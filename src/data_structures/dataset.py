@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
-from typing import Any
+from typing import Any, List
 
+import numpy as np
 import pandas as pd
 
 
@@ -14,8 +15,94 @@ class Dataset(metaclass=ABCMeta):
         dataframe: Any
             dataframe to be consumed by the class and defined as class property
         """
+        self._labels_names = None
+        self._features_names = None
         self._dataframe = None
         self.dataframe = dataframe
+
+    @property
+    def features_names(self) -> List[Any]:
+        """
+        Property for features names
+
+        Returns
+        -------
+        list of the names of the features
+        """
+        return self._features_names
+
+    @features_names.setter
+    def features_names(self, value: List[Any]):
+        """
+        Setter for features names.
+
+        Parameters
+        ----------
+        value : List[Any]
+            list of the features names
+
+        Returns
+        -------
+
+        """
+        if isinstance(value, List):
+            self._features_names = value
+
+        else:
+            raise TypeError("Feature names should be a list-like type.")
+
+    @property
+    @abstractmethod
+    def features(self) -> np.array:
+        """
+        This property will be important for retrieving the columns of the dataframe with the features.
+        
+        Returns
+        -------
+        
+        Features taken from the dataframe. ALIASES: X matrix/vector/array with the features.
+        
+        """
+        pass
+
+    @property
+    def labels_names(self) -> List[Any]:
+        """
+
+        Returns
+        -------
+
+        """
+        return self._labels_names
+
+    @labels_names.setter
+    def labels_names(self, value: List[Any]):
+        """
+
+        Parameters
+        ----------
+        value : list of the labels names to then be retrieved from the dataframe
+
+        Returns
+        -------
+
+        """
+        if isinstance(value, List):
+            self._labels_names = value
+        else:
+            raise TypeError("Labels names should be a list-like type.")
+
+    @property
+    @abstractmethod
+    def labels(self) -> np.array:
+        """
+        This property will contain the labels for supervised learning.
+
+        Returns
+        -------
+        Labels for training and prediction. ALIASES: y vector with labels for classification and regression.
+        """
+        pass
 
     @property
     def dataframe(self) -> Any:
@@ -88,3 +175,20 @@ class PandasDataset(Dataset):
         else:
             raise TypeError("It seems that the type of your input is not a pandas DataFrame."
                             "The type of the dataframe should be a pandas DataFrame")
+
+    @property
+    def features(self) -> np.array:
+        """
+        This property will only go to the dataframe and return a chunk with features.
+
+        Returns
+        -------
+        features : array with the features
+
+        """
+
+        return np.array(self.dataframe.iloc[:, self.features_names])
+
+    @property
+    def labels(self) -> np.array:
+        return np.array(self.dataframe.iloc[:, self.labels_names])
