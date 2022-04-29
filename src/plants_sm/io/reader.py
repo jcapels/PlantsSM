@@ -1,0 +1,53 @@
+from abc import ABCMeta, abstractmethod
+from typing import Any, List
+
+from plants_sm.io.commons import FilePathOrBuffer, get_path, get_buffer
+
+
+class Reader(metaclass=ABCMeta):
+    """
+    Abstract class that aims at reading files of any format
+    """
+
+    def __init__(self, file_path_or_buffer: FilePathOrBuffer, **kwargs):
+        """
+        Constructor
+
+        Parameters
+        ----------
+        file_path_or_buffer: FilePathOrBuffer
+
+        """
+        self.path = get_path(file_path_or_buffer)
+        self.buffer = get_buffer(file_path_or_buffer)
+        self.kwargs = kwargs
+
+    def close_buffer(self):
+        """
+        Method to close buffer.
+        """
+        self.buffer.close()
+
+    @property
+    @abstractmethod
+    def file_types(self) -> List[str]:
+        """
+        Abstract method and property that returns the file types that the reader can read.
+
+        Returns
+        -------
+        file_types : List[str]
+            the file types that the reader can read.
+        """
+        pass
+
+    @abstractmethod
+    def read(self) -> Any:
+        """
+        Abstract method that aims at reading a file.
+
+        Returns
+        -------
+        Any object with the information contained in the file.
+        """
+        pass
