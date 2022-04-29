@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import Any, Union, Dict, List
 
-from data_structures.abstract_entity import AbstractEntity
+from plants_sm.data_structures.abstract_entity import AbstractEntity
 
 
 class BiologicalEntity(AbstractEntity):
