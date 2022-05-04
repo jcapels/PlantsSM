@@ -187,8 +187,8 @@ class PandasDataset(Dataset):
 
         """
 
-        return np.array(self.dataframe.iloc[:, self.features_names])
+        return np.array(self.dataframe.loc[:, self.features_names])
 
     @property
     def labels(self) -> np.array:
-        return np.array(self.dataframe.iloc[:, self.labels_names])
+        return np.array(self.dataframe.loc[:, self.labels_names])
