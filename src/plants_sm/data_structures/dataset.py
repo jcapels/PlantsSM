@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from typing import Any, List
+from typing import Any, List, Union
 
 import numpy as np
 import pandas as pd
@@ -7,16 +7,35 @@ import pandas as pd
 
 class Dataset(metaclass=ABCMeta):
 
-    def __init__(self, dataframe: Any):
+    def __init__(self, dataframe: Any,
+                 representation_field: Union[str, List[str, int]] = None,
+                 features_field: Union[str, List[str, int]] = None,
+                 labels_field: Union[str, List[str, int]] = None,
+                 instances_ids_field: Union[str, List[str, int]] = None):
         """
-        
+        Constructor
+
         Parameters
         ----------
         dataframe: Any
             dataframe to be consumed by the class and defined as class property
+        representation_field: str | List[str | int] (optional)
+            representation column field (to be processed)
+        features_field: str | List[str | int] (optional)
+            features column field
+        labels_field: str | List[str | int] (optional)
+            labels column field
+        instances_ids_field: str | List[str | int] (optional)
+            instances column field
         """
+        self._instances = None
+        self._representation_field = None
+        self.representation_field = representation_field
         self._labels_names = None
+        self.labels_field = labels_field
         self._features_names = None
+        self.features_field = features_field
+        self.instances_ids_field = instances_ids_field
         self._dataframe = None
         self.dataframe = dataframe
 
@@ -105,6 +124,35 @@ class Dataset(metaclass=ABCMeta):
         pass
 
     @property
+    @abstractmethod
+    def instances(self) -> np.array:
+        """
+        This property will contain the instances of the dataset.
+
+        Returns
+        -------
+        Array with the instances.
+        """
+        pass
+
+    @instances.setter
+    def instances(self, value: List[Any]):
+        """
+
+        Parameters
+        ----------
+        value : list of the labels names to then be retrieved from the dataframe
+
+        Returns
+        -------
+
+        """
+        if isinstance(value, List):
+            self._instances = value
+        else:
+            raise TypeError("Instances should be a list-like type.")
+
+    @property
     def dataframe(self) -> Any:
         """
         Property of all datasets: they should have an associated dataframe.
@@ -149,6 +197,34 @@ class Dataset(metaclass=ABCMeta):
 
         """
         self._set_dataframe(value)
+
+    @property
+    def representation_field(self) -> Union[str, int]:
+        """
+        Property of the representation of the molecule, reaction or compounds
+
+        Returns
+        -------
+        Representation field: str | int
+            field where the biological entity is represented
+        """
+        return self._representation_field
+
+    @representation_field.setter
+    def representation_field(self, value: Union[str, int]):
+        """
+        Setter of the property. It verified the type of the value inputted.
+
+        Parameters
+        ----------
+        value: str | int
+            field where the biological entity is represented
+
+        Returns
+        -------
+
+        """
+        self._representation_field = value
 
 
 class PandasDataset(Dataset):
