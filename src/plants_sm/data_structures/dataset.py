@@ -8,10 +8,10 @@ import pandas as pd
 class Dataset(metaclass=ABCMeta):
 
     def __init__(self, dataframe: Any,
-                 representation_field: Union[str, List[str, int]] = None,
-                 features_field: Union[str, List[str, int]] = None,
-                 labels_field: Union[str, List[str, int]] = None,
-                 instances_ids_field: Union[str, List[str, int]] = None):
+                 representation_field: Union[str, List[Union[str, int]]] = None,
+                 features_field: Union[str, List[Union[str, int]]] = None,
+                 labels_field: Union[str, List[Union[str, int]]] = None,
+                 instances_ids_field: Union[str, List[Union[str, int]]] = None):
         """
         Constructor
 
@@ -124,7 +124,6 @@ class Dataset(metaclass=ABCMeta):
         pass
 
     @property
-    @abstractmethod
     def instances(self) -> np.array:
         """
         This property will contain the instances of the dataset.
@@ -133,7 +132,7 @@ class Dataset(metaclass=ABCMeta):
         -------
         Array with the instances.
         """
-        pass
+        return self._instances
 
     @instances.setter
     def instances(self, value: List[Any]):
@@ -141,7 +140,7 @@ class Dataset(metaclass=ABCMeta):
 
         Parameters
         ----------
-        value : list of the labels names to then be retrieved from the dataframe
+        value : list of the instances to then be retrieved from the dataframe
 
         Returns
         -------
@@ -268,3 +267,4 @@ class PandasDataset(Dataset):
     @property
     def labels(self) -> np.array:
         return np.array(self.dataframe.loc[:, self.labels_names])
+
