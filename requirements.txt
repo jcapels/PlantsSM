@@ -2,3 +2,4 @@ pandas==1.3.5
 dask
 propythia==2.0.0
 seaborn
+umap-learn
