@@ -1,5 +1,6 @@
 pandas==1.3.5
 dask
+matplotlib
 propythia==2.0.0
 seaborn
 umap-learn
