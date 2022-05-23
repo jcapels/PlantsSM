@@ -4,3 +4,4 @@ matplotlib
 propythia==2.0.0
 seaborn
 umap
+umap-learn[plot]
