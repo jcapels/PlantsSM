@@ -3,4 +3,4 @@ dask
 matplotlib
 propythia==2.0.0
 seaborn
-umap-learn
+umap
