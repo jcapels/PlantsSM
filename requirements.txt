@@ -3,5 +3,9 @@ dask
 matplotlib
 seaborn
 umap
-umap-learn[plot]
+datashader
+colorcet
+bokeh
+holoviews
+scikit-image
 propythia==2.0.0
