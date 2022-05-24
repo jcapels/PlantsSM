@@ -2,10 +2,4 @@ pandas==1.3.5
 dask
 matplotlib
 seaborn
-umap==0.1.1
-datashader
-colorcet
-bokeh
-holoviews
-scikit-image
-propythia==2.0.0
+biopython

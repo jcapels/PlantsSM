@@ -17,10 +17,16 @@ class FeaturesGenerator(metaclass=ABCMeta):
         ----------
         kwargs
         """
+        self._features_names = None
         if "n_jobs" not in kwargs:
             self.n_jobs = 1
         else:
             self.n_jobs = kwargs["n_jobs"]
+            
+    @property
+    @abstractmethod
+    def features_names(self):
+        return self._features_names
 
     def featurize(self, dataset: Dataset) -> Dataset:
         """
