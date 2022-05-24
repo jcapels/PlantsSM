@@ -228,8 +228,31 @@ class Dataset(metaclass=ABCMeta):
 
 class PandasDataset(Dataset):
 
-    def __init__(self, dataframe: pd.DataFrame):
-        super().__init__(dataframe)
+    def __init__(self, dataframe: pd.DataFrame,
+                 representation_field: Union[str, List[Union[str, int]]] = None,
+                 features_field: Union[str, List[Union[str, int]]] = None,
+                 labels_field: Union[str, List[Union[str, int]]] = None,
+                 instances_ids_field: Union[str, List[Union[str, int]]] = None
+                 ):
+
+        """
+        Constructor
+
+        Parameters
+        ----------
+        dataframe: Any
+            dataframe to be consumed by the class and defined as class property
+        representation_field: str | List[str | int] (optional)
+            representation column field (to be processed)
+        features_field: str | List[str | int] (optional)
+            features column field
+        labels_field: str | List[str | int] (optional)
+            labels column field
+        instances_ids_field: str | List[str | int] (optional)
+            instances column field
+        """
+
+        super().__init__(dataframe, representation_field, features_field, labels_field, instances_ids_field)
 
     def _set_dataframe(self, value: pd.DataFrame):
         """
