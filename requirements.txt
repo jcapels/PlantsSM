@@ -3,3 +3,4 @@ dask
 matplotlib
 seaborn
 biopython
+joblib
