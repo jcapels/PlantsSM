@@ -34,8 +34,7 @@ class Dataset(metaclass=ABCMeta):
         # the features fields is a list of fields that are used to extract the features
         # however, they can be both strings or integers, so we need to check the type of the field
         # and convert it to a list of strings
-        self._features_names = None
-        if not isinstance(features_field, List):
+        if not isinstance(features_field, List) and features_field is not None:
             self.features_field = [features_field]
         else:
             self.features_field = features_field
@@ -45,6 +44,8 @@ class Dataset(metaclass=ABCMeta):
         self.instances_ids_field = instances_ids_field
 
         # the dataframe setter will derive the instance ids field if it is None
+        # and also will try to set the features names
+        self._features_names = None
         self._dataframe = None
         self.dataframe = dataframe
 
@@ -57,6 +58,7 @@ class Dataset(metaclass=ABCMeta):
         else:
             self.labels_names = labels_field
 
+        # in the case that the dataframe is None and the features field is not None, the features names will be set
         if self.features_field is not None:
             self._set_features_names()
 
@@ -363,7 +365,7 @@ class PandasDataset(Dataset, CSVMixin, ExcelMixin):
         """
         Private method to set the features names if it is not defined.
         """
-        if self.features_names is None:
+        if self.features_names is None and self.features_field is not None:
             if isinstance(self.features_field[0], str):
                 self.features_names = list(self.features_field)
             else:
