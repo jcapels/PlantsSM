@@ -19,7 +19,11 @@ class Reader(metaclass=ABCMeta):
 
         """
         self.path = get_path(file_path_or_buffer)
-        self.buffer = get_buffer(file_path_or_buffer)
+        if "mode" in kwargs:
+            self.buffer = get_buffer(file_path_or_buffer, mode=kwargs["mode"])
+            del kwargs["mode"]
+        else:
+            self.buffer = get_buffer(file_path_or_buffer)
         self.kwargs = kwargs
 
     def close_buffer(self):

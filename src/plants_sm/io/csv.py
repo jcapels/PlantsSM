@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 import dask
 
@@ -22,6 +22,7 @@ class CSVReader(Reader):
         ----------
         filepath_or_buffer : str | Path | IO[AnyStr] | TextIO
             file path
+
         sep : string
             the separator of each column in the file
 
@@ -72,6 +73,7 @@ class CSVWriter(Writer):
         ----------
         filepath_or_buffer : str | Path | IO[AnyStr] | TextIO
             file path
+
         sep : string
             the separator of each column in the file
 
@@ -144,6 +146,7 @@ def write_csv(filepath_or_buffer: FilePathOrBuffer, df: pd.DataFrame, **kwargs) 
     ----------
     filepath_or_buffer : str | Path | IO[AnyStr] | TextIO
         file path
+
     df : pd.DataFrame
         Dataframe to be written in the CSV file
 

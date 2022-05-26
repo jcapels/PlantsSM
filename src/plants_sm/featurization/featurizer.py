@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from typing import Any
+from typing import Any, Union, List
 
 import pandas as pd
 from joblib import Parallel, delayed
@@ -17,16 +17,37 @@ class FeaturesGenerator(metaclass=ABCMeta):
         ----------
         kwargs
         """
+        self.kwargs = kwargs
         self._features_names = None
         if "n_jobs" not in kwargs:
             self.n_jobs = 1
         else:
             self.n_jobs = kwargs["n_jobs"]
-            
+            del self.kwargs["n_jobs"]
+
     @property
-    @abstractmethod
-    def features_names(self):
+    def features_names(self) -> List[str]:
+        """
+        Abstract method and property that returns the names of the features.
+
+        Returns
+        -------
+        features_names : List[str]
+            the names of the features
+        """
         return self._features_names
+
+    @features_names.setter
+    def features_names(self, value: List[str]):
+        """
+        Setter for features names.
+
+        Parameters
+        ----------
+        value: List[str]
+            the names of the features
+        """
+        self._features_names = value
 
     def featurize(self, dataset: Dataset) -> Dataset:
         """
@@ -43,13 +64,16 @@ class FeaturesGenerator(metaclass=ABCMeta):
             dataset object with features
         """
         parallel_callback = Parallel(n_jobs=self.n_jobs)
-        new_x = parallel_callback(delayed(self._featurize)(instance) for instance in dataset.instances)
+        len_instances = len(dataset.instances)
+        new_x = parallel_callback(delayed(self._featurize)(dataset.instances[i], dataset.identifiers[i],
+                                                           dataset.instances_ids_field) for i in range(len_instances))
         new_x = pd.concat(new_x, axis=0)
-        dataset.dataframe = pd.concat((dataset.dataframe, new_x), axis=1)
+        dataset.dataframe = dataset.dataframe.merge(new_x, how='left', on=dataset.instances_ids_field)
+        dataset.features_names = self.features_names
         return dataset
 
     @abstractmethod
-    def _featurize(self, instance: Any) -> pd.DataFrame:
+    def _featurize(self, instance: Any, identifier: str, identifier_field_name: str) -> pd.DataFrame:
         """
         Method to be implemented by all feature generators to generate features for one instance at a time
 
