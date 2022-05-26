@@ -2,7 +2,6 @@ from typing import List, Union
 
 import dask
 
-from plants_sm.data_structures.dataset import PandasDataset
 from plants_sm.data_structures.pandas_dataframe import pd
 from plants_sm.io.commons import FilePathOrBuffer
 from plants_sm.io.reader import Reader
@@ -161,43 +160,3 @@ def write_csv(filepath_or_buffer: FilePathOrBuffer, df: pd.DataFrame, **kwargs) 
     ddf = writer.write(df=df)
     writer.close_buffer()
     return ddf
-
-
-# TODO: add a Mixin to cope with this part
-def csv_to_dataset(file_path: FilePathOrBuffer,
-                   representation_field: Union[str, List[Union[str, int]]] = None,
-                   features_field: Union[str, List[Union[str, int]]] = None,
-                   labels_field: Union[str, List[Union[str, int]]] = None,
-                   instances_ids_field: Union[str, List[Union[str, int]]] = None,
-                   **kwargs) -> PandasDataset:
-    """
-    Read a csv file and convert it into a dataset
-
-    Parameters
-    ----------
-    file_path: FilePathOrBuffer
-        path of the file to be read
-
-    representation_field: str | List[str | int] (optional)
-        representation column field (to be processed)
-
-    features_field: str | List[str | int] (optional)
-        features column field
-
-    labels_field: str | List[str | int] (optional)
-        labels column field
-
-    instances_ids_field: str | List[str | int] (optional)
-        instances column field
-
-    Returns
-    ----------
-    dataset: PandasDataset
-        dataset with information for ML tasks
-    """
-
-    reader = CSVReader(file_path, **kwargs)
-    df = reader.read()
-    reader.close_buffer()
-    dataset = PandasDataset(df, representation_field, features_field, labels_field, instances_ids_field)
-    return dataset

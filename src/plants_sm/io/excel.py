@@ -1,8 +1,7 @@
-from typing import List, Any, Union
+from typing import List, Union
 
 import pandas as pd
 
-from plants_sm.data_structures.dataset import PandasDataset
 from plants_sm.io.commons import FilePathOrBuffer
 from plants_sm.io.reader import Reader
 from plants_sm.io.writer import Writer
@@ -142,39 +141,3 @@ def write_excel(output_path: FilePathOrBuffer, object_to_be_written: pd.DataFram
     correctly_written = writer.write(object_to_be_written)
     writer.close_buffer()
     return correctly_written
-
-
-# TODO: add a Mixin to cope with this part
-def excel_to_dataset(file_path: FilePathOrBuffer,
-                     representation_field: Union[str, List[Union[str, int]]] = None,
-                     features_field: Union[str, List[Union[str, int]]] = None,
-                     labels_field: Union[str, List[Union[str, int]]] = None,
-                     instances_ids_field: Union[str, List[Union[str, int]]] = None,
-                     **kwargs) -> PandasDataset:
-    """
-    Read an excel file
-
-    Parameters
-    ----------
-    file_path: FilePathOrBuffer
-        path of the file to be read
-    representation_field: str | List[str | int] (optional)
-        representation column field (to be processed)
-    features_field: str | List[str | int] (optional)
-        features column field
-    labels_field: str | List[str | int] (optional)
-        labels column field
-    instances_ids_field: str | List[str | int] (optional)
-        instances column field
-
-    Returns
-    ----------
-    dataset: PandasDataset
-        dataset with information for ML tasks
-    """
-
-    reader = ExcelReader(file_path, **kwargs)
-    df = reader.read()
-    reader.close_buffer()
-    dataset = PandasDataset(df, representation_field, features_field, labels_field, instances_ids_field)
-    return dataset

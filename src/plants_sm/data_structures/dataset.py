@@ -4,6 +4,8 @@ from typing import Any, List, Union
 import numpy as np
 import pandas as pd
 
+from plants_sm.mixins.mixins import CSVMixin, ExcelMixin
+
 
 class Dataset(metaclass=ABCMeta):
 
@@ -28,16 +30,31 @@ class Dataset(metaclass=ABCMeta):
         instances_ids_field: str | List[str | int] (optional)
             instances column field
         """
+        self._dataframe = None
+        self.dataframe = dataframe
         self._instances = None
         self._representation_field = None
         self.representation_field = representation_field
+
         self._labels_names = None
-        self.labels_field = labels_field
+        if not isinstance(labels_field, List):
+            self.labels_names = [labels_field]
+        else:
+            self.labels_names = labels_field
+
         self._features_names = None
-        self.features_field = features_field
-        self.instances_ids_field = instances_ids_field
-        self._dataframe = None
-        self.dataframe = dataframe
+        if not isinstance(features_field, List):
+            self.features_field = [features_field]
+        else:
+            self.features_field = features_field
+
+        if self.features_field is not None:
+            self._set_features_names()
+
+        if instances_ids_field is None and self.dataframe is not None:
+            self._set_instances_ids_field()
+        else:
+            self.instances_ids_field = instances_ids_field
 
     @property
     def features_names(self) -> List[Any]:
@@ -69,6 +86,18 @@ class Dataset(metaclass=ABCMeta):
 
         else:
             raise TypeError("Feature names should be a list-like type.")
+
+    @property
+    @abstractmethod
+    def identifiers(self) -> List[Union[str, int]]:
+        """
+        Property for identifiers. It should return the identifiers of the dataset.
+
+        Returns
+        -------
+        list of the identifiers: List[Union[str, int]]
+        """
+        pass
 
     @property
     @abstractmethod
@@ -124,6 +153,7 @@ class Dataset(metaclass=ABCMeta):
         pass
 
     @property
+    @abstractmethod
     def instances(self) -> np.array:
         """
         This property will contain the instances of the dataset.
@@ -132,24 +162,7 @@ class Dataset(metaclass=ABCMeta):
         -------
         Array with the instances.
         """
-        return self._instances
-
-    @instances.setter
-    def instances(self, value: List[Any]):
-        """
-
-        Parameters
-        ----------
-        value : list of the instances to then be retrieved from the dataframe
-
-        Returns
-        -------
-
-        """
-        if isinstance(value, List):
-            self._instances = value
-        else:
-            raise TypeError("Instances should be a list-like type.")
+        pass
 
     @property
     def dataframe(self) -> Any:
@@ -163,8 +176,15 @@ class Dataset(metaclass=ABCMeta):
         """
         return self._dataframe
 
-    @abstractmethod
-    def _set_dataframe(self, value: Any):
+    def set_dataframe_dependent_methods(self, func):
+        def wrap(*args, **kwargs):
+            func(*args, **kwargs)
+
+            return self
+
+        return wrap
+
+    def set_dataframe(self, value: Any):
         """
         Just a private method to verify the true type of the dataframe according to the type of dataset.
 
@@ -178,7 +198,10 @@ class Dataset(metaclass=ABCMeta):
         -------
 
         """
-        pass
+        if value is not None:
+            self._set_dataframe(value)
+            self._set_features_names()
+            self._set_instances_ids_field()
 
     @dataframe.setter
     def dataframe(self, value: Any):
@@ -195,7 +218,7 @@ class Dataset(metaclass=ABCMeta):
         -------
 
         """
-        self._set_dataframe(value)
+        self.set_dataframe(value)
 
     @property
     def representation_field(self) -> Union[str, int]:
@@ -225,10 +248,40 @@ class Dataset(metaclass=ABCMeta):
         """
         self._representation_field = value
 
+    @abstractmethod
+    def _set_instances_ids_field(self):
+        """
+        Private method to set the instances ids field if it is not defined.
 
-class PandasDataset(Dataset):
+        """
+        pass
 
-    def __init__(self, dataframe: pd.DataFrame,
+    @abstractmethod
+    def _set_features_names(self):
+        """
+        Private method to set the features names if it is not defined.
+
+        """
+        pass
+
+    @abstractmethod
+    def _set_dataframe(self, value: Any):
+        """
+        Private method to set the dataframe.
+
+        Parameters
+        ----------
+        value: Any
+            dataframe to be set, it can be in pd.DataFrame format, but can also be a List or Dictionary
+            (it can be specific for each data type)
+
+        """
+        pass
+
+
+class PandasDataset(Dataset, CSVMixin, ExcelMixin):
+
+    def __init__(self, dataframe: pd.DataFrame = None,
                  representation_field: Union[str, List[Union[str, int]]] = None,
                  features_field: Union[str, List[Union[str, int]]] = None,
                  labels_field: Union[str, List[Union[str, int]]] = None,
@@ -268,7 +321,7 @@ class PandasDataset(Dataset):
         -------
 
         """
-        if isinstance(value, pd.DataFrame):
+        if isinstance(value, pd.DataFrame) or value is None:
             self._dataframe = value
         else:
             raise TypeError("It seems that the type of your input is not a pandas DataFrame."
@@ -284,10 +337,42 @@ class PandasDataset(Dataset):
         features : array with the features
 
         """
-
-        return np.array(self.dataframe.loc[:, self.features_names])
+        if self.features_names is not None:
+            return np.array(self.dataframe.loc[:, self.features_names])
+        else:
+            raise ValueError("The features were not extracted yet.")
 
     @property
     def labels(self) -> np.array:
         return np.array(self.dataframe.loc[:, self.labels_names])
 
+    @property
+    def instances(self) -> np.array:
+        return np.array(self.dataframe.loc[:, self.representation_field])
+
+    @property
+    def identifiers(self) -> List[str]:
+        return self.dataframe.loc[:, self.instances_ids_field]
+
+    def _set_features_names(self):
+        """
+        Private method to set the features names if it is not defined.
+
+        """
+        if self.features_names is not None:
+            if isinstance(self.features_field[0], str):
+                self.features_names = list(self.features_field)
+            else:
+                self.features_names = []
+                for feature in self.features_field:
+                    self.features_names.append(self.dataframe.columns[feature])
+
+    def _set_instances_ids_field(self):
+        """
+        Private method to set the instances ids field if it is not defined.
+
+        """
+        if self.instances_ids_field is None:
+            self.instances_ids_field = "identifier"
+            self.dataframe["identifier"] = list(range(self.dataframe.shape[0]))
+            self.dataframe["identifier"] = self.dataframe["identifier"].astype(str)
