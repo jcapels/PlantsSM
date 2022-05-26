@@ -30,9 +30,24 @@ class Dataset(metaclass=ABCMeta):
         instances_ids_field: str | List[str | int] (optional)
             instances column field
         """
+
+        # the features fields is a list of fields that are used to extract the features
+        # however, they can be both strings or integers, so we need to check the type of the field
+        # and convert it to a list of strings
+        self._features_names = None
+        if not isinstance(features_field, List):
+            self.features_field = [features_field]
+        else:
+            self.features_field = features_field
+
+        # the instance ids field is defined here, however, if it is None, eventually is derived from the dataframe
+        # setter
+        self.instances_ids_field = instances_ids_field
+
+        # the dataframe setter will derive the instance ids field if it is None
         self._dataframe = None
         self.dataframe = dataframe
-        self._instances = None
+
         self._representation_field = None
         self.representation_field = representation_field
 
@@ -42,19 +57,8 @@ class Dataset(metaclass=ABCMeta):
         else:
             self.labels_names = labels_field
 
-        self._features_names = None
-        if not isinstance(features_field, List):
-            self.features_field = [features_field]
-        else:
-            self.features_field = features_field
-
         if self.features_field is not None:
             self._set_features_names()
-
-        if instances_ids_field is None and self.dataframe is not None:
-            self._set_instances_ids_field()
-        else:
-            self.instances_ids_field = instances_ids_field
 
     @property
     def features_names(self) -> List[Any]:
@@ -201,7 +205,8 @@ class Dataset(metaclass=ABCMeta):
         if value is not None:
             self._set_dataframe(value)
             self._set_features_names()
-            self._set_instances_ids_field()
+            if self.instances_ids_field is None:
+                self._set_instances_ids_field()
 
     @dataframe.setter
     def dataframe(self, value: Any):
@@ -357,9 +362,8 @@ class PandasDataset(Dataset, CSVMixin, ExcelMixin):
     def _set_features_names(self):
         """
         Private method to set the features names if it is not defined.
-
         """
-        if self.features_names is not None:
+        if self.features_names is None:
             if isinstance(self.features_field[0], str):
                 self.features_names = list(self.features_field)
             else:

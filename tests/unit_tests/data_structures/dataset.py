@@ -19,7 +19,6 @@ class TestDataset(TestCase):
 
         dataset = PandasDataset(dataframe, representation_field='a', labels_field='c', features_field='b')
         self.assertTrue(dataset.representation_field == 'a')
-        self.assertTrue(dataset.features_field == 'b')
         self.assertTrue(dataset.features_names == ['b'])
         self.assertTrue(dataset.labels_names == ['c'])
         self.assertTrue(all(representation in dataset.instances for representation in ['representation2',
