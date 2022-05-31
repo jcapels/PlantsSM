@@ -18,7 +18,7 @@ class FeaturesGenerator(metaclass=ABCMeta):
         kwargs
         """
         self.kwargs = kwargs
-        self._features_names = None
+        self._features_fields = None
         if "n_jobs" not in kwargs:
             self.n_jobs = 1
         else:
@@ -26,7 +26,7 @@ class FeaturesGenerator(metaclass=ABCMeta):
             del self.kwargs["n_jobs"]
 
     @property
-    def features_names(self) -> List[str]:
+    def features_fields(self) -> List[str]:
         """
         Abstract method and property that returns the names of the features.
 
@@ -35,10 +35,10 @@ class FeaturesGenerator(metaclass=ABCMeta):
         features_names : List[str]
             the names of the features
         """
-        return self._features_names
+        return self._features_fields
 
-    @features_names.setter
-    def features_names(self, value: List[str]):
+    @features_fields.setter
+    def features_fields(self, value: List[str]):
         """
         Setter for features names.
 
@@ -47,7 +47,7 @@ class FeaturesGenerator(metaclass=ABCMeta):
         value: List[str]
             the names of the features
         """
-        self._features_names = value
+        self._features_fields = value
 
     def featurize(self, dataset: Dataset) -> Dataset:
         """
@@ -75,6 +75,7 @@ class FeaturesGenerator(metaclass=ABCMeta):
         new_x = pd.concat(new_x, axis=0)
         dataset.dataframe = dataset.dataframe.merge(new_x, how='left', on=dataset.instances_ids_field)
 
+        self.features_fields = features_names
         if dataset.features_fields is None:
             dataset.features_fields = features_names
         else:
