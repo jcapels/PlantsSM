@@ -797,10 +797,9 @@ class PropythiaDescriptors:
         modality: str
             maximum (max), mean (mean) or both (all) hydrophobic moment
 
-        scale_name: str
-            name of the amino acid scale (one in
-            https://modlamp.org/modlamp.html#modlamp.descriptors.PeptideDescriptor) used to calculate the descriptor values.
-            By default Eisenberg.
+        scale_name: str name of the amino acid scale (one in
+        https://modlamp.org/modlamp.html#modlamp.descriptors.PeptideDescriptor) used to calculate the descriptor
+        values. By default Eisenberg.
 
         Returns
         -------

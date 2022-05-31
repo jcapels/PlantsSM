@@ -3,44 +3,31 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from sklearn.cluster import KMeans
 
+from plants_sm.unsupervised.model import UnsupervisedModel
 
-class SklearnKMeans:
+
+class SklearnKMeans(UnsupervisedModel):
 
     def __init__(self, **kwargs):
-        self._fitted = False
-        self.kwargs = kwargs
+        super().__init__(**kwargs)
         self.kmeans = KMeans(**self.kwargs)
 
-    @property
-    def fitted(self):
-        return self._fitted
-
-    @fitted.setter
-    def fitted(self, value: bool):
-        self._fitted = value
-
-    def fit(self, x):
+    def _fit(self, x):
         self.kmeans.fit(x)
         self.fitted = True  # add decorator
         return self
 
-    def transform(self, x) -> pd.DataFrame:
+    def _transform(self, x) -> pd.DataFrame:
         if self.fitted:
             return self.kmeans.transform(x)
         else:
             raise ValueError("The model is not fitted")
 
-    def predict(self, x):
+    def _predict(self, x):
         if self.fitted:
             return self.kmeans.predict(x)
         else:
             raise ValueError("The model is not fitted")
-
-    def fit_transform(self, x):
-        return self.fit(x).transform(x)
-
-    def fit_predict(self, x):
-        return self.fit(x).predict(x)
 
     def fit_predict_generate_scatter_plot(self, x):
         labels = self.kmeans.fit_predict(x)

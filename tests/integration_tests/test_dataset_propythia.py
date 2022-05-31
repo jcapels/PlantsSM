@@ -1,9 +1,12 @@
+import os
 from unittest import TestCase
 
 import pandas as pd
 
 from plants_sm.data_structures.dataset import PandasDataset
 from plants_sm.featurization.propythia import PropythiaWrapper
+
+from tests import TEST_DIR
 
 
 class TestDatasetPropythia(TestCase):
@@ -34,5 +37,14 @@ class TestDatasetPropythia(TestCase):
 
         self.assertEqual(dataset.dataframe.shape[0], 2)
         self.assertEqual(dataset.dataframe.shape[1], 3)
-        self.assertEqual(dataset.features_names, ["length"])
+        self.assertEqual(dataset.features_fields, ["length"])
         self.assertEqual(dataset.instances_ids_field, "identifier")
+
+    def test_with_real_data(self):
+        dataset_path = os.path.join(TEST_DIR, "data", "data_athaliana.csv")
+        dataset = PandasDataset(labels_field=["union_class", "Aracyc class"], representation_field="sequence_test",
+                                instances_ids_field="gene")
+        dataset.from_csv(dataset_path)
+        propythia = PropythiaWrapper(descriptor="get_all_physicochemical_properties", n_jobs=1)
+        propythia.featurize(dataset)
+        self.assertEqual(len(dataset.features_fields), 25)
