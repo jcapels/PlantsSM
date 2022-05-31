@@ -3,6 +3,7 @@ from typing import Any, List, Union
 
 import numpy as np
 import pandas as pd
+from pandas import Series
 
 from plants_sm.mixins.mixins import CSVMixin, ExcelMixin
 
@@ -11,7 +12,7 @@ class Dataset(metaclass=ABCMeta):
 
     def __init__(self, dataframe: Any,
                  representation_field: Union[str, List[Union[str, int]]] = None,
-                 features_field: Union[str, List[Union[str, int]]] = None,
+                 features_fields: Union[str, List[Union[str, int]], slice] = None,
                  labels_field: Union[str, List[Union[str, int]]] = None,
                  instances_ids_field: Union[str, List[Union[str, int]]] = None):
         """
@@ -23,7 +24,7 @@ class Dataset(metaclass=ABCMeta):
             dataframe to be consumed by the class and defined as class property
         representation_field: str | List[str | int] (optional)
             representation column field (to be processed)
-        features_field: str | List[str | int] (optional)
+        features_fields: str | List[str | int] | slice (optional)
             features column field
         labels_field: str | List[str | int] (optional)
             labels column field
@@ -34,10 +35,11 @@ class Dataset(metaclass=ABCMeta):
         # the features fields is a list of fields that are used to extract the features
         # however, they can be both strings or integers, so we need to check the type of the field
         # and convert it to a list of strings
-        if not isinstance(features_field, List) and features_field is not None:
-            self.features_field = [features_field]
+        if not isinstance(features_fields, List) and not isinstance(features_fields, slice) and \
+                features_fields is not None:
+            self._features_fields = [features_fields]
         else:
-            self.features_field = features_field
+            self._features_fields = features_fields
 
         # the instance ids field is defined here, however, if it is None, eventually is derived from the dataframe
         # setter
@@ -59,11 +61,9 @@ class Dataset(metaclass=ABCMeta):
             self.labels_names = labels_field
 
         # in the case that the dataframe is None and the features field is not None, the features names will be set
-        if self.features_field is not None:
-            self._set_features_names()
 
     @property
-    def features_names(self) -> List[Any]:
+    def features_fields(self) -> Union[List[Any], slice]:
         """
         Property for features names
 
@@ -71,10 +71,10 @@ class Dataset(metaclass=ABCMeta):
         -------
         list of the names of the features
         """
-        return self._features_names
+        return self._features_fields
 
-    @features_names.setter
-    def features_names(self, value: List[Any]):
+    @features_fields.setter
+    def features_fields(self, value: List[Any]):
         """
         Setter for features names.
 
@@ -87,8 +87,8 @@ class Dataset(metaclass=ABCMeta):
         -------
 
         """
-        if isinstance(value, List):
-            self._features_names = value
+        if isinstance(value, List) or isinstance(value, slice):
+            self._features_fields = value
 
         else:
             raise TypeError("Feature names should be a list-like type.")
@@ -182,14 +182,6 @@ class Dataset(metaclass=ABCMeta):
         """
         return self._dataframe
 
-    def set_dataframe_dependent_methods(self, func):
-        def wrap(*args, **kwargs):
-            func(*args, **kwargs)
-
-            return self
-
-        return wrap
-
     def set_dataframe(self, value: Any):
         """
         Just a private method to verify the true type of the dataframe according to the type of dataset.
@@ -206,7 +198,6 @@ class Dataset(metaclass=ABCMeta):
         """
         if value is not None:
             self._set_dataframe(value)
-            self._set_features_names()
             if self.instances_ids_field is None:
                 self._set_instances_ids_field()
 
@@ -264,14 +255,6 @@ class Dataset(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def _set_features_names(self):
-        """
-        Private method to set the features names if it is not defined.
-
-        """
-        pass
-
-    @abstractmethod
     def _set_dataframe(self, value: Any):
         """
         Private method to set the dataframe.
@@ -285,12 +268,29 @@ class Dataset(metaclass=ABCMeta):
         """
         pass
 
+    @abstractmethod
+    def drop_nan(self, fields: List[Union[str, int]] = None, **kwargs) -> 'Dataset':
+        """
+        Private method to drop the nan values from the dataframe.
+
+        Parameters
+        ----------
+        fields: List[Union[str, int]]
+            list of the fields to drop the nan values
+
+        Returns
+        -------
+        Dataset: Dataset
+            dataset without the nan values
+        """
+        pass
+
 
 class PandasDataset(Dataset, CSVMixin, ExcelMixin):
 
     def __init__(self, dataframe: pd.DataFrame = None,
                  representation_field: Union[str, List[Union[str, int]]] = None,
-                 features_field: Union[str, List[Union[str, int]]] = None,
+                 features_fields: Union[str, List[Union[str, int]], slice] = None,
                  labels_field: Union[str, List[Union[str, int]]] = None,
                  instances_ids_field: Union[str, List[Union[str, int]]] = None
                  ):
@@ -304,7 +304,7 @@ class PandasDataset(Dataset, CSVMixin, ExcelMixin):
             dataframe to be consumed by the class and defined as class property
         representation_field: str | List[str | int] (optional)
             representation column field (to be processed)
-        features_field: str | List[str | int] (optional)
+        features_fields: str | List[str | int] | slice (optional)
             features column field
         labels_field: str | List[str | int] (optional)
             labels column field
@@ -312,7 +312,7 @@ class PandasDataset(Dataset, CSVMixin, ExcelMixin):
             instances column field
         """
 
-        super().__init__(dataframe, representation_field, features_field, labels_field, instances_ids_field)
+        super().__init__(dataframe, representation_field, features_fields, labels_field, instances_ids_field)
 
     def _set_dataframe(self, value: pd.DataFrame):
         """
@@ -344,41 +344,131 @@ class PandasDataset(Dataset, CSVMixin, ExcelMixin):
         features : array with the features
 
         """
-        if self.features_names is not None:
-            return np.array(self.dataframe.loc[:, self.features_names])
+        if self.features_fields is not None:
+            try:
+                return np.array(self.dataframe.loc[:, self.features_fields])
+            except (TypeError, KeyError):
+                return np.array(self.dataframe.iloc[:, self.features_fields])
+
         else:
             raise ValueError("The features were not extracted yet.")
 
     @property
     def labels(self) -> np.array:
+        """
+        This property will only go to the dataframe and return a chunk with labels.
+
+        Returns
+        -------
+
+        """
         return np.array(self.dataframe.loc[:, self.labels_names])
 
     @property
     def instances(self) -> np.array:
+        """
+        This property will only go to the dataframe and return a chunk with instances.
+
+        Returns
+        -------
+
+        """
         return np.array(self.dataframe.loc[:, self.representation_field])
 
     @property
     def identifiers(self) -> List[str]:
-        return self.dataframe.loc[:, self.instances_ids_field]
+        """
+        This property will only go to the dataframe and return a list with the identifiers.
 
-    def _set_features_names(self):
+        Returns
+        -------
+
         """
-        Private method to set the features names if it is not defined.
-        """
-        if self.features_names is None and self.features_field is not None:
-            if isinstance(self.features_field[0], str):
-                self.features_names = list(self.features_field)
-            else:
-                self.features_names = []
-                for feature in self.features_field:
-                    self.features_names.append(self.dataframe.columns[feature])
+        return self.dataframe.loc[:, self.instances_ids_field]
 
     def _set_instances_ids_field(self):
         """
-        Private method to set the instances ids field if it is not defined.
+        Private method to set the instances ids field if it is not defined. If not defined, it is necessary to
+        increment one field to the features fields if they are integers or slices.
 
         """
         if self.instances_ids_field is None:
             self.instances_ids_field = "identifier"
-            self.dataframe["identifier"] = list(range(self.dataframe.shape[0]))
+            identifiers_series = Series(list(range(self.dataframe.shape[0])), name="identifier")
+            self.dataframe = pd.concat((identifiers_series, self.dataframe), axis=1)
             self.dataframe["identifier"] = self.dataframe["identifier"].astype(str)
+
+            if self.features_fields is not None:
+                if isinstance(self.features_fields, slice):
+                    start = self.features_fields.start + 1
+                    if self.features_fields.stop is not None:
+                        stop = self.features_fields.stop + 1
+                    else:
+                        stop = None
+                    self.features_fields = slice(start, stop, self.features_fields.step)
+
+                elif isinstance(self.features_fields[0], int):
+                    self.features_fields = [x + 1 for x in self.features_fields]
+
+    def drop_nan(self, fields: List[Union[str, int]] = None, **kwargs) -> 'PandasDataset':
+        """
+        Method to drop the nan values from the dataframe.
+
+        Parameters
+        ----------
+        fields: List[Union[str, int]]
+            list of the fields to drop the nan values
+
+        Returns
+        -------
+        PandasDataset: PandasDataset
+            pandas dataset without the nan values
+        """
+        drop_columns = False
+        if "inplace" not in kwargs:
+            inplace = True
+            kwargs["inplace"] = inplace
+
+        if "axis" in kwargs:
+            axis = kwargs["axis"]
+            if axis == 1:
+                drop_columns = True
+
+        if not fields:
+            if drop_columns:
+                bool_idx = self.dataframe.isnull().any(axis=0)
+                bool_idx = bool_idx.values
+                columns_to_remove = self.dataframe.columns[bool_idx].values
+
+                if self.representation_field in columns_to_remove:
+                    raise ValueError("You dropped the representation field of the dataframe, no changes were made.")
+                elif any(label in columns_to_remove for label in self.labels_names):
+                    raise ValueError("You dropped one of the labels field of the dataframe, no changes were made.")
+                elif self.instances_ids_field in columns_to_remove:
+                    raise ValueError("You dropped the instances ids field of the dataframe, no changes were made.")
+
+                for column in columns_to_remove:
+                    self.features_fields.remove(column)
+
+            self.dataframe.dropna(**kwargs)
+
+        else:
+            if drop_columns:
+
+                if isinstance(fields[0], int):
+                    fields = [self.dataframe.columns[field] for field in fields]
+                if self.representation_field in fields:
+                    raise ValueError("You dropped the representation field of the dataframe, no changes were made.")
+                elif any(label in fields for label in self.labels_names):
+                    raise ValueError("You dropped one of the labels field of the dataframe, no changes were made.")
+                elif self.instances_ids_field in fields:
+                    raise ValueError("You dropped the instances ids field of the dataframe, no changes were made.")
+
+                bool_idx = self.dataframe.isnull().any(axis=0)
+                bool_idx = bool_idx.values
+                columns_to_remove = self.dataframe.columns[bool_idx].values
+                for column in columns_to_remove:
+                    self.features_fields.remove(column)
+
+            self.dataframe.dropna(subset=fields, **kwargs)
+        return self

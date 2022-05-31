@@ -21,7 +21,7 @@ class PropythiaWrapper(FeaturesGenerator):
         self.general_descriptor = PropythiaDescriptors()
         super().__init__(**kwargs)
 
-    def _featurize(self, protein_sequence: str, identifier: str, identifier_field_name: str) -> pd.DataFrame:
+    def _featurize(self, protein_sequence: str) -> pd.DataFrame:
         """
         The method _featurize will generate the desired features for a given protein sequence
 
@@ -30,9 +30,6 @@ class PropythiaWrapper(FeaturesGenerator):
         protein_sequence: str
             protein sequence string
 
-        identifier: str
-            protein identifier
-
         Returns
         -------
         dataframe with features: pd.DataFrame
@@ -40,7 +37,4 @@ class PropythiaWrapper(FeaturesGenerator):
         func = getattr(self.general_descriptor, self.descriptor)
         features = func(protein_sequence, **self.kwargs)
         features_df = DataFrame(features, index=[0])
-        if self.features_names is None:
-            self.features_names = list(features_df.columns)
-        features_df[identifier_field_name] = [protein_sequence]
         return features_df
