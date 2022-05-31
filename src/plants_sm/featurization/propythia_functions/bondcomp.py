@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#!/usr/bin/env python
+# !/usr/bin/env python
 """
 This function gives the sum of the bond composition for each type of bond
 For bond composition four types of bonds are
@@ -25,36 +25,9 @@ Email:
 """
 import pandas as pd
 import os
+
+
 # import sys
-def init(path=None, index=''):
-    """
-    Read in files. You need to run this (once) before you can
-    access any records. If the files are not within the current directory,
-    you need to specify the correct directory path.
-
-    :param path:
-    :param index:
-    :return:
-    """
-    index = str(index)
-    if path is None:
-        for path in [os.path.split(__file__)[0]]:
-            if os.path.exists(os.path.join(path, index)):
-                break
-        # print('path =', path, file=sys.stderr)
-
-    doc=''
-    if index == 'bonds.csv':
-        doc=(path + '/data/bonds.csv')
-    if index == 'PhysicoChemical.csv':
-        doc=(path + '/data/PhysicoChemical.csv')
-    return doc
-
-
-doc=init(index='bonds.csv')
-#Finding physico-chemical property of a vector of polypeptides
-bonds = pd.read_csv(doc, header=None)
-
 
 def boc_wp(seq):
     """
@@ -64,51 +37,45 @@ def boc_wp(seq):
     :param seq: protein sequence
     :return: dictionary with number of total, hydrogen, single and double bonds
     """
-    tota = []
-    hy = []
-    Si = []
-    Du = []
-    b1 = []
-    b2 = []
-    b3 = []
-    b4 = []
     bb = {}
 
-    df = seq
+    bonds_dictionary = {"G": [9, 5, 8, 1],
+                        "S": [13, 7, 12, 1],
+                        "A": [12, 7, 11, 1],
+                        "D": [15, 7, 13, 2],
+                        "N": [16, 8, 14, 2],
+                        "T": [16, 9, 15, 1],
+                        "P": [17, 9, 16, 1],
+                        "E": [18, 9, 16, 2],
+                        "V": [18, 11, 17, 1],
+                        "Q": [19, 10, 17, 2],
+                        "M": [19, 11, 18, 1],
+                        "H": [20, 9, 17, 3],
+                        "I": [21, 13, 20, 1],
+                        "Y": [24, 11, 20, 4],
+                        "L": [21, 13, 20, 1],
+                        "K": [23, 14, 22, 1],
+                        "W": [28, 12, 23, 5],
+                        "F": [23, 11, 19, 4],
+                        "C": [25, 12, 23, 2],
+                        "R": [25, 14, 23, 2]
+                        }
+    total = 0
+    h = 0
+    s = 0
+    d = 0
+    for aa in seq:
 
-    for i in range(0,len(df)) :
-        tot = 0
-        h = 0
-        S = 0
-        D = 0
-        tota.append([i])
-        hy.append([i])
-        Si.append([i])
-        Du.append([i])
-        for j in range(0,len(df[i])) :
-            temp = df[i][j]
-            for k in range(0,len(bonds)) :
-                if bonds.iloc[:,0][k] == temp :
-                    tot = tot + int(bonds.iloc[:,1][k])
-                    h = h + int(bonds.iloc[:,2][k])
-                    S = S + int(bonds.iloc[:,3][k])
-                    D = D + int(bonds.iloc[:,4][k])
-        tota[i].append(tot)
-        hy[i].append(h)
-        Si[i].append(S)
-        Du[i].append(D)
-    for m in range(0,len(df)) :
-        b1.append(tota[m][1])
-        b2.append(hy[m][1])
-        b3.append(Si[m][1])
-        b4.append(Du[m][1])
+        total += bonds_dictionary[aa][0]
+        h += bonds_dictionary[aa][1]
+        s += bonds_dictionary[aa][2]
+        d += bonds_dictionary[aa][3]
 
-    #IF BOND COMPOSITION SEPARATEDLY BY AA RESIDUE JUST TAKE OFF SUM (AND WILL GIVE 4*LEN(SEQ)
-    bb["tot"] = sum(b1)
-    bb["hydrogen"] = sum(b2)
-    bb["single"] = sum(b3)
-    bb["double"] = sum(b4)
-    
+    bb["total_bonds"] = total
+    bb["hydrogen_bonds"] = h
+    bb["single bonds"] = s
+    bb["double bonds"] = d
+
     return bb
 
 
@@ -116,4 +83,3 @@ if __name__ == '__main__':
     print(boc_wp('MQGNGSALPNASQPVLRGDGARPSWLASALACVLIFTIVVDILGNLLVILSVYRNKKLRN'))
     print(boc_wp('MALPNAVIAAAALSVYRNKKLRN'))
     print(boc_wp('MQGNGSPALLNSRRRRRGDGARPSWLASALACVLIFTIVVDILGNLLVILSVYRNKKLRN'))
-
