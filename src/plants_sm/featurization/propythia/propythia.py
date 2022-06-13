@@ -2,7 +2,7 @@ import pandas as pd
 from pandas import DataFrame
 
 from plants_sm.featurization.featurizer import FeaturesGenerator
-from plants_sm.featurization.propythia_functions.protein_descriptors import PropythiaDescriptors
+from plants_sm.featurization.propythia.propythia_descriptors.presets import DESCRIPTORS_PRESETS
 
 
 class PropythiaWrapper(FeaturesGenerator):
@@ -18,7 +18,9 @@ class PropythiaWrapper(FeaturesGenerator):
 
         """
         self.descriptor = descriptor
-        self.general_descriptor = PropythiaDescriptors()
+        if self.descriptor not in DESCRIPTORS_PRESETS:
+            raise ValueError(f'Preset {self.descriptor} is not available.')
+        self.descriptors = [descriptor() for descriptor in DESCRIPTORS_PRESETS[self.descriptor]]
         super().__init__(**kwargs)
 
     def _featurize(self, protein_sequence: str, identifier: str, identifier_field_name: str) -> pd.DataFrame:
@@ -37,10 +39,15 @@ class PropythiaWrapper(FeaturesGenerator):
         -------
         dataframe with features: pd.DataFrame
         """
-        func = getattr(self.general_descriptor, self.descriptor)
-        features = func(protein_sequence, **self.kwargs)
-        features_df = DataFrame(features, index=[0])
+        features_names = []
+        features_list = []
+        for descriptor in self.descriptors:
+            features = descriptor(protein_sequence, **self.kwargs)
+            features_names.extend(descriptor.get_features_out())
+            features_list.extend(features)
+
+        features_df = DataFrame([features_list], index=[0], columns=features_names)
         if self.features_names is None:
-            self.features_names = list(features_df.columns)
-        features_df[identifier_field_name] = [protein_sequence]
+            self.features_names = features_names
+        features_df[identifier_field_name] = [identifier]
         return features_df

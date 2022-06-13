@@ -1,16 +1,21 @@
+import unittest
 from unittest import TestCase
+from unittest.mock import Mock
 
-import pandas as pd
+from pandas import DataFrame
 
-from plants_sm.data_structures.dataset import PandasDataset
-from plants_sm.featurization.propythia.propythia import PropythiaWrapper
+from plants_sm.featurization.bio_embeddings.unirep import UniRepEmbeddings
 
 
-class TestDatasetPropythia(TestCase):
+class TestEmbeddings(TestCase):
 
     def setUp(self) -> None:
-        self.dataframe = pd.DataFrame(columns=["sequence"])
-        self.sequences = [
+        self.dataset = Mock()
+        self.dataset.dataframe = DataFrame(columns=["sequence", "identifiers"])
+        self.dataset.representation_field = "sequence"
+        self.dataset.identifiers = ["0", "1"]
+        self.dataset.instances_ids_field = "identifiers"
+        self.dataset.instances = [
             "MASLMLSLGSTSLLPREINKDKLKLGTSASNPFLKAKSFSRVTMTVAVKPSRFEGITMAPPDPILGVSEAFKADT"
             "NGMKLNLGVGAYRTEELQPYVLNVVKKAENLMLERGDNKEYLPIEGLAAFNKATAELLFGAGHPVIKEQRVATIQG"
             "LSGTGSLRLAAALIERYFPGAKVVISSPTWGNHKNIFNDAKVPWSEYRYYDPKTIGLDFEGMIADIKEAPEGSFIL"
@@ -25,14 +30,9 @@ class TestDatasetPropythia(TestCase):
             "YESVEHRVMVNSEKERFSIPFFFNPAHYTWVEPLKELINQQNPSKYKAYNWGKFFTTRKGSNFKKLDVEN"
             "IQIYHFKNI"
         ]
-        self.dataframe["sequence"] = self.sequences
+        self.dataset.dataframe["sequence"] = self.dataset.instances
 
-    def test_create_dataset_propythia(self):
-        dataset = PandasDataset(dataframe=self.dataframe, representation_field="sequence")
-        propythia = PropythiaWrapper(descriptor="all")
-        propythia.featurize(dataset)
-
-        self.assertEqual(dataset.dataframe.shape[0], 2)
-        self.assertEqual(dataset.dataframe.shape[1], 9598)
-        self.assertEqual(dataset.features_names[0], "length")
-        self.assertEqual(dataset.instances_ids_field, "identifier")
+    @unittest.skip("embeddings use cuda")
+    def test_unirep_embeddings(self):
+        embeddings = UniRepEmbeddings(device="0")
+        embeddings.featurize(self.dataset)
