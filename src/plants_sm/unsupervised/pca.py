@@ -1,37 +1,32 @@
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from pandas import DataFrame
 from sklearn.decomposition import PCA
 import seaborn as sns
 
+from plants_sm.unsupervised.model import UnsupervisedModel
 
-class SklearnPCA:
+
+class SklearnPCA(UnsupervisedModel):
 
     def __init__(self, **kwargs):
-        self._fitted = None
-        self.pca = PCA(**kwargs)
+        super().__init__(**kwargs)
+        self.pca = PCA(**self.kwargs)
 
-    @property
-    def fitted(self):
-        return self._fitted
+    def _predict(self, x):
+        pass
 
-    @fitted.setter
-    def fitted(self, value: bool):
-        self._fitted = value
-
-    def fit(self, x):
+    def _fit(self, x):
         self.pca.fit(x)
-        self.fitted = True  # add decorator
+        self.fitted = True
         return self
 
-    def transform(self, x) -> pd.DataFrame:
+    def _transform(self, x) -> pd.DataFrame:
         if self.fitted:
             return self.pca.transform(x)
         else:
             raise ValueError("The model is not fitted")
-
-    def fit_transform(self, x):
-        return self.fit(x).transform(x)
 
     def generate_pca_variance_plot(self):
         plt.figure()
@@ -51,13 +46,17 @@ class SklearnPCA:
         print(f'First 2 PC: {sum(self.pca.explained_variance_ratio_[0:2] * 100)}')
         print(f'First {i} PC: {sum(self.pca.explained_variance_ratio_[0:i] * 100)}')
 
-    def generate_dotplot(self, data):
+    def generate_dotplot(self, data, labels):
         plt.figure(figsize=(20, 20))
         plt.xlabel(f'PC1 = {np.round(self.pca.explained_variance_ratio_[0] * 100, 3)}% variance')
         plt.ylabel(f'PC2 = {np.round(self.pca.explained_variance_ratio_[1] * 100, 3)}% variance')
+
+        data = DataFrame(data)
+        data["label"] = labels
         sns.scatterplot(
-            x=data[:, 0], y=data[:, 1],
-            hue=None,
-            palette=sns.color_palette("deep", 2),
+            data=data,
+            x=data.columns[0], y=data.columns[1],
+            hue="label",
+            palette=sns.color_palette("deep", len(np.unique(data["label"]))),
             legend="full",
             s=25)

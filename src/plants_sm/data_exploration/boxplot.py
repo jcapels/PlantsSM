@@ -39,6 +39,7 @@ class Boxplot:
         plt.subplots(figsize=(20, 10))
         sns.set(font_scale=1.4)
         plt.title(self.title[0], fontsize=self.title[1])
+        features_name.append(label_name)
         self.plot = sns.boxplot(x="variable", y="value", data=pd.melt(dataframe.loc[:, features_name], label_name),
                                 hue=label_name,
                                 palette=self.pallete,
