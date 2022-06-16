@@ -6,3 +6,4 @@ seaborn
 biopython
 joblib
 sklearn
+modlamp

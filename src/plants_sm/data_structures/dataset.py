@@ -335,7 +335,7 @@ class PandasDataset(Dataset, CSVMixin, ExcelMixin):
                             "The type of the dataframe should be a pandas DataFrame")
 
     @property
-    def features(self) -> np.array:
+    def features(self) -> pd.DataFrame:
         """
         This property will only go to the dataframe and return a chunk with features.
 
@@ -346,9 +346,9 @@ class PandasDataset(Dataset, CSVMixin, ExcelMixin):
         """
         if self.features_fields is not None:
             try:
-                return np.array(self.dataframe.loc[:, self.features_fields])
+                return self.dataframe.loc[:, self.features_fields]
             except (TypeError, KeyError):
-                return np.array(self.dataframe.iloc[:, self.features_fields])
+                return self.dataframe.iloc[:, self.features_fields]
 
         else:
             raise ValueError("The features were not extracted yet.")

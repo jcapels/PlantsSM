@@ -34,5 +34,5 @@ class TestDatasetPropythia(TestCase):
 
         self.assertEqual(dataset.dataframe.shape[0], 2)
         self.assertEqual(dataset.dataframe.shape[1], 9598)
-        self.assertEqual(dataset.features_names[0], "length")
+        self.assertEqual(dataset.features_fields[0], "length")
         self.assertEqual(dataset.instances_ids_field, "identifier")
