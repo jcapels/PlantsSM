@@ -1,39 +1,79 @@
+from typing import Dict, Any, Callable, Union
+
+import numpy as np
 import pandas as pd
+from numpy import ndarray
 from pandas import DataFrame
 
+from plants_sm.data_structures.dataset import Dataset
 from plants_sm.featurization.featurizer import FeaturesGenerator
+from jax import vmap
+from functools import partial
+from jax_unirep.utils import get_embeddings
 
-from bio_embeddings.embed.unirep_embedder import UniRepEmbedder
+from jax_unirep.utils import load_params
+from jax_unirep.layers import mLSTM
+from jax_unirep.utils import validate_mLSTM_params
 
 
 class UniRepEmbeddings(FeaturesGenerator):
+    """UniRep Embedder
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    Alley, E.C., Khimulya, G., Biswas, S. et al. Unified rational protein
+    engineering with sequence-based deep representation learning. Nat Methods
+    16, 1315–1322 (2019). https://doi.org/10.1038/s41592-019-0598-1
 
-        import logging
-        logging.getLogger('numba').setLevel(logging.WARNING)
+    We use a reimplementation of unirep:
 
-        self.unirep_embedder = UniRepEmbedder(**kwargs)
+    Ma, Eric, and Arkadij Kummer. "Reimplementing Unirep in JAX." bioRxiv (2020).
+    https://doi.org/10.1101/2020.05.11.088344
+    """
 
-    def _featurize(self, instance: str, identifier: str, identifier_field_name: str) -> pd.DataFrame:
-        """
+    name = "unirep"
+    # An integer representing the size of the embedding.
+    embedding_dimension = 1900
+    # An integer representing the number of layers from the RAW output of the LM.
+    number_of_layers = 1
+    # dimension of the final embedding
+    output_dimension: int = 2
 
-        Parameters
-        ----------
-        instance
-        identifier
-        identifier_field_name
+    _params: Dict[str, Any]
+    _apply_fun: Callable
 
-        Returns
-        -------
+    def _fit(self, dataset: Dataset):
 
-        """
-        embedding = self.unirep_embedder.embed(instance)
-        features_names = [f"unirep_embedding_{i}" for i in range(1, len(embedding) + 1)]
-        features_df = DataFrame([embedding], index=[0], columns=features_names)
-        if self.features_names is None:
-            self.features_names = features_names
+        self.features_names = [f"unirep_{num}" for num in range(1, self.embedding_dimension + 1)]
 
-        features_df[identifier_field_name] = [identifier]
+        self._params = load_params()[1]
+        _, self._apply_fun = mLSTM(output_dim=self.embedding_dimension)
+        validate_mLSTM_params(self._params, n_outputs=self.embedding_dimension)
+
+        if self.device:
+            raise NotImplementedError("UniRep does not allow configuring the device")
+
+    def _featurize(self, sequence: str) -> pd.DataFrame:
+        # https://github.com/sacdallago/bio_embeddings/issues/117
+        if not sequence:
+            features = np.zeros((0, self.embedding_dimension))
+            features_df = DataFrame([features], index=[0], columns=self.features_names)
+            return features_df
+
+        # Unirep only allows batching with sequences of the same length, so we don't do batching at all
+        embedded_seqs = get_embeddings([sequence])
+        # h and c refer to hidden and cell state
+        # h contains all the hidden states, while h_final and c_final contain only the last state
+        h_final, c_final, h = vmap(partial(self._apply_fun, self._params))(
+            embedded_seqs
+        )
+        # Go from a batch of 1, which is `(1, len(sequence), 1900)`, to `len(sequence), 1900)`
+        if self.output_dimension == 2:
+            embedding = np.asarray(h_final[0])
+        else:  # TODO: correct abstract classes to cope with three dimensional embeddings for RNNs and CNNs for instance
+            embedding = np.asarray(h[0])
+        features_df = DataFrame([embedding], index=[0], columns=self.features_names)
         return features_df
+
+    @staticmethod
+    def reduce_per_protein(embedding: ndarray) -> ndarray:
+        # This is `h_avg` in jax-unirep terminology
+        return embedding.mean(axis=0)

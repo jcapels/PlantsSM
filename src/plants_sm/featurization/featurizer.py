@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Any, List
+from typing import Any, List, Union
 
 import pandas as pd
 from joblib import Parallel, delayed
@@ -9,6 +9,16 @@ from plants_sm.transformation.transformer import Transformer
 
 
 class FeaturesGenerator(Transformer):
+
+    _device: str = None
+
+    @property
+    def device(self):
+        return self._device
+
+    @device.setter
+    def device(self, value: str):
+        self._device = value
 
     @property
     def features_fields(self) -> List[str]:
@@ -34,7 +44,7 @@ class FeaturesGenerator(Transformer):
         """
         self._features_fields = value
 
-    def _fit(self, dataset: Dataset):
+    def _fit(self, dataset: Dataset) -> 'Estimator':
         """
         Abstract method that has to be implemented by all feature generators
 
