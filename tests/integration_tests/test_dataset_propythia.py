@@ -3,7 +3,7 @@ from unittest import TestCase
 import pandas as pd
 
 from plants_sm.data_structures.dataset import PandasDataset
-from plants_sm.featurization.propythia.propythia import PropythiaWrapper
+from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
 
 
 class TestDatasetPropythia(TestCase):

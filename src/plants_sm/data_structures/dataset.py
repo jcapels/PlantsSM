@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from typing import Any, List, Union
+from typing import Any, List, Union, Dict
 
 import numpy as np
 import pandas as pd
@@ -107,7 +107,7 @@ class Dataset(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def features(self) -> np.array:
+    def features(self) -> np.ndarray:
         """
         This property will be important for retrieving the columns of the dataframe with the features.
         
@@ -118,6 +118,13 @@ class Dataset(metaclass=ABCMeta):
         
         """
         pass
+
+    @property
+    def X(self) -> np.ndarray:
+        """
+        Alias for the features property.
+        """
+        return self.features
 
     @property
     def labels_names(self) -> List[Any]:
@@ -148,7 +155,7 @@ class Dataset(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def labels(self) -> np.array:
+    def labels(self) -> np.ndarray:
         """
         This property will contain the labels for supervised learning.
 
@@ -159,8 +166,15 @@ class Dataset(metaclass=ABCMeta):
         pass
 
     @property
+    def y(self) -> np.ndarray:
+        """
+        Alias for the labels property.
+        """
+        return self.labels
+
+    @property
     @abstractmethod
-    def instances(self) -> np.array:
+    def instances(self) -> np.ndarray:
         """
         This property will contain the instances of the dataset.
 
@@ -219,14 +233,18 @@ class Dataset(metaclass=ABCMeta):
         self.set_dataframe(value)
 
     @property
-    def representation_field(self) -> Union[str, int]:
+    def representation_field(self) -> Union[str, int, Dict[str, str]]:
         """
         Property of the representation of the molecule, reaction or compounds
 
         Returns
         -------
-        Representation field: str | int
-            field where the biological entity is represented
+        Representation field: str | int | Dict[str, str]
+            Field where the biological entity is represented. It can also be a dictionary with the fields
+
+        Examples
+        --------
+        >>> dataset.representation_field = {"protein": "protein_field", "ligand": "ligand_field"}
         """
         return self._representation_field
 
@@ -354,7 +372,7 @@ class PandasDataset(Dataset, CSVMixin, ExcelMixin):
             raise ValueError("The features were not extracted yet.")
 
     @property
-    def labels(self) -> np.array:
+    def labels(self) -> np.ndarray:
         """
         This property will only go to the dataframe and return a chunk with labels.
 
@@ -365,7 +383,7 @@ class PandasDataset(Dataset, CSVMixin, ExcelMixin):
         return np.array(self.dataframe.loc[:, self.labels_names])
 
     @property
-    def instances(self) -> np.array:
+    def instances(self) -> np.ndarray:
         """
         This property will only go to the dataframe and return a chunk with instances.
 

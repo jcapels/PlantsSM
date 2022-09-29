@@ -1,29 +1,14 @@
-from abc import ABCMeta, abstractmethod
-from typing import Any, Union, List
+from abc import abstractmethod
+from typing import Any, List
 
 import pandas as pd
 from joblib import Parallel, delayed
 
 from plants_sm.data_structures.dataset import Dataset
+from plants_sm.transformation.transformer import Transformer
 
 
-class FeaturesGenerator(metaclass=ABCMeta):
-
-    def __init__(self, **kwargs):
-        """
-        Abstract class for feature extraction
-
-        Parameters
-        ----------
-        kwargs
-        """
-        self.kwargs = kwargs
-        self._features_fields = None
-        if "n_jobs" not in kwargs:
-            self.n_jobs = 1
-        else:
-            self.n_jobs = kwargs["n_jobs"]
-            del self.kwargs["n_jobs"]
+class FeaturesGenerator(Transformer):
 
     @property
     def features_fields(self) -> List[str]:
@@ -49,7 +34,18 @@ class FeaturesGenerator(metaclass=ABCMeta):
         """
         self._features_fields = value
 
-    def featurize(self, dataset: Dataset) -> Dataset:
+    def _fit(self, dataset: Dataset):
+        """
+        Abstract method that has to be implemented by all feature generators
+
+        Parameters
+        ----------
+        dataset: Dataset
+            dataset to fit the transformer where instances are the representation or object to be processed.
+        """
+        raise NotImplementedError
+
+    def _transform(self, dataset: Dataset) -> Dataset:
         """
         General method that calls _featurize that has to be implemented by all feature generators
 
@@ -75,7 +71,7 @@ class FeaturesGenerator(metaclass=ABCMeta):
         new_x = pd.concat(new_x, axis=0)
         dataset.dataframe = dataset.dataframe.merge(new_x, how='left', on=dataset.instances_ids_field)
 
-        self.features_fields = features_names
+        self._features_fields = features_names
         if dataset.features_fields is None:
             dataset.features_fields = features_names
         else:
