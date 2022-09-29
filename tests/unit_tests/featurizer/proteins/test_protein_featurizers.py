@@ -29,3 +29,4 @@ class TestProteinFeaturizers(TestCase):
             "IQIYHFKNI"
         ]
         self.dataset.dataframe["sequence"] = self.dataset.instances
+        self.dataset.dataframe["identifiers"] = self.dataset.identifiers

@@ -8,3 +8,6 @@ joblib
 sklearn
 modlamp
 pydantic
+torch
+torchvision
+torchaudio

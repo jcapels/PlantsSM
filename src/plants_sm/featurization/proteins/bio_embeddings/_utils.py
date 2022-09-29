@@ -1,5 +1,19 @@
-from typing import Union
+import logging
+import os
+import shutil
+from pathlib import Path
+from typing import Union, Optional, Dict
+from urllib import request
+
 import torch
+import yaml
+from numpy import ndarray
+from torch._appdirs import user_cache_dir
+from yaml import YAMLError
+
+logger = logging.getLogger(__name__)
+
+_module_dir: Path = Path(os.path.dirname(os.path.abspath(__file__)))
 
 
 def get_device(device: Union[None, str, torch.device] = None) -> torch.device:
@@ -13,3 +27,63 @@ def get_device(device: Union[None, str, torch.device] = None) -> torch.device:
         return torch.device("cuda")
     else:
         return torch.device("cpu")
+
+
+def read_config_file(config_path: Union[str, Path], preserve_order: bool = True) -> dict:
+    """
+    Read config from path to file.
+    :param config_path: path to .yml config file
+    :param preserve_order:
+    :return:
+    """
+    with open(config_path, "r") as fp:
+        try:
+            if preserve_order:
+                return yaml.load(fp, Loader=yaml.Loader)
+            else:
+                return yaml.safe_load(fp)
+        except YAMLError as e:
+            raise Exception(
+                f"Could not parse configuration file at '{config_path}' as yaml. "
+                "Formatting mistake in config file? "
+                "See Error above for details."
+            ) from e
+
+
+def get_model_file(
+        model: Optional[str] = None,
+        file: Optional[str] = None,
+        overwrite_cache: bool = False,
+) -> str:
+    """If the specified asset for the model is in the user cache, returns the
+    location, otherwise downloads the file to cache and returns the location"""
+    cache_path = Path(user_cache_dir("plants_sm")).joinpath(model).joinpath(file)
+    if not overwrite_cache and cache_path.is_file():
+        logger.info(f"Loading {file} for {model} from cache at '{cache_path}'")
+        return str(cache_path)
+
+    cache_path.parent.mkdir(exist_ok=True, parents=True)
+    _defaults: Dict[str, Dict[str, str]] = read_config_file(_module_dir / "defaults.yml")
+    url = _defaults.get(model, {}).get(file)
+
+    # Since the files are not user provided, this must never happen
+    assert url, f"File {file} for {model} doesn't exist."
+
+    logger.info(f"Downloading {file} for {model} and storing it in '{cache_path}'")
+
+    req = request.Request(url, headers={
+        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'
+    })
+
+    with request.urlopen(req) as response, open(cache_path, 'wb') as outfile:
+        shutil.copyfileobj(response, outfile)
+
+    return str(cache_path)
+
+
+def reduce_per_protein(embedding: ndarray) -> ndarray:
+    """
+    Reduce the embedding of a protein to a single vector.
+    """
+    # This is `h_avg` in jax-unirep terminology
+    return embedding.mean(axis=0)

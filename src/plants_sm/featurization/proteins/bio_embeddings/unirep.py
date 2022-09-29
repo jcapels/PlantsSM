@@ -15,6 +15,8 @@ from jax_unirep.utils import load_params
 from jax_unirep.layers import mLSTM
 from jax_unirep.utils import validate_mLSTM_params
 
+from plants_sm.featurization.proteins.bio_embeddings._utils import reduce_per_protein
+
 
 class UniRepEmbeddings(FeaturesGenerator):
     """UniRep Embedder
@@ -41,8 +43,11 @@ class UniRepEmbeddings(FeaturesGenerator):
     _apply_fun: Callable
 
     def _fit(self, dataset: Dataset):
+        """
+        Load the parameters of the mLSTM model.
+        """
 
-        self.features_names = [f"unirep_{num}" for num in range(1, self.embedding_dimension + 1)]
+        self.features_names = [f"{self.name}_{num}" for num in range(1, self.embedding_dimension + 1)]
 
         self._params = load_params()[1]
         _, self._apply_fun = mLSTM(output_dim=self.embedding_dimension)
@@ -52,6 +57,19 @@ class UniRepEmbeddings(FeaturesGenerator):
             raise NotImplementedError("UniRep does not allow configuring the device")
 
     def _featurize(self, sequence: str) -> pd.DataFrame:
+        """
+        Featurize a sequence using UniRep embedding.
+
+        Parameters
+        ----------
+        sequence: str
+            A string representing the sequence of a protein.
+
+        Returns
+        -------
+        features_df: pd.DataFrame
+            A DataFrame containing the UniRep embedding of the sequence.
+        """
         # https://github.com/sacdallago/bio_embeddings/issues/117
         if not sequence:
             features = np.zeros((0, self.embedding_dimension))
@@ -67,13 +85,9 @@ class UniRepEmbeddings(FeaturesGenerator):
         )
         # Go from a batch of 1, which is `(1, len(sequence), 1900)`, to `len(sequence), 1900)`
         if self.output_dimension == 2:
-            embedding = np.asarray(h_final[0])
-        else:  # TODO: correct abstract classes to cope with three dimensional embeddings for RNNs and CNNs for instance
+            embedding = reduce_per_protein(h[0])
+        else:  # TODO: correct abstract classes to cope with three-dimensional embeddings for RNNs and CNNs for instance
             embedding = np.asarray(h[0])
         features_df = DataFrame([embedding], index=[0], columns=self.features_names)
         return features_df
 
-    @staticmethod
-    def reduce_per_protein(embedding: ndarray) -> ndarray:
-        # This is `h_avg` in jax-unirep terminology
-        return embedding.mean(axis=0)
