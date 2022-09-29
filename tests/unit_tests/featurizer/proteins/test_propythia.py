@@ -1,10 +1,5 @@
-from unittest import TestCase
-from unittest.mock import MagicMock
-
-from pandas import DataFrame
-
 from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
-from unit_tests.featurizer.proteins.test_protein_featurizers import TestProteinFeaturizers
+from ...featurizer.proteins.test_protein_featurizers import TestProteinFeaturizers
 
 
 class TestPropythiaWrapper(TestProteinFeaturizers):
