@@ -1,5 +1,5 @@
 import re
-from typing import Dict, Any
+from typing import Dict, Any, Tuple, List
 
 import numpy as np
 import pandas as pd
@@ -20,9 +20,22 @@ class Word2Vec(FeaturesGenerator):
     necessary_files = ["model_file"]
     _options: Dict[str, Any] = {}
 
-    output_dimension: int = 2
+    output_shape_dimension: int = 2
 
-    def _fit(self, dataset: Dataset) -> 'Estimator':
+    def _fit(self, dataset: Dataset) -> 'FeaturesGenerator':
+        """
+        Fit the feature generator to the dataset
+
+        Parameters
+        ----------
+        dataset: Dataset
+            dataset to fit the transformer where instances are the representation or object to be processed.
+
+        Returns
+        -------
+        self: Estimator
+            the fitted FeaturesGenerator
+        """
 
         self._model_file = self._options.get("model_file")
 
@@ -37,7 +50,22 @@ class Word2Vec(FeaturesGenerator):
         self._window_size = 3
         self.features_names = [f"{self.name}_{num}" for num in range(1, self.embedding_dimension + 1)]
 
-    def _featurize(self, sequence: str) -> pd.DataFrame:
+        return self
+
+    def _featurize(self, sequence: str) -> Tuple[List[str], np.ndarray]:
+        """
+        The method _featurize will generate the desired features for a given protein sequence
+
+        Parameters
+        ----------
+        sequence: str
+            protein sequence string
+
+        Returns
+        -------
+        dataframe with features: pd.DataFrame
+
+        """
 
         sequence = re.sub(r"[UZOB]", "X", sequence)
         # pad sequence with special character (only 3-mers are considered)
@@ -53,13 +81,29 @@ class Word2Vec(FeaturesGenerator):
                 embedding[index, :] = self._get_kmer_representation(k_mer)
             # end of sequence reached
             except IndexError:
-                if self.output_dimension == 2:
+                if self.output_shape_dimension == 2:
                     embedding = reduce_per_protein(embedding)
+                elif self.output_shape_dimension == 3:
+                    continue
+                else:
+                    raise ValueError("Output dimension must be 2 or 3")
+                return self.features_names, embedding
 
-                features_df = DataFrame([embedding], index=[0], columns=self.features_names)
-                return features_df
+        return self.features_names, embedding
 
-    def _get_kmer_representation(self, k_mer):
+    def _get_kmer_representation(self, k_mer: str) -> ndarray:
+        """
+        Get the embedding for a given k-mer
+
+        Parameters
+        ----------
+        k_mer: str
+            k-mer string
+
+        Returns
+        -------
+        kmer representation: ndarray
+        """
         # try to retrieve embedding for k-mer
         try:
             return self._model.wv[k_mer]
@@ -72,7 +116,3 @@ class Word2Vec(FeaturesGenerator):
             elif "-" in k_mer:
                 idx_center = int(len(k_mer) / 2)
                 return self._get_kmer_representation(k_mer[idx_center])
-
-    @staticmethod
-    def reduce_per_protein(embedding: ndarray) -> ndarray:
-        return embedding.mean(axis=0)

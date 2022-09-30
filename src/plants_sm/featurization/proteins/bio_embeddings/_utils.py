@@ -17,8 +17,20 @@ _module_dir: Path = Path(os.path.dirname(os.path.abspath(__file__)))
 
 
 def get_device(device: Union[None, str, torch.device] = None) -> torch.device:
-    """Returns what the user specified, or defaults to the GPU,
-    with a fallback to CPU if no GPU is available."""
+    """
+    Returns what the user specified, or defaults to the GPU,
+    with a fallback to CPU if no GPU is available.
+
+    Parameters
+    ----------
+    device: Union[None, str, torch.device]
+        The device to use. If None, defaults to GPU, with fallback to CPU.
+
+    Returns
+    -------
+    torch.device
+        The device to use.
+    """
     if isinstance(device, torch.device):
         return device
     elif device:
@@ -32,9 +44,17 @@ def get_device(device: Union[None, str, torch.device] = None) -> torch.device:
 def read_config_file(config_path: Union[str, Path], preserve_order: bool = True) -> dict:
     """
     Read config from path to file.
-    :param config_path: path to .yml config file
-    :param preserve_order:
-    :return:
+
+    Parameters
+    ----------
+    config_path: Union[str, Path]
+        Path to config file.
+    preserve_order: bool
+        Whether to preserve order of config file.
+
+    Returns
+    -------
+    result of parsing the YAML file: dict
     """
     with open(config_path, "r") as fp:
         try:
@@ -50,13 +70,23 @@ def read_config_file(config_path: Union[str, Path], preserve_order: bool = True)
             ) from e
 
 
-def get_model_file(
-        model: Optional[str] = None,
-        file: Optional[str] = None,
-        overwrite_cache: bool = False,
-) -> str:
-    """If the specified asset for the model is in the user cache, returns the
-    location, otherwise downloads the file to cache and returns the location"""
+def get_model_file(model: Optional[str] = None,
+                   file: Optional[str] = None,
+                   overwrite_cache: bool = False) -> str:
+    """
+    If the specified asset for the model is in the user cache, returns the
+    location, otherwise downloads the file to cache and returns the location.
+
+    Parameters
+    ----------
+    model: Optional[str]
+        The model to get the file for. If None, returns the file for the
+        default model.
+    file: Optional[str]
+        The file to get. If None, returns the default file for the model.
+    overwrite_cache: bool
+        Whether to overwrite the cache if the file is already present.
+    """
     cache_path = Path(user_cache_dir("plants_sm")).joinpath(model).joinpath(file)
     if not overwrite_cache and cache_path.is_file():
         logger.info(f"Loading {file} for {model} from cache at '{cache_path}'")
@@ -84,6 +114,16 @@ def get_model_file(
 def reduce_per_protein(embedding: ndarray) -> ndarray:
     """
     Reduce the embedding of a protein to a single vector.
+
+    Parameters
+    ----------
+    embedding: ndarray
+        The embedding of a protein.
+
+    Returns
+    -------
+    ndarray
+        The reduced embedding.
     """
     # This is `h_avg` in jax-unirep terminology
     return embedding.mean(axis=0)

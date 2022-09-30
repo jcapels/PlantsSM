@@ -1,5 +1,6 @@
-import pandas as pd
-from pandas import DataFrame
+from typing import Tuple, List
+
+import numpy as np
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.featurization.featurizer import FeaturesGenerator
@@ -22,7 +23,7 @@ class PropythiaWrapper(FeaturesGenerator):
             raise ValueError(f'Preset {self.preset} is not available.')
         self.descriptors = [descriptor() for descriptor in DESCRIPTORS_PRESETS[self.preset]]
 
-    def _featurize(self, protein_sequence: str) -> pd.DataFrame:
+    def _featurize(self, protein_sequence: str) -> Tuple[List[str], np.ndarray]:
         """
         The method _featurize will generate the desired features for a given protein sequence
 
@@ -33,7 +34,11 @@ class PropythiaWrapper(FeaturesGenerator):
 
         Returns
         -------
-        dataframe with features: pd.DataFrame
+        features_names: List[str]
+            the names of the features
+
+        features: np.ndarray
+            the features
         """
         features_names = []
         features_list = []
@@ -42,5 +47,4 @@ class PropythiaWrapper(FeaturesGenerator):
             features_names.extend(descriptor.get_features_out())
             features_list.extend(features)
 
-        features_df = DataFrame([features_list], index=[0], columns=features_names)
-        return features_df
+        return features_names, np.array(features_list)

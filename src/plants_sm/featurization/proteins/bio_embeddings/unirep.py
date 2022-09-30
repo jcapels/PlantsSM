@@ -1,4 +1,4 @@
-from typing import Dict, Any, Callable, Union
+from typing import Dict, Any, Callable, Union, Tuple, List
 
 import numpy as np
 import pandas as pd
@@ -37,7 +37,7 @@ class UniRepEmbeddings(FeaturesGenerator):
     # An integer representing the number of layers from the RAW output of the LM.
     number_of_layers = 1
     # dimension of the final embedding
-    output_dimension: int = 2
+    output_shape_dimension: int = 2
 
     _params: Dict[str, Any]
     _apply_fun: Callable
@@ -56,7 +56,7 @@ class UniRepEmbeddings(FeaturesGenerator):
         if self.device:
             raise NotImplementedError("UniRep does not allow configuring the device")
 
-    def _featurize(self, sequence: str) -> pd.DataFrame:
+    def _featurize(self, sequence: str) -> Tuple[List[str], ndarray]:
         """
         Featurize a sequence using UniRep embedding.
 
@@ -73,8 +73,7 @@ class UniRepEmbeddings(FeaturesGenerator):
         # https://github.com/sacdallago/bio_embeddings/issues/117
         if not sequence:
             features = np.zeros((0, self.embedding_dimension))
-            features_df = DataFrame([features], index=[0], columns=self.features_names)
-            return features_df
+            return self.features_names, features
 
         # Unirep only allows batching with sequences of the same length, so we don't do batching at all
         embedded_seqs = get_embeddings([sequence])
@@ -84,10 +83,9 @@ class UniRepEmbeddings(FeaturesGenerator):
             embedded_seqs
         )
         # Go from a batch of 1, which is `(1, len(sequence), 1900)`, to `len(sequence), 1900)`
-        if self.output_dimension == 2:
+        if self.output_shape_dimension <= 2:
             embedding = reduce_per_protein(h[0])
-        else:  # TODO: correct abstract classes to cope with three-dimensional embeddings for RNNs and CNNs for instance
+        else:
             embedding = np.asarray(h[0])
-        features_df = DataFrame([embedding], index=[0], columns=self.features_names)
-        return features_df
+        return self.features_names, embedding
 

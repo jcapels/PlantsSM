@@ -1,3 +1,4 @@
+import functools
 from abc import ABCMeta, abstractmethod
 from typing import Any, List, Union, Dict
 
@@ -5,6 +6,7 @@ import numpy as np
 import pandas as pd
 from pandas import Series
 
+from plants_sm.data_structures._utils import NUMERICAL_TYPES
 from plants_sm.mixins.mixins import CSVMixin, ExcelMixin
 
 
@@ -17,7 +19,6 @@ class Dataset(metaclass=ABCMeta):
                  instances_ids_field: Union[str, List[Union[str, int]]] = None):
         """
         Constructor
-
         Parameters
         ----------
         dataframe: Any
@@ -35,6 +36,9 @@ class Dataset(metaclass=ABCMeta):
         # the features fields is a list of fields that are used to extract the features
         # however, they can be both strings or integers, so we need to check the type of the field
         # and convert it to a list of strings
+        self._features_shape = None
+        self._features_dataframe = None
+        self._n_dimensional_features_array = None
         if not isinstance(features_fields, List) and not isinstance(features_fields, slice) and \
                 features_fields is not None:
             self._features_fields = [features_fields]
@@ -44,6 +48,7 @@ class Dataset(metaclass=ABCMeta):
         # the instance ids field is defined here, however, if it is None, eventually is derived from the dataframe
         # setter
         self.instances_ids_field = instances_ids_field
+        self._n_dimensional_features = {}
 
         # the dataframe setter will derive the instance ids field if it is None
         # and also will try to set the features names
@@ -66,7 +71,6 @@ class Dataset(metaclass=ABCMeta):
     def features_fields(self) -> Union[List[Any], slice]:
         """
         Property for features names
-
         Returns
         -------
         list of the names of the features
@@ -77,15 +81,12 @@ class Dataset(metaclass=ABCMeta):
     def features_fields(self, value: List[Any]):
         """
         Setter for features names.
-
         Parameters
         ----------
         value : List[Any]
             list of the features names
-
         Returns
         -------
-
         """
         if isinstance(value, List) or isinstance(value, slice):
             self._features_fields = value
@@ -98,7 +99,6 @@ class Dataset(metaclass=ABCMeta):
     def identifiers(self) -> List[Union[str, int]]:
         """
         Property for identifiers. It should return the identifiers of the dataset.
-
         Returns
         -------
         list of the identifiers: List[Union[str, int]]
@@ -110,12 +110,12 @@ class Dataset(metaclass=ABCMeta):
     def features(self) -> np.ndarray:
         """
         This property will be important for retrieving the columns of the dataframe with the features.
-        
+
         Returns
         -------
-        
+
         Features taken from the dataframe. ALIASES: X matrix/vector/array with the features.
-        
+
         """
         pass
 
@@ -129,24 +129,19 @@ class Dataset(metaclass=ABCMeta):
     @property
     def labels_names(self) -> List[Any]:
         """
-
         Returns
         -------
-
         """
         return self._labels_names
 
     @labels_names.setter
     def labels_names(self, value: List[Any]):
         """
-
         Parameters
         ----------
         value : list of the labels names to then be retrieved from the dataframe
-
         Returns
         -------
-
         """
         if isinstance(value, List):
             self._labels_names = value
@@ -158,7 +153,6 @@ class Dataset(metaclass=ABCMeta):
     def labels(self) -> np.ndarray:
         """
         This property will contain the labels for supervised learning.
-
         Returns
         -------
         Labels for training and prediction. ALIASES: y vector with labels for classification and regression.
@@ -177,7 +171,6 @@ class Dataset(metaclass=ABCMeta):
     def instances(self) -> np.ndarray:
         """
         This property will contain the instances of the dataset.
-
         Returns
         -------
         Array with the instances.
@@ -185,10 +178,56 @@ class Dataset(metaclass=ABCMeta):
         pass
 
     @property
+    def features_shape(self) -> tuple:
+        """
+        Returns
+        -------
+        shape of the features array
+        """
+        return self._features_shape
+
+    @features_shape.setter
+    def features_shape(self, value: tuple):
+        """
+        Parameters
+        ----------
+        value: tuple
+            shape of the features array
+        Returns
+        -------
+        """
+        self._features_shape = value
+
+    @property
+    def features_dataframe(self) -> pd.DataFrame:
+        """
+        This property will contain the features dataframe.
+
+        Returns
+        -------
+        """
+        return self._features_dataframe
+
+    @features_dataframe.setter
+    def features_dataframe(self, value: pd.DataFrame):
+        """
+        This property will contain the features dataframe.
+
+        Parameters
+        ----------
+        value: pd.DataFrame
+            dataframe with the features
+
+        Returns
+        -------
+
+        """
+        self._features_dataframe = value
+
+    @property
     def dataframe(self) -> Any:
         """
         Property of all datasets: they should have an associated dataframe.
-
         Returns
         -------
         dataframe : Any
@@ -205,30 +244,36 @@ class Dataset(metaclass=ABCMeta):
         value: Any
             dataframe to be set, it can be in pd.DataFrame format, but can also be a List or Dictionary 
             (it can be specific for each data type)
-
         Returns
         -------
-
         """
         if value is not None:
             self._set_dataframe(value)
             if self.instances_ids_field is None:
                 self._set_instances_ids_field()
+            else:
+                self._dataframe.set_index(self.instances_ids_field, inplace=True)
+
+            if self.features_fields is not None:
+
+                try:
+                    self.features_dataframe = self.dataframe.loc[:, self.features_fields]
+                    self.features_shape = self.features_dataframe.shape
+                except (TypeError, KeyError):
+                    self.features_dataframe = self.dataframe.iloc[:, self.features_fields]
+                    self.features_shape = self.features_dataframe.shape
 
     @dataframe.setter
     def dataframe(self, value: Any):
         """
         Setter of the property. It verified the type of the value inputted.
-
         Parameters
         ----------
         value: Any
             dataframe to be set, it can be in pd.DataFrame format, but can also be a List or Dictionary 
             (it can be specific for each data type)
-
         Returns
         -------
-
         """
         self.set_dataframe(value)
 
@@ -236,12 +281,10 @@ class Dataset(metaclass=ABCMeta):
     def representation_field(self) -> Union[str, int, Dict[str, str]]:
         """
         Property of the representation of the molecule, reaction or compounds
-
         Returns
         -------
         Representation field: str | int | Dict[str, str]
             Field where the biological entity is represented. It can also be a dictionary with the fields
-
         Examples
         --------
         >>> dataset.representation_field = {"protein": "protein_field", "ligand": "ligand_field"}
@@ -252,15 +295,12 @@ class Dataset(metaclass=ABCMeta):
     def representation_field(self, value: Union[str, int]):
         """
         Setter of the property. It verified the type of the value inputted.
-
         Parameters
         ----------
         value: str | int
             field where the biological entity is represented
-
         Returns
         -------
-
         """
         self._representation_field = value
 
@@ -268,7 +308,6 @@ class Dataset(metaclass=ABCMeta):
     def _set_instances_ids_field(self):
         """
         Private method to set the instances ids field if it is not defined.
-
         """
         pass
 
@@ -276,13 +315,11 @@ class Dataset(metaclass=ABCMeta):
     def _set_dataframe(self, value: Any):
         """
         Private method to set the dataframe.
-
         Parameters
         ----------
         value: Any
             dataframe to be set, it can be in pd.DataFrame format, but can also be a List or Dictionary
             (it can be specific for each data type)
-
         """
         pass
 
@@ -290,12 +327,10 @@ class Dataset(metaclass=ABCMeta):
     def drop_nan(self, fields: List[Union[str, int]] = None, **kwargs) -> 'Dataset':
         """
         Private method to drop the nan values from the dataframe.
-
         Parameters
         ----------
         fields: List[Union[str, int]]
             list of the fields to drop the nan values
-
         Returns
         -------
         Dataset: Dataset
@@ -315,7 +350,6 @@ class PandasDataset(Dataset, CSVMixin, ExcelMixin):
 
         """
         Constructor
-
         Parameters
         ----------
         dataframe: Any
@@ -335,16 +369,13 @@ class PandasDataset(Dataset, CSVMixin, ExcelMixin):
     def _set_dataframe(self, value: pd.DataFrame):
         """
         Setter of the property. It verified the type of the value inputted.
-
         Parameters
         ----------
         value: Any
             dataframe to be set, it can be in pd.DataFrame format, but can also be a List or Dictionary 
             (it can be specific for each data type)
-
         Returns
         -------
-
         """
         if isinstance(value, pd.DataFrame) or value is None:
             self._dataframe = value
@@ -353,20 +384,25 @@ class PandasDataset(Dataset, CSVMixin, ExcelMixin):
                             "The type of the dataframe should be a pandas DataFrame")
 
     @property
-    def features(self) -> pd.DataFrame:
+    def features(self) -> np.ndarray:
         """
         This property will only go to the dataframe and return a chunk with features.
-
         Returns
         -------
         features : array with the features
-
         """
         if self.features_fields is not None:
-            try:
-                return self.dataframe.loc[:, self.features_fields]
-            except (TypeError, KeyError):
-                return self.dataframe.iloc[:, self.features_fields]
+
+            features = np.array(self.features_dataframe.loc[:, self.features_fields])
+
+            if len(self.features_shape) <= 2:
+                return features
+
+            elif len(self.features_shape) == 3:
+                return self.features_dataframe.loc[:, self.features_fields].to_numpy() \
+                    .reshape((len(self.identifiers), self.features_shape[1], len(self.features_fields)))
+
+
 
         else:
             raise ValueError("The features were not extracted yet.")
@@ -375,10 +411,8 @@ class PandasDataset(Dataset, CSVMixin, ExcelMixin):
     def labels(self) -> np.ndarray:
         """
         This property will only go to the dataframe and return a chunk with labels.
-
         Returns
         -------
-
         """
         return np.array(self.dataframe.loc[:, self.labels_names])
 
@@ -386,57 +420,63 @@ class PandasDataset(Dataset, CSVMixin, ExcelMixin):
     def instances(self) -> np.ndarray:
         """
         This property will only go to the dataframe and return a chunk with instances.
-
         Returns
         -------
-
         """
         return np.array(self.dataframe.loc[:, self.representation_field])
 
-    @property
+    @functools.cached_property
     def identifiers(self) -> List[str]:
         """
         This property will only go to the dataframe and return a list with the identifiers.
-
         Returns
         -------
-
         """
-        return self.dataframe.loc[:, self.instances_ids_field]
+        return self.dataframe.index.tolist()
 
     def _set_instances_ids_field(self):
         """
         Private method to set the instances ids field if it is not defined. If not defined, it is necessary to
         increment one field to the features fields if they are integers or slices.
-
         """
         if self.instances_ids_field is None:
             self.instances_ids_field = "identifier"
             identifiers_series = Series(list(range(self.dataframe.shape[0])), name="identifier")
-            self.dataframe = pd.concat((identifiers_series, self.dataframe), axis=1)
-            self.dataframe["identifier"] = self.dataframe["identifier"].astype(str)
 
             if self.features_fields is not None:
                 if isinstance(self.features_fields, slice):
-                    start = self.features_fields.start + 1
-                    if self.features_fields.stop is not None:
-                        stop = self.features_fields.stop + 1
+                    if self.features_fields.start is not None:
+                        start = self.features_fields.start
                     else:
-                        stop = None
-                    self.features_fields = slice(start, stop, self.features_fields.step)
+                        start = 0
+
+                    if self.features_fields.stop is not None:
+                        stop = self.features_fields.stop
+                    else:
+                        stop = self._dataframe.columns.size
+
+                    if self.features_fields.step is not None:
+                        step = self.features_fields.step
+                    else:
+                        step = 1
+
+                    indexes_list = list(range(start, stop, step))
+                    self.features_fields = [self._dataframe.columns[i] for i in indexes_list]
 
                 elif isinstance(self.features_fields[0], int):
-                    self.features_fields = [x + 1 for x in self.features_fields]
+                    self.features_fields = [self._dataframe.columns[i] for i in self.features_fields]
+
+            self._dataframe = pd.concat((identifiers_series, self._dataframe), axis=1)
+            self._dataframe["identifier"] = self._dataframe["identifier"].astype(str)
+            self._dataframe.set_index("identifier", inplace=True)
 
     def drop_nan(self, fields: List[Union[str, int]] = None, **kwargs) -> 'PandasDataset':
         """
         Method to drop the nan values from the dataframe.
-
         Parameters
         ----------
         fields: List[Union[str, int]]
             list of the fields to drop the nan values
-
         Returns
         -------
         PandasDataset: PandasDataset
