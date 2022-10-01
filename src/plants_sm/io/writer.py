@@ -46,7 +46,6 @@ class Writer(metaclass=ABCMeta):
         file_types : List[str]
             file types that the writer can write
         """
-        pass
 
     @contextmanager
     @abstractmethod

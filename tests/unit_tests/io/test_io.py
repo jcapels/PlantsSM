@@ -1,9 +1,9 @@
-from plants_sm.io import read_csv, write_csv
+from plants_sm.io import read_csv, write_csv, CSVReader, CSVWriter
 
 import os
 from unittest import TestCase
 
-from plants_sm.io.excel import read_excel, write_excel
+from plants_sm.io.excel import read_excel, write_excel, ExcelReader, ExcelWriter
 from tests import TEST_DIR
 
 
@@ -55,5 +55,54 @@ class TestIO(TestCase):
 
         self.assertEqual(df1.shape, df2.shape)
         self.assertEqual(df1.iloc[0, 0], df1.iloc[0, 0])
+
+    def test_csv_reader(self):
+        reader = CSVReader(self.test_read_csv)
+        ddf = reader.read()
+        df = ddf.compute()
+        reader.close_buffer()
+
+        self.assertEqual(df.shape, (100, 1026))
+        self.assertEqual(df.iloc[0, 0], 0.0)
+        self.assertEqual(reader.file_types, ['txt', 'csv', 'tsv'])
+
+    def test_csv_writer(self):
+        df = read_csv(self.test_read_csv)
+
+        writer = CSVWriter(filepath_or_buffer=self.df_path_to_write_csv, index=False)
+        written = writer.write(df=df)
+        writer.close_buffer()
+
+        self.assertTrue(written)
+        self.assertTrue(os.path.exists(self.df_path_to_write_csv))
+
+        df = read_csv(self.df_path_to_write_csv)
+        self.assertEqual(df.shape[0], 100)
+        self.assertEqual(df.shape[1], 1026)
+
+    def test_excel_reader(self):
+        reader = ExcelReader(self.test_read_excel, sheet_name="DrugInfo")
+        df = reader.read()
+        reader.close_buffer()
+
+        self.assertEqual(df.shape, (271, 117))
+        self.assertEqual(df.iloc[0, 0], 'ABACAVIR SULFATE')
+        self.assertEqual(reader.file_types, ["xlsx"])
+
+    def test_excel_writer(self):
+        df1 = read_excel(self.test_read_excel, sheet_name="DrugInfo")
+
+        writer = ExcelWriter(filepath_or_buffer=self.df_path_to_write_xlsx, index=False)
+        written = writer.write(df1)
+        writer.close_buffer()
+
+        self.assertTrue(written)
+        self.assertTrue(os.path.exists(self.df_path_to_write_xlsx))
+
+        df = read_excel(self.df_path_to_write_xlsx)
+        self.assertEqual(df.shape[0], 271)
+        self.assertEqual(df.shape[1], 117)
+        self.assertEqual(df1.shape, df.shape)
+
 
 

@@ -43,7 +43,6 @@ class Reader(metaclass=ABCMeta):
         file_types : List[str]
             the file types that the reader can read.
         """
-        pass
 
     @abstractmethod
     def read(self) -> Any:
@@ -54,4 +53,3 @@ class Reader(metaclass=ABCMeta):
         -------
         Any object with the information contained in the file.
         """
-        pass
