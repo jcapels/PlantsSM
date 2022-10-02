@@ -12,17 +12,9 @@ from plants_sm.transformation.transformer import Transformer
 
 
 class FeaturesGenerator(Transformer):
-    _device: str = None
+    device: str = None
     output_shape_dimension: int = 2
     feature_names: List[str] = None
-
-    @property
-    def device(self):
-        return self._device
-
-    @device.setter
-    def device(self, value: str):
-        self._device = value
 
     @property
     def features_fields(self) -> List[str]:

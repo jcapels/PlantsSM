@@ -63,7 +63,7 @@ def read_config_file(config_path: Union[str, Path], preserve_order: bool = True)
             else:
                 return yaml.safe_load(fp)
         except YAMLError as e:
-            raise Exception(
+            raise YAMLError(
                 f"Could not parse configuration file at '{config_path}' as yaml. "
                 "Formatting mistake in config file? "
                 "See Error above for details."

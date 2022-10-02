@@ -1,0 +1,103 @@
+seqvec:
+  weights_file: "http://data.bioembeddings.com/public/embeddings/embedding_models/seqvec/weights.hdf5"
+  options_file: "http://data.bioembeddings.com/public/embeddings/embedding_models/seqvec/options.json"
+
+seqvec_from_publication_annotations_extractors:
+  secondary_structure_checkpoint_file: "http://data.bioembeddings.com/public/embeddings/feature_models/seqvec/secstruct_checkpoint.pt"
+  subcellular_location_checkpoint_file: "http://data.bioembeddings.com/public/embeddings/feature_models/seqvec/subcell_checkpoint.pt"
+
+- fasttext:
+model_file: "http://data.bioembeddings.com/public/embeddings/embedding_models/fasttext/fasttext.model"
+
+word2vec:
+  model_file: "http://data.bioembeddings.com/public/embeddings/embedding_models/word2vec/word2vec.model"
+
+glove:
+  model_file: "http://data.bioembeddings.com/public/embeddings/embedding_models/glove/glove.model"
+
+prottrans_bert_bfd:
+  model_directory: "http://data.bioembeddings.com/public/embeddings/embedding_models/bert/prottrans_bert_bfd.zip"
+
+bert_from_publication_annotations_extractors:
+  secondary_structure_checkpoint_file: "http://data.bioembeddings.com/public/embeddings/feature_models/bert/secstruct_checkpoint.pt"
+  subcellular_location_checkpoint_file: "http://data.bioembeddings.com/public/embeddings/feature_models/bert/subcell_checkpoint.pt"
+
+t5_xl_u50_from_publication_annotations_extractors:
+  secondary_structure_checkpoint_file: "http://data.bioembeddings.com/public/embeddings/feature_models/t5/secstruct_checkpoint.pt"
+  subcellular_location_checkpoint_file: "http://data.bioembeddings.com/public/embeddings/feature_models/t5/subcell_checkpoint.pt"
+
+t5_from_publication_annotations_extractors:
+  secondary_structure_checkpoint_file: "http://data.bioembeddings.com/public/embeddings/feature_models/t5/secstruct_checkpoint.pt"
+  subcellular_location_checkpoint_file: "http://data.bioembeddings.com/public/embeddings/feature_models/t5/subcell_checkpoint.pt"
+
+la_protbert:
+  subcellular_location_checkpoint_file: 'http://data.bioembeddings.com/public/embeddings/feature_models/light_attention/la_bert_subcellular_localization.pt'
+  membrane_checkpoint_file: 'http://data.bioembeddings.com/public/embeddings/feature_models/light_attention/la_bert_solubility.pt'
+
+la_prott5:
+  subcellular_location_checkpoint_file: 'http://data.bioembeddings.com/public/embeddings/feature_models/light_attention/la_prott5_subcellular_localization.pt'
+  membrane_checkpoint_file: 'http://data.bioembeddings.com/public/embeddings/feature_models/light_attention/la_prott5_subcellular_solubility.pt'
+
+prottrans_xlnet_uniref100:
+  model_directory: "http://data.bioembeddings.com/public/embeddings/embedding_models/xlnet/prottrans_xlnet_uniref100.zip"
+
+prottrans_albert_bfd:
+  model_directory: "http://data.bioembeddings.com/public/embeddings/embedding_models/albert/prottrans_albert_bfd.zip"
+
+prottrans_t5_bfd:
+  model_directory: "http://data.bioembeddings.com/public/embeddings/embedding_models/t5/prottrans_t5_bfd.zip"
+
+prottrans_t5_uniref50:
+  model_directory: "http://data.bioembeddings.com/public/embeddings/embedding_models/t5/prottrans_t5_uniref50.zip"
+
+prottrans_t5_xl_u50:
+  model_directory: "http://data.bioembeddings.com/public/embeddings/embedding_models/t5/prottrans_t5_xl_u50.zip"
+  half_precision_model_directory: "http://data.bioembeddings.com/public/embeddings/embedding_models/t5/half_prottrans_t5_xl_u50.zip"
+
+esm:
+  model_file: "http://data.bioembeddings.com/public/embeddings/embedding_models/esm/esm1_t34_670M_UR50S.pt"
+
+esm1b:
+  model_file: "http://data.bioembeddings.com/public/embeddings/embedding_models/esm1b/esm1b_t33_650M_UR50S.pt"
+
+esm1v:
+  model_1_file: "http://data.bioembeddings.com/public/embeddings/embedding_models/esm1v/esm1v_t33_650M_UR90S_1.pt"
+  model_2_file: "http://data.bioembeddings.com/public/embeddings/embedding_models/esm1v/esm1v_t33_650M_UR90S_2.pt"
+  model_3_file: "http://data.bioembeddings.com/public/embeddings/embedding_models/esm1v/esm1v_t33_650M_UR90S_3.pt"
+  model_4_file: "http://data.bioembeddings.com/public/embeddings/embedding_models/esm1v/esm1v_t33_650M_UR90S_4.pt"
+  model_5_file: "http://data.bioembeddings.com/public/embeddings/embedding_models/esm1v/esm1v_t33_650M_UR90S_5.pt"
+
+cpcprot:
+  model_file: "http://data.bioembeddings.com/public/embeddings/embedding_models/cpcprot/best.ckpt"
+
+plus_rnn:
+  model_file: "http://data.bioembeddings.com/public/embeddings/embedding_models/plus/PLUS-RNN_BASE.pt"
+
+bepler:
+  model_file: "http://data.bioembeddings.com/public/embeddings/embedding_models/bepler/ssa_L1_100d_lstm3x512_lm_i512_mb64_tau0.5_lambda0.1_p0.05_epoch100_updated.state_dict"
+
+deepblast:
+  model_file: "http://data.bioembeddings.com/public/embeddings/embedding_models/deepblast/deepblast-lstm4x.pt"
+
+pb_tucker:
+  model_file: "http://data.bioembeddings.com/public/embeddings/embedding_models/pb_tucker/checkpoint.pt"
+
+prott5cons:
+  model_file: "http://data.bioembeddings.com/public/embeddings/feature_models/prott5cons/checkpoint.pt"
+
+bindembed21dl:
+  model_1_file: "http://data.bioembeddings.com/public/embeddings/feature_models/bindembed21/checkpoint1.pt"
+  model_2_file: "http://data.bioembeddings.com/public/embeddings/feature_models/bindembed21/checkpoint2.pt"
+  model_3_file: "http://data.bioembeddings.com/public/embeddings/feature_models/bindembed21/checkpoint3.pt"
+  model_4_file: "http://data.bioembeddings.com/public/embeddings/feature_models/bindembed21/checkpoint4.pt"
+  model_5_file: "http://data.bioembeddings.com/public/embeddings/feature_models/bindembed21/checkpoint5.pt"
+
+bindembed21hbi:
+  annotations_directory: "http://data.bioembeddings.com/public/embeddings/feature_models/bindembed21/annotation_files.zip"
+
+tmbed:
+  model_0_file: "http://data.bioembeddings.com/public/embeddings/feature_models/tmbed/cv_0.pt"
+  model_1_file: "http://data.bioembeddings.com/public/embeddings/feature_models/tmbed/cv_1.pt"
+  model_2_file: "http://data.bioembeddings.com/public/embeddings/feature_models/tmbed/cv_2.pt"
+  model_3_file: "http://data.bioembeddings.com/public/embeddings/feature_models/tmbed/cv_3.pt"
+  model_4_file: "http://data.bioembeddings.com/public/embeddings/feature_models/tmbed/cv_4.pt"

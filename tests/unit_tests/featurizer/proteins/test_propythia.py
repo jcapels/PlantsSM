@@ -4,6 +4,13 @@ from ...featurizer.proteins.test_protein_featurizers import TestProteinFeaturize
 
 class TestPropythiaWrapper(TestProteinFeaturizers):
 
+    def test_propythia_wrapper(self):
+        wrapper = PropythiaWrapper(preset="all", n_jobs=2)
+        wrapper._fit(self.dataset)
+        features_names, features = wrapper._featurize(self.dataset.instances[0])
+        self.assertEqual(len(features_names), 9596)
+        self.assertEqual(features.shape[0], 9596)
+
     def test_all(self):
         wrapper = PropythiaWrapper(preset="all", n_jobs=2)
         wrapper.fit_transform(self.dataset)
@@ -74,5 +81,3 @@ class TestPropythiaWrapper(TestProteinFeaturizers):
         self.assertEqual(self.dataset.dataframe.shape[0], 2)
         self.assertEqual(self.dataset.features_dataframe.shape[1], 24)
         self.assertEqual(wrapper.features_fields, self.dataset.features_fields)
-
-

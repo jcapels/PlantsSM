@@ -71,10 +71,6 @@ class UniRepEmbeddings(FeaturesGenerator):
             A DataFrame containing the UniRep embedding of the sequence.
         """
         # https://github.com/sacdallago/bio_embeddings/issues/117
-        if not sequence:
-            features = np.zeros((0, self.embedding_dimension))
-            return self.features_names, features
-
         # Unirep only allows batching with sequences of the same length, so we don't do batching at all
         embedded_seqs = get_embeddings([sequence])
         # h and c refer to hidden and cell state

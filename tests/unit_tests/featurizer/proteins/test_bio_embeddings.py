@@ -1,12 +1,13 @@
-import numpy as np
-import pandas as pd
+import os
 
+from yaml import YAMLError
+
+from plants_sm.featurization.proteins.bio_embeddings._utils import get_model_file, get_device, read_config_file
 from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
 from ...featurizer.proteins.test_protein_featurizers import TestProteinFeaturizers
 
 from plants_sm.featurization.proteins.bio_embeddings.unirep import UniRepEmbeddings
-
-import xarray as xr
+from tests import TEST_DIR
 
 
 class TestEmbeddings(TestProteinFeaturizers):
@@ -24,8 +25,10 @@ class TestEmbeddings(TestProteinFeaturizers):
 
         self.assertEqual((2, 454, 1900), features.shape)
 
-    # TODO: it generates 3-dimensional vectors, so it is not compatible with the current implementation
-    # @unittest.skip("it generates 3-dimensional vectors, so it is not compatible with the current implementation")
+    def test_raise_errors_unirep(self):
+        with self.assertRaises(NotImplementedError):
+            UniRepEmbeddings(output_shape_dimension=2, device="2").fit_transform(self.dataset)
+
     def test_word2vec_embeddings_2d(self):
         dataset = Word2Vec().fit_transform(self.dataset)
         self.assertEqual(dataset.features_dataframe.shape, (2, 513))
@@ -40,30 +43,26 @@ class TestEmbeddings(TestProteinFeaturizers):
         self.assertEqual(dataset.dataframe.shape, (2, 2))
         self.assertEqual(features.shape, (2, 453, 512))
 
-    # def test_word2vec_embeddings_3d_xarray(self):
-        # sequences = dataset.identifiers  # Years
-        # aa = np.arange(0, features.shape[1])  # Samples
-        # features_names = np.array(dataset.features_fields)  # Patients
-        #
-        # maj_dim = 1
-        # for dim in features.shape[:-1]:
-        #     maj_dim = maj_dim * dim
-        # new_dims = (maj_dim, features.shape[-1])
-        # features = features.reshape(new_dims)
-        #
-        # # Create the MultiIndex from years, samples and patients.
-        # midx = pd.MultiIndex.from_product([sequences, aa])
-        #
-        # # Create sample data for each patient, and add the MultiIndex.
-        # patient_data = pd.DataFrame(data=features, index=midx, columns=features_names)
-        # data_0 = patient_data.loc[["0"], :, :]
-        # data_1 = patient_data.loc[["1"], :, :]
-        #
-        # data = pd.concat((data_0, data_1), axis=0)
-        #
-        # print(pd.pivot(data, index=["identifier"], columns=features_names, values=aa))
-        #
-        # numpy_convertion = patient_data.to_numpy().reshape((len(dataset.identifiers),
-        #                                                     len(aa), len(dataset.features_fields)))
-        # print(patient_data.to_numpy())
-        # # view 3D DataFrame
+    def test_get_model_function(self):
+        self.assertIn("plants_sm/word2vec/model_file", get_model_file("word2vec", "model_file"))
+
+    def test_get_device(self):
+        device = get_device("cpu")
+        self.assertEqual(device.type, "cpu")
+
+        device = get_device("cuda")
+        self.assertEqual(device.type, "cuda")
+
+        device = get_device()
+        self.assertEqual(device.type, "cuda")
+
+    def test_read_config_file(self):
+        config_file = os.path.join(TEST_DIR, "data", "defaults.yml")
+        config = read_config_file(config_file)
+
+        self.assertEqual(config["word2vec"]["model_file"],
+                         "http://data.bioembeddings.com/public/embeddings/embedding_models/word2vec/word2vec.model")
+
+        with self.assertRaises(YAMLError):
+            config_file = os.path.join(TEST_DIR, "data", "defaults_error.yml")
+            read_config_file(config_file)
