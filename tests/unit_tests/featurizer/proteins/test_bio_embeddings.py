@@ -3,6 +3,8 @@ import os
 from yaml import YAMLError
 
 from plants_sm.featurization.proteins.bio_embeddings._utils import get_model_file, get_device, read_config_file
+from plants_sm.featurization.proteins.bio_embeddings.plus_rnn_embedding import PlusRNNEmbedding
+from plants_sm.featurization.proteins.bio_embeddings.prot_bert import ProtBert
 from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
 from ...featurizer.proteins.test_protein_featurizers import TestProteinFeaturizers
 
@@ -14,8 +16,8 @@ class TestEmbeddings(TestProteinFeaturizers):
 
     def test_unirep_embeddings(self):
         dataset = UniRepEmbeddings().fit_transform(self.dataset)
-        self.assertEqual(dataset.features_dataframe.shape, (2, 1901))
-        self.assertAlmostEqual(0.016243484, dataset.features_dataframe.iloc[0, 1])
+        self.assertEqual(dataset.features_dataframe.shape, (2, 1900))
+        self.assertAlmostEqual(0.016247222, dataset.features_dataframe.iloc[0, 0])
 
     def test_unirep_embeddings_3d(self):
         dataset = UniRepEmbeddings(output_shape_dimension=3).fit_transform(self.dataset)
@@ -31,8 +33,8 @@ class TestEmbeddings(TestProteinFeaturizers):
 
     def test_word2vec_embeddings_2d(self):
         dataset = Word2Vec().fit_transform(self.dataset)
-        self.assertEqual(dataset.features_dataframe.shape, (2, 513))
-        self.assertAlmostEqual(-0.033814143, dataset.features_dataframe.iloc[0, 1])
+        self.assertEqual(dataset.features_dataframe.shape, (2, 512))
+        self.assertAlmostEqual(-0.033494536, dataset.features_dataframe.iloc[0, 0], delta=0.0001)
 
     def test_word2vec_embeddings_3d(self):
         dataset = Word2Vec(output_shape_dimension=3).fit_transform(self.dataset)
@@ -42,6 +44,26 @@ class TestEmbeddings(TestProteinFeaturizers):
 
         self.assertEqual(dataset.dataframe.shape, (2, 2))
         self.assertEqual(features.shape, (2, 453, 512))
+
+    def test_prot_bert_embeddings(self):
+        dataset = ProtBert().fit_transform(self.dataset)
+        self.assertEqual(dataset.features_dataframe.shape, (2, 1024))
+        self.assertAlmostEqual(0.11366609, dataset.features_dataframe.iloc[0, 0])
+
+    def test_prot_bert_embeddings_3d(self):
+        dataset = ProtBert(output_shape_dimension=3).fit_transform(self.dataset)
+        self.assertEqual(dataset.features_dataframe.shape, (906, 1024))
+        self.assertAlmostEqual(-0.006767738, dataset.features_dataframe.iloc[0, 0])
+
+    def test_plus_rnn_embeddings(self):
+        dataset = PlusRNNEmbedding(output_shape_dimension=2, device="cpu").fit_transform(self.dataset)
+        self.assertEqual(dataset.features_dataframe.shape, (2, 1024))
+        self.assertAlmostEqual(-0.006006486, dataset.features_dataframe.iloc[0, 0])
+
+    def test_plus_rnn_embeddings_3d(self):
+        dataset = PlusRNNEmbedding(output_shape_dimension=3, device="cpu").fit_transform(self.dataset)
+        self.assertEqual(dataset.features_dataframe.shape, (906, 1024))
+        self.assertAlmostEqual(-0.013215046, dataset.features_dataframe.iloc[0, 0])
 
     def test_get_model_function(self):
         self.assertIn("plants_sm/word2vec/model_file", get_model_file("word2vec", "model_file"))

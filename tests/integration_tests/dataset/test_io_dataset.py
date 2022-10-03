@@ -1,26 +1,9 @@
-import os
-from unittest import TestCase
 
+from integration_tests.dataset.test_dataset import TestDataset
 from plants_sm.data_structures.dataset import PandasDataset
-from tests import TEST_DIR
 
 
-class TestIODataset(TestCase):
-
-    def setUp(self) -> None:
-        self.excel_to_read = os.path.join(TEST_DIR, "data", "drug_list.xlsx")
-        self.csv_to_read = os.path.join(TEST_DIR, "data", "proteins.csv")
-
-        self.df_path_to_write_csv = os.path.join(TEST_DIR, "data", "test.csv")
-        self.df_path_to_write_xlsx = os.path.join(TEST_DIR, "data", "test.xlsx")
-
-    def tearDown(self) -> None:
-        paths_to_remove = [self.df_path_to_write_csv,
-                           self.df_path_to_write_xlsx]
-
-        for path in paths_to_remove:
-            if os.path.exists(path):
-                os.remove(path)
+class TestIODataset(TestDataset):
 
     def test_read_excel_to_dataset(self):
         dataset = PandasDataset(representation_field="SMILES",
@@ -31,7 +14,7 @@ class TestIODataset(TestCase):
         self.assertEqual(dataset.representation_field, "SMILES")
         self.assertEqual(dataset.labels_names, ["TargetedMZ"])
         with self.assertRaises(ValueError):
-            features = dataset.features
+            print(dataset.features)
 
     def test_write_excel_from_dataset(self):
         dataset = PandasDataset(representation_field="sequence",
@@ -47,7 +30,7 @@ class TestIODataset(TestCase):
         self.assertEqual(dataset.representation_field, "SMILES")
         self.assertEqual(dataset.labels_names, ["TargetedMZ"])
         with self.assertRaises(ValueError):
-            features = dataset.features
+            print(dataset.features)
 
     def test_read_csv_to_dataset(self):
         dataset = PandasDataset(representation_field="sequence",
@@ -64,14 +47,14 @@ class TestIODataset(TestCase):
                                 instances_ids_field="id")
         dataset.from_csv(self.csv_to_read)
 
-        dataset.to_csv(self.df_path_to_write_csv, index=False)
+        dataset.to_csv(self.df_path_to_write_csv, index=True)
 
-        dataset = PandasDataset(representation_field="sequence",
-                                instances_ids_field="id")
-        dataset.from_csv(self.df_path_to_write_csv)
+        dataset2 = PandasDataset(representation_field="sequence",
+                                 instances_ids_field="id")
+        dataset2.from_csv(self.df_path_to_write_csv)
 
-        self.assertEqual(dataset.instances[0], 'MGWVGKKKSTAGQLAGTANELTKEVLERAVHRESPVIRPDVVVGIPAVDRRPKQ')
-        self.assertEqual(dataset.representation_field, "sequence")
-        self.assertEqual(dataset.instances_ids_field, "id")
+        self.assertEqual(dataset2.instances[0], 'MGWVGKKKSTAGQLAGTANELTKEVLERAVHRESPVIRPDVVVGIPAVDRRPKQ')
+        self.assertEqual(dataset2.representation_field, "sequence")
+        self.assertEqual(dataset2.instances_ids_field, "id")
         with self.assertRaises(ValueError):
-            features = dataset.features
+            print(dataset.features)

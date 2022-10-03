@@ -9,7 +9,6 @@ from plants_sm.estimation.estimator import Estimator
 
 class Transformer(Estimator):
     n_jobs: int = 1
-    _features_fields: list = None
 
     @abstractmethod
     def _transform(self, dataset: Dataset) -> Dataset:

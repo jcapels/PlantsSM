@@ -56,7 +56,7 @@ class UniRepEmbeddings(FeaturesGenerator):
         if self.device:
             raise NotImplementedError("UniRep does not allow configuring the device")
 
-    def _featurize(self, sequence: str) -> Tuple[List[str], ndarray]:
+    def _featurize(self, sequence: str) -> ndarray:
         """
         Featurize a sequence using UniRep embedding.
 
@@ -83,5 +83,5 @@ class UniRepEmbeddings(FeaturesGenerator):
             embedding = reduce_per_protein(h[0])
         else:
             embedding = np.asarray(h[0])
-        return self.features_names, embedding
+        return embedding
 

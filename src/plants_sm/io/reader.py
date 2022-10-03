@@ -53,3 +53,10 @@ class Reader(metaclass=ABCMeta):
         -------
         Any object with the information contained in the file.
         """
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close_buffer()
+        return False

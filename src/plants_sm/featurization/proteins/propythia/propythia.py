@@ -21,9 +21,13 @@ class PropythiaWrapper(FeaturesGenerator):
         """
         if self.preset not in DESCRIPTORS_PRESETS:
             raise ValueError(f'Preset {self.preset} is not available.')
-        self.descriptors = [descriptor() for descriptor in DESCRIPTORS_PRESETS[self.preset]]
+        self.descriptors = []
+        for descriptor in DESCRIPTORS_PRESETS[self.preset]:
+            instantiated_descriptor = descriptor()
+            self.descriptors.append(instantiated_descriptor)
+            self.features_names.extend(instantiated_descriptor.get_features_out())
 
-    def _featurize(self, protein_sequence: str) -> Tuple[List[str], np.ndarray]:
+    def _featurize(self, protein_sequence: str) -> np.ndarray:
         """
         The method _featurize will generate the desired features for a given protein sequence
 
@@ -40,11 +44,9 @@ class PropythiaWrapper(FeaturesGenerator):
         features: np.ndarray
             the features
         """
-        features_names = []
         features_list = []
         for descriptor in self.descriptors:
             features = descriptor(protein_sequence)
-            features_names.extend(descriptor.get_features_out())
             features_list.extend(features)
 
-        return features_names, np.array(features_list)
+        return np.array(features_list)

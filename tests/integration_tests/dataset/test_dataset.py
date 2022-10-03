@@ -1,15 +1,20 @@
+import os
 from unittest import TestCase
 
 import pandas as pd
 
-from plants_sm.data_structures.dataset import PandasDataset
-from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
+from tests import TEST_DIR
 
 
-class TestDatasetPropythia(TestCase):
+class TestDataset(TestCase):
 
     def setUp(self) -> None:
-        self.dataframe = pd.DataFrame(columns=["sequence"])
+        self.excel_to_read = os.path.join(TEST_DIR, "data", "drug_list.xlsx")
+        self.csv_to_read = os.path.join(TEST_DIR, "data", "proteins.csv")
+
+        self.df_path_to_write_csv = os.path.join(TEST_DIR, "data", "test.csv")
+        self.df_path_to_write_xlsx = os.path.join(TEST_DIR, "data", "test.xlsx")
+        self.dataframe = pd.DataFrame(columns=["ids", "sequence"])
         self.sequences = [
             "MASLMLSLGSTSLLPREINKDKLKLGTSASNPFLKAKSFSRVTMTVAVKPSRFEGITMAPPDPILGVSEAFKADT"
             "NGMKLNLGVGAYRTEELQPYVLNVVKKAENLMLERGDNKEYLPIEGLAAFNKATAELLFGAGHPVIKEQRVATIQG"
@@ -26,13 +31,12 @@ class TestDatasetPropythia(TestCase):
             "DSLVSKDKSGKDWSFILKQIGMFSFTGLNKAQSDNMTDKWHVYMTKDGRISLAGLSLAKCEYLADAIIDWSFILK"
         ]
         self.dataframe["sequence"] = self.sequences
+        self.dataframe["ids"] = ["WP_003399745.1", "WP_003399671.1"]
 
-    def test_create_dataset_propythia(self):
-        dataset = PandasDataset(dataframe=self.dataframe, representation_field="sequence")
-        propythia = PropythiaWrapper(preset="all")
-        propythia.fit_transform(dataset)
+    def tearDown(self) -> None:
+        paths_to_remove = [self.df_path_to_write_csv,
+                           self.df_path_to_write_xlsx]
 
-        self.assertEqual(dataset.dataframe.shape[0], 2)
-        self.assertEqual(dataset.features_dataframe.shape[1], 9597)
-        self.assertEqual(dataset.features_fields[0], "length")
-        self.assertEqual(dataset.instances_ids_field, "identifier")
+        for path in paths_to_remove:
+            if os.path.exists(path):
+                os.remove(path)

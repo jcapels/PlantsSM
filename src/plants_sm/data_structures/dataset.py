@@ -253,6 +253,7 @@ class Dataset(metaclass=ABCMeta):
                 self._set_instances_ids_field()
             else:
                 self._dataframe.set_index(self.instances_ids_field, inplace=True)
+                self._dataframe.sort_index(inplace=True)
 
             if self.features_fields is not None:
 
@@ -393,16 +394,20 @@ class PandasDataset(Dataset, CSVMixin, ExcelMixin):
         """
         if self.features_fields is not None:
 
-            features = np.array(self.features_dataframe.loc[:, self.features_fields])
-
             if len(self.features_shape) <= 2:
+                features = self.features_dataframe.loc[:, self.features_fields].to_numpy()
+                assert features.shape[1] == self.features_shape[1], \
+                    "The number of features is not the same as the number of features fields"
                 return features
 
             elif len(self.features_shape) == 3:
-                return self.features_dataframe.loc[:, self.features_fields].to_numpy() \
+                features = self.features_dataframe.loc[:, self.features_fields].to_numpy() \
                     .reshape((len(self.identifiers), self.features_shape[1], len(self.features_fields)))
 
+                assert features.shape[1] == self.features_shape[1], \
+                    "The number of features is not the same as the number of features fields"
 
+                return features
 
         else:
             raise ValueError("The features were not extracted yet.")

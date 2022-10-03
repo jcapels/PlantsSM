@@ -52,7 +52,7 @@ class Word2Vec(FeaturesGenerator):
 
         return self
 
-    def _featurize(self, sequence: str) -> Tuple[List[str], np.ndarray]:
+    def _featurize(self, sequence: str) -> np.ndarray:
         """
         The method _featurize will generate the desired features for a given protein sequence
 
@@ -87,9 +87,9 @@ class Word2Vec(FeaturesGenerator):
                     continue
                 else:
                     raise ValueError("Output dimension must be 2 or 3")
-                return self.features_names, embedding
+                return embedding
 
-        return self.features_names, embedding
+        return embedding
 
     def _get_kmer_representation(self, k_mer: str) -> ndarray:
         """

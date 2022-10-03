@@ -11,6 +11,8 @@ from numpy import ndarray
 from torch._appdirs import user_cache_dir
 from yaml import YAMLError
 
+from plants_sm.io.yaml import read_yaml
+
 logger = logging.getLogger(__name__)
 
 _module_dir: Path = Path(os.path.dirname(os.path.abspath(__file__)))
@@ -56,6 +58,7 @@ def read_config_file(config_path: Union[str, Path], preserve_order: bool = True)
     -------
     result of parsing the YAML file: dict
     """
+    read_yaml(config_path, preserve_order=preserve_order)
     with open(config_path, "r") as fp:
         try:
             if preserve_order:

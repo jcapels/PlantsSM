@@ -4,6 +4,7 @@ import os
 from unittest import TestCase
 
 from plants_sm.io.excel import read_excel, write_excel, ExcelReader, ExcelWriter
+from plants_sm.io.yaml import YAMLReader, YAMLWriter, read_yaml, write_yaml
 from tests import TEST_DIR
 
 
@@ -14,11 +15,14 @@ class TestIO(TestCase):
         self.test_read_excel = os.path.join(TEST_DIR, "data", "drug_list.xlsx")
         self.df_path_to_write_csv = os.path.join(TEST_DIR, "data", "test.csv")
         self.df_path_to_write_xlsx = os.path.join(TEST_DIR, "data", "test.xlsx")
+        self.test_read_yaml = os.path.join(TEST_DIR, "data", "defaults.yml")
+        self.test_write_yaml = os.path.join(TEST_DIR, "data", "defaults_temp.yml")
 
     def tearDown(self) -> None:
 
         paths_to_remove = [self.df_path_to_write_csv,
-                           self.df_path_to_write_xlsx]
+                           self.df_path_to_write_xlsx,
+                           self.test_write_yaml]
 
         for path in paths_to_remove:
             if os.path.exists(path):
@@ -104,5 +108,39 @@ class TestIO(TestCase):
         self.assertEqual(df.shape[1], 117)
         self.assertEqual(df1.shape, df.shape)
 
+    def test_yaml_reader(self):
+        with YAMLReader(file_path_or_buffer=self.test_read_yaml) as reader:
+            # suppress warning due to dask delayed decorator: https://github.com/dask/dask/issues/7779
+            # noinspection PyUnresolvedReferences
+            config = reader.read().compute()
+        self.assertEqual(config["word2vec"]["model_file"],
+                         "http://data.bioembeddings.com/public/embeddings/embedding_models/word2vec/word2vec.model")
 
+        config = read_yaml(file_path_or_buffer=self.test_read_yaml)
+        self.assertEqual(config["word2vec"]["model_file"],
+                         "http://data.bioembeddings.com/public/embeddings/embedding_models/word2vec/word2vec.model")
 
+        config = read_yaml(file_path_or_buffer=self.test_read_yaml, preserve_order=True)
+        self.assertEqual(config["word2vec"]["model_file"],
+                         "http://data.bioembeddings.com/public/embeddings/embedding_models/word2vec/word2vec.model")
+
+    def test_yaml_writer(self):
+        with YAMLReader(file_path_or_buffer=self.test_read_yaml) as reader:
+            config = reader.read().compute()
+
+        with YAMLWriter(file_path_or_buffer=self.test_write_yaml) as writer:
+            flag = writer.write(data=config)
+        self.assertTrue(flag)
+
+        with YAMLReader(file_path_or_buffer=self.test_write_yaml) as reader:
+            config = reader.read().compute()
+
+        self.assertEqual(config["word2vec"]["model_file"],
+                         "http://data.bioembeddings.com/public/embeddings/embedding_models/word2vec/word2vec.model")
+
+        flag = write_yaml(file_path_or_buffer=self.test_write_yaml, data=config)
+        self.assertTrue(flag)
+        config = read_yaml(file_path_or_buffer=self.test_write_yaml)
+
+        self.assertEqual(config["word2vec"]["model_file"],
+                         "http://data.bioembeddings.com/public/embeddings/embedding_models/word2vec/word2vec.model")
