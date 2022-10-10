@@ -1,4 +1,5 @@
-from typing import Tuple, List
+from functools import cached_property
+from typing import List
 
 import numpy as np
 
@@ -8,7 +9,18 @@ from plants_sm.featurization.proteins.propythia.propythia_descriptors.presets im
 
 
 class PropythiaWrapper(FeaturesGenerator):
+
     preset: str
+
+    def set_features_names(self) -> List[str]:
+        """
+        The method features_names will return the names of the features
+        """
+        self.features_names = []
+        for descriptor in DESCRIPTORS_PRESETS[self.preset]:
+            instantiated_descriptor = descriptor()
+            self.features_names.extend(instantiated_descriptor.get_features_out())
+        return self.features_names
 
     def _fit(self, dataset: Dataset):
         """
@@ -25,7 +37,6 @@ class PropythiaWrapper(FeaturesGenerator):
         for descriptor in DESCRIPTORS_PRESETS[self.preset]:
             instantiated_descriptor = descriptor()
             self.descriptors.append(instantiated_descriptor)
-            self.features_names.extend(instantiated_descriptor.get_features_out())
 
     def _featurize(self, protein_sequence: str) -> np.ndarray:
         """

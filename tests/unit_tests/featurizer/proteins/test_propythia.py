@@ -8,7 +8,6 @@ class TestPropythiaWrapper(TestProteinFeaturizers):
         wrapper = PropythiaWrapper(preset="all", n_jobs=2)
         wrapper._fit(self.dataset)
         features = wrapper._featurize(self.dataset.instances[0])
-        self.assertEqual(len(wrapper.features_names), 9596)
         self.assertEqual(features.shape[0], 9596)
 
     def test_all(self):

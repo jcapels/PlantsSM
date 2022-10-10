@@ -8,6 +8,7 @@ from joblib import Parallel, delayed
 from numpy import ndarray
 
 from plants_sm.data_structures.dataset import Dataset
+from plants_sm.featurization._utils import call_set_features_names
 from plants_sm.transformation.transformer import Transformer
 
 
@@ -16,7 +17,14 @@ class FeaturesGenerator(Transformer):
     output_shape_dimension: int = 2
     features_names: List[str] = []
 
-    def _fit(self, dataset: Dataset) -> 'Estimator':
+    @abstractmethod
+    def set_features_names(self):
+        """
+        Abstract method that has to be implemented by all feature generators to set the features names
+        """
+        raise NotImplementedError
+
+    def _fit(self, dataset: Dataset) -> 'FeaturesGenerator':
         """
         Abstract method that has to be implemented by all feature generators
 
@@ -27,6 +35,7 @@ class FeaturesGenerator(Transformer):
         """
         raise NotImplementedError
 
+    @call_set_features_names
     def _transform(self, dataset: Dataset) -> Dataset:
         """
         General method that calls _featurize that has to be implemented by all feature generators

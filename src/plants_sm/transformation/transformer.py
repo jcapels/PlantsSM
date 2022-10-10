@@ -1,7 +1,4 @@
 from abc import abstractmethod
-from typing import Any
-
-import numpy as np
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.estimation.estimator import Estimator

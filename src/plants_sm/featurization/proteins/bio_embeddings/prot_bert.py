@@ -1,3 +1,6 @@
+from functools import cached_property
+from typing import List
+
 import numpy as np
 from transformers import AutoTokenizer, AutoModel
 
@@ -11,7 +14,19 @@ class ProtBert(FeaturesGenerator):
     embedding_dimension = 1024
     output_shape_dimension: int = 2
 
-    def _fit(self, dataset: Dataset) -> 'Estimator':
+    @cached_property
+    def features_names(self) -> List[str]:
+        """
+        The method features_names will return the names of the features
+
+        Returns
+        -------
+        features_names: List[str]
+            the names of the features
+        """
+        return [f"{self.name}_{num}" for num in range(1, self.embedding_dimension + 1)]
+
+    def _fit(self, dataset: Dataset) -> 'ProtBert':
         """
         Fit the ProtBert model to the dataset.
 
@@ -31,8 +46,6 @@ class ProtBert(FeaturesGenerator):
         device_to_use = get_device(self.device)
         self.model = model.to(device_to_use)
         self.model = model.eval()
-
-        self.features_names = [f"{self.name}_{num}" for num in range(1, self.embedding_dimension + 1)]
 
         return self
 

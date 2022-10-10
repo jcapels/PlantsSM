@@ -8,7 +8,7 @@ from pandas import DataFrame
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.featurization.featurizer import FeaturesGenerator
 from jax import vmap
-from functools import partial
+from functools import partial, cached_property
 from jax_unirep.utils import get_embeddings
 
 from jax_unirep.utils import load_params
@@ -42,12 +42,16 @@ class UniRepEmbeddings(FeaturesGenerator):
     _params: Dict[str, Any]
     _apply_fun: Callable
 
+    def set_features_names(self):
+        """
+        The method features_names will return the names of the features
+        """
+        self.features_names = [f"{self.name}_{num}" for num in range(1, self.embedding_dimension + 1)]
+
     def _fit(self, dataset: Dataset):
         """
         Load the parameters of the mLSTM model.
         """
-
-        self.features_names = [f"{self.name}_{num}" for num in range(1, self.embedding_dimension + 1)]
 
         self._params = load_params()[1]
         _, self._apply_fun = mLSTM(output_dim=self.embedding_dimension)
@@ -84,4 +88,3 @@ class UniRepEmbeddings(FeaturesGenerator):
         else:
             embedding = np.asarray(h[0])
         return embedding
-

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 _module_dir: Path = Path(os.path.dirname(os.path.abspath(__file__)))
 
 
-def get_device(device: Union[None, str, torch.device] = None) -> torch.device:
+def get_device(device: Union[None, str, torch.device] = None, cuda_as_default=False) -> torch.device:
     """
     Returns what the user specified, or defaults to the GPU,
     with a fallback to CPU if no GPU is available.
@@ -27,7 +27,8 @@ def get_device(device: Union[None, str, torch.device] = None) -> torch.device:
     ----------
     device: Union[None, str, torch.device]
         The device to use. If None, defaults to GPU, with fallback to CPU.
-
+    cuda_as_default: bool
+        Whether to use CUDA as default device.
     Returns
     -------
     torch.device
@@ -37,7 +38,7 @@ def get_device(device: Union[None, str, torch.device] = None) -> torch.device:
         return device
     elif device:
         return torch.device(device)
-    elif torch.cuda.is_available():
+    elif torch.cuda.is_available() and cuda_as_default:
         return torch.device("cuda")
     else:
         return torch.device("cpu")

@@ -1,11 +1,10 @@
 import re
-from typing import Dict, Any, Tuple, List
+from functools import cached_property
+from typing import Dict, Any, List
 
 import numpy as np
-import pandas as pd
 from gensim.models import KeyedVectors
 from numpy import ndarray
-from pandas import DataFrame
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.featurization.featurizer import FeaturesGenerator
@@ -22,7 +21,13 @@ class Word2Vec(FeaturesGenerator):
 
     output_shape_dimension: int = 2
 
-    def _fit(self, dataset: Dataset) -> 'FeaturesGenerator':
+    def set_features_names(self):
+        """
+        The method features_names will return the names of the features
+        """
+        self.features_names = [f"{self.name}_{num}" for num in range(1, self.embedding_dimension + 1)]
+
+    def _fit(self, dataset: Dataset) -> 'Word2Vec':
         """
         Fit the feature generator to the dataset
 
@@ -48,7 +53,6 @@ class Word2Vec(FeaturesGenerator):
         self._vector_size = 512
         self._zero_vector = np.zeros(self._vector_size, dtype=np.float32)
         self._window_size = 3
-        self.features_names = [f"{self.name}_{num}" for num in range(1, self.embedding_dimension + 1)]
 
         return self
 

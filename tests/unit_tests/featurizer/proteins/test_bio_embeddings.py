@@ -1,8 +1,10 @@
 import os
+from unittest import skip
 
 from yaml import YAMLError
 
 from plants_sm.featurization.proteins.bio_embeddings._utils import get_model_file, get_device, read_config_file
+from plants_sm.featurization.proteins.bio_embeddings.esm import ESM1bEncoder
 from plants_sm.featurization.proteins.bio_embeddings.plus_rnn_embedding import PlusRNNEmbedding
 from plants_sm.featurization.proteins.bio_embeddings.prot_bert import ProtBert
 from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
@@ -64,6 +66,10 @@ class TestEmbeddings(TestProteinFeaturizers):
         dataset = PlusRNNEmbedding(output_shape_dimension=3, device="cpu").fit_transform(self.dataset)
         self.assertEqual(dataset.features_dataframe.shape, (906, 1024))
         self.assertAlmostEqual(-0.013215046, dataset.features_dataframe.iloc[0, 0])
+
+    @skip("No memory on CI")
+    def test_esm_1b(self):
+        dataset = ESM1bEncoder(device="cpu").fit_transform(self.dataset)
 
     def test_get_model_function(self):
         self.assertIn("plants_sm/word2vec/model_file", get_model_file("word2vec", "model_file"))
