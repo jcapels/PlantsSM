@@ -1,6 +1,5 @@
 import re
-from functools import cached_property
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 import numpy as np
 from gensim.models import KeyedVectors

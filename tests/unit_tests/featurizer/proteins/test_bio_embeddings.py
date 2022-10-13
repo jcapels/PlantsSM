@@ -50,12 +50,12 @@ class TestEmbeddings(TestProteinFeaturizers):
     def test_prot_bert_embeddings(self):
         dataset = ProtBert().fit_transform(self.dataset)
         self.assertEqual(dataset.features_dataframe.shape, (2, 1024))
-        self.assertAlmostEqual(0.11366609, dataset.features_dataframe.iloc[0, 0])
+        self.assertAlmostEqual(0.11366609, dataset.features_dataframe.iloc[0, 0], delta=0.0001)
 
     def test_prot_bert_embeddings_3d(self):
         dataset = ProtBert(output_shape_dimension=3).fit_transform(self.dataset)
         self.assertEqual(dataset.features_dataframe.shape, (906, 1024))
-        self.assertAlmostEqual(-0.006767738, dataset.features_dataframe.iloc[0, 0])
+        self.assertAlmostEqual(-0.006767738, dataset.features_dataframe.iloc[0, 0], delta=0.001)
 
     def test_plus_rnn_embeddings(self):
         dataset = PlusRNNEmbedding(output_shape_dimension=2, device="cpu").fit_transform(self.dataset)
@@ -78,11 +78,8 @@ class TestEmbeddings(TestProteinFeaturizers):
         device = get_device("cpu")
         self.assertEqual(device.type, "cpu")
 
-        device = get_device("cuda")
-        self.assertEqual(device.type, "cuda")
-
         device = get_device()
-        self.assertEqual(device.type, "cuda")
+        self.assertEqual(device.type, "cpu")
 
     def test_read_config_file(self):
         config_file = os.path.join(TEST_DIR, "data", "defaults.yml")

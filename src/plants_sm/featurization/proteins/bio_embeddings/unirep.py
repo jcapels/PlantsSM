@@ -3,12 +3,11 @@ from typing import Dict, Any, Callable, Union, Tuple, List
 import numpy as np
 import pandas as pd
 from numpy import ndarray
-from pandas import DataFrame
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.featurization.featurizer import FeaturesGenerator
 from jax import vmap
-from functools import partial, cached_property
+from functools import partial
 from jax_unirep.utils import get_embeddings
 
 from jax_unirep.utils import load_params

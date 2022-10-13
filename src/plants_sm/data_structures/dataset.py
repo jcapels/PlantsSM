@@ -4,9 +4,9 @@ from typing import Any, List, Union, Dict
 
 import numpy as np
 import pandas as pd
+from cached_property import cached_property
 from pandas import Series
 
-from plants_sm.data_structures._utils import NUMERICAL_TYPES
 from plants_sm.mixins.mixins import CSVMixin, ExcelMixin
 
 
@@ -430,7 +430,7 @@ class PandasDataset(Dataset, CSVMixin, ExcelMixin):
         """
         return np.array(self.dataframe.loc[:, self.representation_field])
 
-    @functools.cached_property
+    @cached_property
     def identifiers(self) -> List[str]:
         """
         This property will only go to the dataframe and return a list with the identifiers.

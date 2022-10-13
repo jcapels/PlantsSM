@@ -1,6 +1,3 @@
-from functools import cached_property
-from typing import List
-
 import numpy as np
 from transformers import AutoTokenizer, AutoModel
 
