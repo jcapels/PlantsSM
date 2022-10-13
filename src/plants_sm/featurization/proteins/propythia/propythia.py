@@ -13,7 +13,7 @@ class PropythiaWrapper(FeaturesGenerator):
 
     def set_features_names(self) -> List[str]:
         """
-        The method features_names will return the names of the features
+        The method features_names will return the names of the features.
         """
         self.features_names = []
         for descriptor in DESCRIPTORS_PRESETS[self.preset]:
