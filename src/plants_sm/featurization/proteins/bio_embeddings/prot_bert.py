@@ -10,21 +10,16 @@ from plants_sm.featurization.proteins.bio_embeddings._utils import get_device, r
 
 
 class ProtBert(FeaturesGenerator):
+
     name = "prot_bert"
     embedding_dimension = 1024
     output_shape_dimension: int = 2
 
-    @cached_property
-    def features_names(self) -> List[str]:
+    def set_features_names(self):
         """
-        The method features_names will return the names of the features
-
-        Returns
-        -------
-        features_names: List[str]
-            the names of the features
+        The method features_names will set the names of the features
         """
-        return [f"{self.name}_{num}" for num in range(1, self.embedding_dimension + 1)]
+        self.features_names = [f"{self.name}_{num}" for num in range(1, self.embedding_dimension + 1)]
 
     def _fit(self, dataset: Dataset) -> 'ProtBert':
         """

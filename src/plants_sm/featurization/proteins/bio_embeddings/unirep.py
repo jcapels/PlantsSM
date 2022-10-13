@@ -44,7 +44,7 @@ class UniRepEmbeddings(FeaturesGenerator):
 
     def set_features_names(self):
         """
-        The method features_names will return the names of the features
+        The method features_names will set the names of the features
         """
         self.features_names = [f"{self.name}_{num}" for num in range(1, self.embedding_dimension + 1)]
 
