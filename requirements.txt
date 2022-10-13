@@ -1,5 +1,5 @@
 biopython==1.79
-dask==2022.9.1
+dask==2022.2.0
 jax==0.3.20
 jax-unirep==2.2.0
 jaxlib==0.3.20
