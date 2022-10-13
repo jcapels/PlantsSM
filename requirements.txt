@@ -7,7 +7,7 @@ joblib==1.2.0
 lxml==4.9.1
 matplotlib==3.5.3
 modlamp==4.3.0
-numpy==1.23.3
+numpy==1.21.6
 openpyxl==3.0.10
 pandas==1.4.4
 Pillow==9.2.0
