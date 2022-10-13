@@ -5,7 +5,7 @@ jax-unirep==2.2.0
 jaxlib==0.3.20
 joblib==1.2.0
 lxml==4.9.1
-MarkupSafe==2.1.1
+MarkupSafe==2.0.1
 matplotlib==3.6.0
 modlamp==4.3.0
 numpy==1.23.3
