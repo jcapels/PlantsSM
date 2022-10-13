@@ -25,17 +25,14 @@ class TestDataset(TestCase):
         self.assertTrue(all(representation in dataset.instances for representation in ['representation2',
                                                                                        'representation1',
                                                                                        'representation']))
-        self.assertTrue(all(feature in dataset.features.values for feature in [2, 5, 8]))
+        self.assertTrue(all(feature in dataset.features for feature in [2, 5, 8]))
         self.assertTrue(all(label in dataset.labels for label in [3, 6, 9]))
 
         dataset = PandasDataset(dataframe, representation_field='a', labels_field='c', features_fields=[1])
-        self.assertTrue(dataset.features_fields == [2])
+        self.assertTrue(dataset.features_fields == ["b"])
         self.assertEqual(dataset.features.shape[1], 1)
 
     def test_drop_nan(self):
-        """
-
-        """
         dataframe = pd.DataFrame(columns=['a', 'b', 'c'])
 
         dataframe.loc[0] = ["representation2", 2, np.nan]
@@ -79,7 +76,8 @@ class TestDataset(TestCase):
         dataset.drop_nan(axis=1)
 
         self.assertEqual(3, len(dataset.instances))
-        self.assertEqual(0, dataset.features.shape[1])
+        features = dataset.features
+        self.assertEqual(0, features.size)
 
     def test_slice_as_features_field(self):
         dataframe = pd.DataFrame(columns=['a', 'b', 'c'])
@@ -90,3 +88,4 @@ class TestDataset(TestCase):
 
         dataset = PandasDataset(dataframe, representation_field='a', features_fields=slice(1, None))
         self.assertTrue(dataset.features.shape[1] == 2)
+

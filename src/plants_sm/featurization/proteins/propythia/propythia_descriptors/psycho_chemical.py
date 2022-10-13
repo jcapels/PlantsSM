@@ -122,7 +122,7 @@ class FormulaDescriptor(Descriptor):
         return list(formula.values())
 
     def get_features_out(self, **kwargs):
-        return ['C', 'H', 'N', 'O', 'S']
+        return ['Carbon', 'Hydrogen', 'Nitrogen', 'Oxygen', 'Sulfur']
 
 
 class BondDescriptor(Descriptor):

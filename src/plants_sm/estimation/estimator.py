@@ -1,13 +1,13 @@
-from abc import abstractmethod, ABCMeta
+from abc import abstractmethod
 
-from pydantic.generics import GenericModel
+from pydantic import BaseModel
 from pydantic.validators import dict_validator
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.estimation._utils import fit_status
 
 
-class Estimator(GenericModel):
+class Estimator(BaseModel):
 
     _fitted: bool = False
 
@@ -45,7 +45,7 @@ class Estimator(GenericModel):
             raise TypeError("fitted has to be a boolean")
 
     @abstractmethod
-    def _fit(self, dataset: Dataset):
+    def _fit(self, dataset: Dataset) -> 'Estimator':
         raise NotImplementedError
 
     @fit_status

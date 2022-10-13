@@ -12,21 +12,21 @@ class Writer(metaclass=ABCMeta):
     All writers must define the file_types attribute.
     """
 
-    def __init__(self, filepath_or_buffer: FilePathOrBuffer, **kwargs):
+    def __init__(self, file_path_or_buffer: FilePathOrBuffer, **kwargs):
         """
         Initializer of this class that defines instance variables such as the buffer for the file and path.
 
         Parameters
         ----------
-        filepath_or_buffer : str | Path | IO[AnyStr] | TextIO
+        file_path_or_buffer : str | Path | IO[AnyStr] | TextIO
             file path
 
         Returns
         -------
         """
 
-        self.path = get_path(filepath_or_buffer)
-        self.buffer = get_buffer(filepath_or_buffer, mode="w")
+        self.path = get_path(file_path_or_buffer)
+        self.buffer = get_buffer(file_path_or_buffer, mode="w")
         self.kwargs = kwargs
 
     def close_buffer(self):
@@ -46,7 +46,6 @@ class Writer(metaclass=ABCMeta):
         file_types : List[str]
             file types that the writer can write
         """
-        pass
 
     @contextmanager
     @abstractmethod
@@ -63,4 +62,10 @@ class Writer(metaclass=ABCMeta):
         -------
         bool : True if the data was written successfully, False otherwise.
         """
-        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close_buffer()
+        return False
