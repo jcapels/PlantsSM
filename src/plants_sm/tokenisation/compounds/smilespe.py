@@ -1,7 +1,7 @@
 import os
 from typing import List
 
-from plants_sm._files_constants import RESOURCES_PATH
+from plants_sm import RESOURCES_PATH
 from plants_sm.tokenisation.tokeniser import Tokenizer
 from SmilesPE.pretokenizer import atomwise_tokenizer
 from SmilesPE.pretokenizer import kmer_tokenizer
