@@ -5,6 +5,7 @@ from joblib import Parallel, delayed
 
 from plants_sm.data_standardization.padding_enumerators import PaddingEnumerators
 from plants_sm.data_structures.dataset import Dataset
+from plants_sm.transformation._utils import transform_instances
 from plants_sm.transformation.transformer import Transformer
 
 
@@ -57,17 +58,7 @@ class SequencePadder(Transformer):
         dataset with features: Dataset
             dataset object with features
         """
-        parallel_callback = Parallel(n_jobs=self.n_jobs)
-        len_instances = len(dataset.instances)
-        res = parallel_callback(
-            delayed(self._pad_sequence)(dataset.instances[i], dataset.identifiers[i])
-            for i in range(len_instances))
-
-        sequences_dict = dict(ChainMap(*res))
-        dataset.dataframe.loc[:, dataset.representation_field] = dataset.dataframe.index.map(
-            sequences_dict)
-
-        return dataset
+        return transform_instances(self.n_jobs, dataset, self._pad_sequence)
 
     def _pad_sequence(self, instance: str, identifier: str) -> Dict[str, str]:
         """

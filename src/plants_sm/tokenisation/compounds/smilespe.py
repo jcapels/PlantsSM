@@ -1,7 +1,6 @@
 import os
 from typing import List
 
-from plants_sm._files_constants import RESOURCES_PATH
 from plants_sm.tokenisation.tokeniser import Tokenizer
 from SmilesPE.pretokenizer import atomwise_tokenizer
 from SmilesPE.pretokenizer import kmer_tokenizer
@@ -75,7 +74,8 @@ class SPETokenizer(Tokenizer):
         Tokenize a SMILES sequence with SPE_Tokenizer.
         """
 
-        spe_vob = codecs.open(os.path.join(RESOURCES_PATH, 'encodings', 'compounds', 'SPE_ChEMBL.txt'))
+        spe_vob = codecs.open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                           'SPE_ChEMBL.txt'))
         spe = SPE_Tokenizer(spe_vob)
         tokens = spe.tokenize(sequence)
         tokens = tokens.split(" ")
