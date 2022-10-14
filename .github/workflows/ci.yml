@@ -30,7 +30,7 @@ jobs:
           fetch-depth: 0
 
       - name: Copy resources files
-        run: cp -r ./resources resources
+        run: cp -r resources/encodings/compounds/SPE_ChEMBL.txt resources/encodings/compounds/SPE_ChEMBL.txt
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
