@@ -33,6 +33,13 @@ class TestDataset(TestCase):
         self.dataframe["sequence"] = self.sequences
         self.dataframe["ids"] = ["WP_003399745.1", "WP_003399671.1"]
 
+        self.compounds_dataframe = pd.DataFrame(columns=["ids", "sequence"])
+        self.sequences = [
+            "CCCCCCCO", "C1=CC=C(C=C1)C=O"
+        ]
+        self.compounds_dataframe["sequence"] = self.sequences
+        self.compounds_dataframe["ids"] = ["WP_003399745.1", "WP_003399671.1"]
+
     def tearDown(self) -> None:
         paths_to_remove = [self.df_path_to_write_csv,
                            self.df_path_to_write_xlsx]
