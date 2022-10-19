@@ -3,7 +3,7 @@ from unittest import TestCase
 import pandas as pd
 
 from plants_sm.data_standardization.proteins.standardization import ProteinStandardizer
-from plants_sm.data_structures.dataset import PandasDataset
+from plants_sm.data_structures.dataset import SingleInputDataset
 
 
 class TestDatasetStandardizer(TestCase):
@@ -27,7 +27,7 @@ class TestDatasetStandardizer(TestCase):
         ]
         self.dataframe["sequence"] = self.sequences
         self.dataframe["ids"] = ["WP_003399745.1", "WP_003399671.1"]
-        self.dataset = PandasDataset(dataframe=self.dataframe, representation_field="sequence")
+        self.dataset = SingleInputDataset(dataframe=self.dataframe, representation_field="sequence")
 
     def test_dataset_standardizer(self):
 

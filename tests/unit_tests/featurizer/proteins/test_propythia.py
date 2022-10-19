@@ -14,68 +14,68 @@ class TestPropythiaWrapper(TestProteinFeaturizers):
         wrapper = PropythiaWrapper(preset="all", n_jobs=2)
         wrapper.fit_transform(self.dataset)
         self.assertEqual(self.dataset.dataframe.shape[0], 2)
-        self.assertEqual(self.dataset.features_dataframe.shape[1], 9596)
+        self.assertEqual(self.dataset.X().shape[1], 9596)
         self.assertEqual(wrapper.features_names, self.dataset.features_fields)
 
     def test_physicochemical(self):
         wrapper = PropythiaWrapper(preset="physicochemical", n_jobs=2)
         wrapper.fit_transform(self.dataset)
         self.assertEqual(self.dataset.dataframe.shape[0], 2)
-        self.assertEqual(self.dataset.features_dataframe.shape[1], 26)
+        self.assertEqual(self.dataset.X().shape[1], 26)
         self.assertEqual(wrapper.features_names, self.dataset.features_fields)
 
     def test_performance(self):
         wrapper = PropythiaWrapper(preset="performance", n_jobs=2)
         wrapper.fit_transform(self.dataset)
         self.assertEqual(self.dataset.dataframe.shape[0], 2)
-        self.assertEqual(self.dataset.features_dataframe.shape[1], 8677)
+        self.assertEqual(self.dataset.X().shape[1], 8677)
         self.assertEqual(wrapper.features_names, self.dataset.features_fields)
 
     def test_aac(self):
         wrapper = PropythiaWrapper(preset="aac", n_jobs=2)
         wrapper.fit_transform(self.dataset)
         self.assertEqual(self.dataset.dataframe.shape[0], 2)
-        self.assertEqual(self.dataset.features_dataframe.shape[1], 8420)
+        self.assertEqual(self.dataset.X().shape[1], 8420)
         self.assertEqual(wrapper.features_names, self.dataset.features_fields)
 
     def test_paac(self):
         wrapper = PropythiaWrapper(preset="paac", n_jobs=2)
         wrapper.fit_transform(self.dataset)
         self.assertEqual(self.dataset.dataframe.shape[0], 2)
-        self.assertEqual(self.dataset.features_dataframe.shape[1], 70)
+        self.assertEqual(self.dataset.X().shape[1], 70)
         self.assertEqual(wrapper.features_names, self.dataset.features_fields)
 
     def test_auto_correlation(self):
         wrapper = PropythiaWrapper(preset="auto-correlation", n_jobs=2)
         wrapper.fit_transform(self.dataset)
         self.assertEqual(self.dataset.dataframe.shape[0], 2)
-        self.assertEqual(self.dataset.features_dataframe.shape[1], 720)
+        self.assertEqual(self.dataset.X().shape[1], 720)
         self.assertEqual(wrapper.features_names, self.dataset.features_fields)
 
     def test_composition_transition_distribution(self):
         wrapper = PropythiaWrapper(preset="composition-transition-distribution", n_jobs=2)
         wrapper.fit_transform(self.dataset)
         self.assertEqual(self.dataset.dataframe.shape[0], 2)
-        self.assertEqual(self.dataset.features_dataframe.shape[1], 147)
+        self.assertEqual(self.dataset.X().shape[1], 147)
         self.assertEqual(wrapper.features_names, self.dataset.features_fields)
 
     def test_seq_order(self):
         wrapper = PropythiaWrapper(preset="seq-order", n_jobs=2)
         wrapper.fit_transform(self.dataset)
         self.assertEqual(self.dataset.dataframe.shape[0], 2)
-        self.assertEqual(self.dataset.features_dataframe.shape[1], 190)
+        self.assertEqual(self.dataset.X().shape[1], 190)
         self.assertEqual(wrapper.features_names, self.dataset.features_fields)
 
     def test_modlamp_correlation(self):
         wrapper = PropythiaWrapper(preset="modlamp-correlation", n_jobs=2)
         wrapper.fit_transform(self.dataset)
         self.assertEqual(self.dataset.dataframe.shape[0], 2)
-        self.assertEqual(self.dataset.features_dataframe.shape[1], 14)
+        self.assertEqual(self.dataset.X().shape[1], 14)
         self.assertEqual(wrapper.features_names, self.dataset.features_fields)
 
     def test_modlamp_all(self):
         wrapper = PropythiaWrapper(preset="modlamp-all", n_jobs=2)
         wrapper.fit_transform(self.dataset)
         self.assertEqual(self.dataset.dataframe.shape[0], 2)
-        self.assertEqual(self.dataset.features_dataframe.shape[1], 23)
+        self.assertEqual(self.dataset.X().shape[1], 23)
         self.assertEqual(wrapper.features_names, self.dataset.features_fields)

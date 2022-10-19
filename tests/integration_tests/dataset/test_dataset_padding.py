@@ -1,12 +1,12 @@
 from integration_tests.dataset.test_dataset import TestDataset
 from plants_sm.data_standardization.proteins.padding import SequencePadder
-from plants_sm.data_structures.dataset import PandasDataset
+from plants_sm.data_structures.dataset import SingleInputDataset
 
 
 class TestDatasetSequencePadding(TestDataset):
 
     def test_dataset_padding(self):
-        dataset = PandasDataset(dataframe=self.dataframe, representation_field="sequence")
+        dataset = SingleInputDataset(dataframe=self.dataframe, representation_field="sequence")
 
         padder = SequencePadder().fit(dataset)
 

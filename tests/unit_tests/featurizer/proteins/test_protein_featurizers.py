@@ -1,10 +1,15 @@
 from unittest import TestCase
 from unittest.mock import MagicMock
 
+import numpy as np
+import torch
 from pandas import DataFrame
 
 
 class TestProteinFeaturizers(TestCase):
+
+    def X(self):
+        return np.array(list(self.dataset.features.values()))
 
     def setUp(self) -> None:
         self.dataset = MagicMock()
@@ -31,3 +36,6 @@ class TestProteinFeaturizers(TestCase):
         ]
         self.dataset.dataframe["sequence"] = self.dataset.instances
         self.dataset.dataframe["identifiers"] = self.dataset.identifiers
+        torch.seed()
+        self.dataset.X = self.X
+

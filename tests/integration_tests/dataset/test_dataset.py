@@ -11,6 +11,7 @@ class TestDataset(TestCase):
     def setUp(self) -> None:
         self.excel_to_read = os.path.join(TEST_DIR, "data", "drug_list.xlsx")
         self.csv_to_read = os.path.join(TEST_DIR, "data", "proteins.csv")
+        self.multi_input_dataset_csv = os.path.join(TEST_DIR, "data", "multi_input_dataset.csv")
 
         self.df_path_to_write_csv = os.path.join(TEST_DIR, "data", "test.csv")
         self.df_path_to_write_xlsx = os.path.join(TEST_DIR, "data", "test.xlsx")

@@ -94,7 +94,8 @@ class CSVMixin:
         else:
             raise NotImplementedError("This method is not implemented for this type of object")
 
-    def from_csv(self, file_path: FilePathOrBuffer, **kwargs) -> Any:
+    @staticmethod
+    def _from_csv(file_path: FilePathOrBuffer, **kwargs) -> Any:
         """
         Method to import the dataframe from csv.
 
@@ -109,9 +110,24 @@ class CSVMixin:
             raise FileNotFoundError(f"File {file_path} does not exist.")
 
         df = read_csv(file_path, **kwargs)
-        self.dataframe = df
 
-        return self
+        return df
+
+    @classmethod
+    def from_csv(cls, file_path: FilePathOrBuffer, **kwargs) -> 'CSVMixin':
+        """
+        Method to import the dataframe from csv.
+
+        Parameters
+        ----------
+        file_path: FilePathOrBuffer
+            path to the file where the dataframe will be imported.
+
+        Returns
+        -------
+        CSVMixin: object of the class that inherits from CSVMixin
+
+        """
 
 
 class ExcelMixin:
@@ -162,7 +178,8 @@ class ExcelMixin:
         else:
             raise NotImplementedError("This method is not implemented for this type of object")
 
-    def from_excel(self, file_path: FilePathOrBuffer, **kwargs) -> Any:
+    @staticmethod
+    def _from_excel(file_path: FilePathOrBuffer, **kwargs) -> Any:
         """
         Method to import the dataframe from excel.
         Parameters
@@ -175,6 +192,21 @@ class ExcelMixin:
             raise FileNotFoundError(f"File {file_path} does not exist.")
 
         df = read_excel(file_path, **kwargs)
-        self.dataframe = df
 
-        return self
+        return df
+
+    @classmethod
+    def from_excel(cls, file_path: FilePathOrBuffer, **kwargs) -> 'ExcelMixin':
+        """
+        Method to import the dataframe from excel.
+
+        Parameters
+        ----------
+        file_path: FilePathOrBuffer
+            path to the file where the dataframe will be imported.
+
+        Returns
+        -------
+        ExcelMixin: object of the class that inherits from ExcelMixin
+
+        """

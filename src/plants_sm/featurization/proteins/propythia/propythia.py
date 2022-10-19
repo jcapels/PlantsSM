@@ -2,7 +2,7 @@ from typing import List
 
 import numpy as np
 
-from plants_sm.data_structures.dataset import Dataset
+from plants_sm.data_structures.dataset import SingleInputDataset
 from plants_sm.featurization.featurizer import FeaturesGenerator
 from plants_sm.featurization.proteins.propythia.propythia_descriptors.presets import DESCRIPTORS_PRESETS
 
@@ -21,7 +21,7 @@ class PropythiaWrapper(FeaturesGenerator):
             self.features_names.extend(instantiated_descriptor.get_features_out())
         return self.features_names
 
-    def _fit(self, dataset: Dataset):
+    def _fit(self, dataset: SingleInputDataset):
         """
         Abstract method that has to be implemented by all feature generators
 
