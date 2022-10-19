@@ -100,6 +100,10 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
         return self.dataframe.index.values
 
     @property
+    def labels(self):
+        return self._labels
+
+    @property
     def features_fields(self):
         return self._features_fields
 
@@ -122,6 +126,8 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
         for id_type, _ in self.instances_ids_field.items():
             if id_type not in instance_types:
                 self.dataframe.set_index(self.instances_ids_field[id_type], inplace=True)
+
+        self.dataframe.drop(list(self.representation_field.values()), axis=1, inplace=True)
 
     def generate_ids(self, instance_type):
         """

@@ -32,7 +32,7 @@ class BLOSSUMEncoder(FeaturesGenerator):
         """
         self.features_names = [f"{self.blosum}_{num}" for num in range(1, len(self._blosum["A"]) + 1)]
 
-    def _fit(self, dataset: Dataset) -> 'BLOSSUMEncoder':
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'BLOSSUMEncoder':
         """
         It fits the blosumEncoder.
 

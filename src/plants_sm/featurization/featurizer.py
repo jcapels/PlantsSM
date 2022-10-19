@@ -23,7 +23,7 @@ class FeaturesGenerator(Transformer):
         """
         raise NotImplementedError
 
-    def _fit(self, dataset: Dataset) -> 'FeaturesGenerator':
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'FeaturesGenerator':
         """
         Abstract method that has to be implemented by all feature generators
 
@@ -51,12 +51,13 @@ class FeaturesGenerator(Transformer):
         """
 
         parallel_callback = Parallel(n_jobs=self.n_jobs)
-        len_instances = len(dataset.instances)
-        res = parallel_callback(
-            delayed(self._featurize_and_add_identifier)(dataset.instances[i], dataset.identifiers[i])
-            for i in range(len_instances))
+        instances = dataset.get_instances(instance_type)
 
-        dataset.features = {instance_type, dict(ChainMap(*res))}
+        res = parallel_callback(
+            delayed(self._featurize_and_add_identifier)(instance_representation, instance_id)
+            for instance_id, instance_representation in instances.items())
+
+        dataset.features = {instance_type: dict(ChainMap(*res))}
 
         if dataset.features_fields is None:
             dataset.features_fields = self.features_names

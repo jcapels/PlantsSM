@@ -10,13 +10,17 @@ class TestDatasetSequencePadding(TestDataset):
 
         padder = SequencePadder().fit(dataset)
 
-        self.assertEqual(padder.pad_width, len(dataset.instances[0]))
-        self.assertEqual(padder.pad_width, len(dataset.instances[1]))
+        instances = list(dataset.get_instances().values())
+
+        self.assertEqual(padder.pad_width, len(instances[0]))
+        self.assertEqual(padder.pad_width, len(instances[1]))
 
         padder = SequencePadder(padding="left", n_jobs=2).fit(dataset)
-        self.assertEqual(padder.pad_width, len(dataset.instances[0]))
-        self.assertEqual(padder.pad_width, len(dataset.instances[1]))
+        instances = list(dataset.get_instances().values())
+        self.assertEqual(padder.pad_width, len(instances[0]))
+        self.assertEqual(padder.pad_width, len(instances[1]))
 
         padder = SequencePadder(padding="center", n_jobs=2).fit(dataset)
-        self.assertEqual(padder.pad_width, len(dataset.instances[0]))
-        self.assertEqual(padder.pad_width, len(dataset.instances[1]))
+        instances = list(dataset.get_instances().values())
+        self.assertEqual(padder.pad_width, len(instances[0]))
+        self.assertEqual(padder.pad_width, len(instances[1]))

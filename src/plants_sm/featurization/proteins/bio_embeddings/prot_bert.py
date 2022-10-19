@@ -18,7 +18,7 @@ class ProtBert(FeaturesGenerator):
         """
         self.features_names = [f"{self.name}_{num}" for num in range(1, self.embedding_dimension + 1)]
 
-    def _fit(self, dataset: Dataset) -> 'ProtBert':
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'ProtBert':
         """
         Fit the ProtBert model to the dataset.
 

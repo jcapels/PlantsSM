@@ -6,15 +6,14 @@ from joblib import Parallel, delayed
 from plants_sm.data_structures.dataset import Dataset
 
 
-def transform_instances(n_jobs: int, dataset: Dataset, func: Callable) -> Dataset:
+def transform_instances(n_jobs: int, dataset: Dataset, func: Callable, instance_type: str) -> Dataset:
     parallel_callback = Parallel(n_jobs=n_jobs)
-    len_instances = len(dataset.instances)
+    instances = dataset.get_instances(instance_type)
     res = parallel_callback(
-        delayed(func)(dataset.instances[i], dataset.identifiers[i])
-        for i in range(len_instances))
+        delayed(func)(instance_representation, instance_id)
+        for instance_id, instance_representation in instances.items())
 
     sequences_dict = dict(ChainMap(*res))
-    dataset.dataframe.loc[:, dataset.representation_field] = dataset.dataframe.index.map(
-        sequences_dict)
+    dataset.instances[instance_type] = sequences_dict
 
     return dataset

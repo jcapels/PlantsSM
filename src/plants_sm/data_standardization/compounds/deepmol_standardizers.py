@@ -11,7 +11,7 @@ from plants_sm.transformation.transformer import Transformer
 class DeepMolStandardizer(Transformer):
     preset: str = "custom_standardizer"
 
-    def _fit(self, dataset: Dataset, **kwargs) -> 'DeepMolStandardizer':
+    def _fit(self, dataset: Dataset, instance_type: str, **kwargs) -> 'DeepMolStandardizer':
         """
         Method to fit the transformer
 
@@ -32,7 +32,7 @@ class DeepMolStandardizer(Transformer):
         self.descriptor = descriptor(**kwargs)
         return self
 
-    def _transform(self, dataset: Dataset) -> Dataset:
+    def _transform(self, dataset: Dataset, instance_type: str) -> Dataset:
         """
         Method to transform the dataset
 
@@ -47,7 +47,7 @@ class DeepMolStandardizer(Transformer):
             transformed dataset
 
         """
-        return transform_instances(self.n_jobs, dataset, self._compound_preprocessing)
+        return transform_instances(self.n_jobs, dataset, self._compound_preprocessing, instance_type)
 
     def _compound_preprocessing(self, compound: str, identifier: str) -> Dict[str, str]:
         """

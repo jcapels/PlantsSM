@@ -38,7 +38,7 @@ class ProteinStandardizer(Transformer):
     J: str = 'I'  # It can be either 'I' or 'L'
     X: str = ''
 
-    def _fit(self, dataset: Dataset) -> 'ProteinStandardizer':
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'ProteinStandardizer':
         """
         Fit the transformer.
 
@@ -55,7 +55,7 @@ class ProteinStandardizer(Transformer):
         self.replace_dict = {'B': self.B, 'Z': self.Z, 'U': self.U, 'O': self.O, 'J': self.J, 'X': self.X}
         return self
 
-    def _transform(self, dataset: Dataset) -> Dataset:
+    def _transform(self, dataset: Dataset, instance_type: str) -> Dataset:
         """
         Standardize protein sequences.
 
@@ -69,7 +69,7 @@ class ProteinStandardizer(Transformer):
         dataset : Dataset
             Transformed dataset.
         """
-        return transform_instances(self.n_jobs, dataset, self._protein_preprocessing)
+        return transform_instances(self.n_jobs, dataset, self._protein_preprocessing, instance_type)
 
     def _protein_preprocessing(self, sequence: str, identifier: str) -> Dict[str, str]:
         """

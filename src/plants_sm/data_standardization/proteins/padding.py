@@ -1,7 +1,4 @@
-from collections import ChainMap
 from typing import Dict
-
-from joblib import Parallel, delayed
 
 from plants_sm.data_standardization.padding_enumerators import PaddingEnumerators
 from plants_sm.data_structures.dataset import Dataset
@@ -23,7 +20,7 @@ class SequencePadder(Transformer):
     pad_width: int = None
     padding: str = "right"
 
-    def _fit(self, dataset: Dataset) -> 'SequencePadder':
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'SequencePadder':
         """
         Method that fits the sequence padder to the dataset
 
@@ -37,14 +34,16 @@ class SequencePadder(Transformer):
         fitted sequence padder: SequencePadder
         """
         if not self.pad_width:
-            self.pad_width = dataset.dataframe.loc[:, dataset.representation_field].str.len().max()
+            # get the maximum length of the sequences
+            lengths = [len(instance) for instance in dataset.get_instances(instance_type).values()]
+            self.pad_width = max(lengths)
 
         if self.padding not in ["right", "left", "center"]:
             raise ValueError(f"Padding type not supported: {self.padding}")
 
         return self
 
-    def _transform(self, dataset: Dataset) -> Dataset:
+    def _transform(self, dataset: Dataset, instance_type: str) -> Dataset:
         """
         Abstract method that has to be implemented by all feature generators
 
@@ -52,13 +51,15 @@ class SequencePadder(Transformer):
         ----------
         dataset: Dataset
             dataset to be transformed where instances are the representation or object to be processed.
+        instance_type: str
+            type of instances to be transformed
 
         Returns
         -------
         dataset with features: Dataset
             dataset object with features
         """
-        return transform_instances(self.n_jobs, dataset, self._pad_sequence)
+        return transform_instances(self.n_jobs, dataset, self._pad_sequence, instance_type)
 
     def _pad_sequence(self, instance: str, identifier: str) -> Dict[str, str]:
         """

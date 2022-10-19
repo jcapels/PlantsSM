@@ -29,7 +29,7 @@ class ESM1bEncoder(FeaturesGenerator):
     preset: str = 'representations'
     batch_size: int = 16
 
-    def _fit(self, dataset: Dataset) -> 'ESM1bEncoder':
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'ESM1bEncoder':
         """
         Fit the Esm1bEncoder. It loads the pre-trained model and the batch converter.
 

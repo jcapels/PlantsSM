@@ -28,7 +28,7 @@ class NLFEncoder(FeaturesGenerator):
         """
         self.features_names = [f"{self.name}_{num}" for num in range(1, self.encoding_dimension + 1)]
 
-    def _fit(self, dataset: Dataset) -> 'NLFEncoder':
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'NLFEncoder':
         """
         Fit the transformer to the data.
 

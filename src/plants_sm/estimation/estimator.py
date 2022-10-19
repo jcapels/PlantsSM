@@ -3,7 +3,8 @@ from abc import abstractmethod
 from pydantic import BaseModel
 from pydantic.validators import dict_validator
 
-from plants_sm.data_structures.dataset import Dataset
+from plants_sm.data_structures.dataset import Dataset, SingleInputDataset
+from plants_sm.data_structures.dataset.single_input_dataset import PLACEHOLDER_FIELD
 from plants_sm.estimation._utils import fit_status
 
 
@@ -45,11 +46,17 @@ class Estimator(BaseModel):
             raise TypeError("fitted has to be a boolean")
 
     @abstractmethod
-    def _fit(self, dataset: Dataset) -> 'Estimator':
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'Estimator':
         raise NotImplementedError
 
     @fit_status
-    def fit(self, dataset: Dataset) -> 'Estimator':
+    def fit(self, dataset: Dataset, instance_type: str = None) -> 'Estimator':
 
-        self._fit(dataset)
+        if instance_type is None and isinstance(dataset, SingleInputDataset):
+            self._fit(dataset, PLACEHOLDER_FIELD)
+        elif isinstance(dataset, SingleInputDataset):
+            self._fit(dataset, PLACEHOLDER_FIELD)
+        else:
+            self._fit(dataset, instance_type)
+
         return self

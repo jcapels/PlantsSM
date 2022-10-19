@@ -24,7 +24,7 @@ class ZScaleEncoder(FeaturesGenerator):
     def set_features_names(self):
         self.features_names = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5']
 
-    def _fit(self, dataset: Dataset) -> 'ZScaleEncoder':
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'ZScaleEncoder':
         return self
 
     def _featurize(self, sequence: str) -> np.ndarray:

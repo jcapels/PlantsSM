@@ -1,3 +1,4 @@
+from plants_sm.data_structures.dataset.single_input_dataset import PLACEHOLDER_FIELD
 from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
 from ...featurizer.proteins.test_protein_featurizers import TestProteinFeaturizers
 
@@ -6,8 +7,8 @@ class TestPropythiaWrapper(TestProteinFeaturizers):
 
     def test_propythia_wrapper(self):
         wrapper = PropythiaWrapper(preset="all", n_jobs=2)
-        wrapper._fit(self.dataset)
-        features = wrapper._featurize(self.dataset.instances[0])
+        wrapper._fit(self.dataset, PLACEHOLDER_FIELD)
+        features = wrapper._featurize(list(self.dataset.get_instances().values())[0])
         self.assertEqual(features.shape[0], 9596)
 
     def test_all(self):

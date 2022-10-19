@@ -9,15 +9,15 @@ from plants_sm.data_structures.dataset.dataset import Dataset
 from plants_sm.io.commons import FilePathOrBuffer
 from plants_sm.mixins.mixins import CSVMixin, ExcelMixin
 
-FEATURES_FIELD = 'features'
+PLACEHOLDER_FIELD = 'place_holder'
 
 
 class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
     _features: Dict[str, Dict[str, np.ndarray]]
     _features_names: List[str]
     _dataframe: pd.DataFrame
-    _representation_field: str
     _labels_names: List[str]
+    _instances: Dict[str, str]
 
     def __init__(self, dataframe: Any = None, representation_field: str = None,
                  features_fields: Union[str, List[Union[str, int]], slice] = None,
@@ -54,11 +54,12 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             # setter
             self.instances_ids_field = instances_ids_field
 
+            self.representation_fields = {PLACEHOLDER_FIELD: representation_field}
+            self.representation_field = representation_field
+
             # the dataframe setter will derive the instance ids field if it is None
             # and also will try to set the features names
             self.dataframe = dataframe
-
-            self.representation_field = representation_field
 
             if labels_field is not None:
                 if not isinstance(labels_field, List):
@@ -71,7 +72,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                 self._labels = None
 
             if self._features_fields:
-                self._features = {FEATURES_FIELD: self.dataframe.loc[:, self._features_fields].T.to_dict('list')}
+                self._features = {PLACEHOLDER_FIELD: self.dataframe.loc[:, self._features_fields].T.to_dict('list')}
 
         # in the case that the dataframe is None and the features field is not None, the features names will be set
 
@@ -176,7 +177,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         """
         Property for X. It should return the features of the dataset.
         """
-        return np.array(list(self.features[FEATURES_FIELD].values()))
+        return np.array(list(self.features[PLACEHOLDER_FIELD].values()))
 
     @cached_property
     def y(self) -> np.ndarray:
@@ -186,14 +187,17 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         return np.array(list(self.labels.values()))
 
     @property
-    def instances(self) -> np.ndarray:
+    def instances(self) -> Dict[str, str]:
         """
         This property will contain the instances of the dataset.
         Returns
         -------
         Array with the instances.
         """
-        return np.array(self.dataframe.loc[:, self.representation_field])
+        return self._instances
+
+    def get_instances(self, instance_type: str = PLACEHOLDER_FIELD):
+        return self.instances[instance_type]
 
     @property
     def dataframe(self) -> Any:
@@ -224,6 +228,11 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                 self._set_instances_ids_field()
             else:
                 self._dataframe.set_index(self.instances_ids_field, inplace=True)
+
+                identifiers = self.dataframe.index.values
+                instances = self.dataframe.loc[:, self.representation_field].values
+                self._instances = {PLACEHOLDER_FIELD: dict(zip(identifiers, instances))}
+                self.dataframe.drop(self.representation_field, axis=1, inplace=True)
 
     @dataframe.setter
     def dataframe(self, value: Any):
@@ -273,6 +282,10 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             self._dataframe = pd.concat((identifiers_series, self._dataframe), axis=1)
             self._dataframe["identifier"] = self._dataframe["identifier"].astype(str)
             self._dataframe.set_index("identifier", inplace=True)
+
+            instances = self.dataframe.loc[:, self.representation_field].values
+            self._instances = {PLACEHOLDER_FIELD: dict(zip(identifiers_series.values, instances))}
+            self.dataframe.drop(self.representation_field, axis=1, inplace=True)
 
     def _set_dataframe(self, value: Any):
         """
