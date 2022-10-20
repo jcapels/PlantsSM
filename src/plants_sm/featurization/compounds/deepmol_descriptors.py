@@ -22,7 +22,7 @@ class DeepMolDescriptors(FeaturesGenerator):
         else:
             self.features_names = []
 
-    def _fit(self, dataset: Dataset, **kwargs) -> 'DeepMolDescriptors':
+    def _fit(self, dataset: Dataset, instance_type: str, **kwargs) -> 'DeepMolDescriptors':
         """
         Method to fit the transformer
 

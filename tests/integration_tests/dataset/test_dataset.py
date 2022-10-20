@@ -3,6 +3,7 @@ from unittest import TestCase
 
 import pandas as pd
 
+from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputDataset
 from tests import TEST_DIR
 
 
@@ -11,6 +12,7 @@ class TestDataset(TestCase):
     def setUp(self) -> None:
         self.excel_to_read = os.path.join(TEST_DIR, "data", "drug_list.xlsx")
         self.csv_to_read = os.path.join(TEST_DIR, "data", "proteins.csv")
+        self.multi_input_dataset_csv = os.path.join(TEST_DIR, "data", "multi_input_dataset.csv")
 
         self.df_path_to_write_csv = os.path.join(TEST_DIR, "data", "test.csv")
         self.df_path_to_write_xlsx = os.path.join(TEST_DIR, "data", "test.xlsx")
@@ -39,6 +41,12 @@ class TestDataset(TestCase):
         ]
         self.compounds_dataframe["sequence"] = self.sequences
         self.compounds_dataframe["ids"] = ["WP_003399745.1", "WP_003399671.1"]
+
+        self.multi_input_dataset = MultiInputDataset.from_csv(self.multi_input_dataset_csv,
+                                                                representation_fields={"proteins": "SEQ",
+                                                                                       "ligands": "SUBSTRATES"},
+                                                                instances_ids_field={"interaction": "ids"},
+                                                                labels_field="LogSpActivity")
 
     def tearDown(self) -> None:
         paths_to_remove = [self.df_path_to_write_csv,

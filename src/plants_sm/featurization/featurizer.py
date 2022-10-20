@@ -3,7 +3,6 @@ from collections import ChainMap
 from typing import Any, List, Dict
 
 import numpy as np
-import pandas as pd
 from joblib import Parallel, delayed
 from numpy import ndarray
 
@@ -24,7 +23,7 @@ class FeaturesGenerator(Transformer):
         """
         raise NotImplementedError
 
-    def _fit(self, dataset: Dataset) -> 'FeaturesGenerator':
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'FeaturesGenerator':
         """
         Abstract method that has to be implemented by all feature generators
 
@@ -36,7 +35,7 @@ class FeaturesGenerator(Transformer):
         raise NotImplementedError
 
     @call_set_features_names
-    def _transform(self, dataset: Dataset) -> Dataset:
+    def _transform(self, dataset: Dataset, instance_type: str) -> Dataset:
         """
         General method that calls _featurize that has to be implemented by all feature generators
 
@@ -52,49 +51,18 @@ class FeaturesGenerator(Transformer):
         """
 
         parallel_callback = Parallel(n_jobs=self.n_jobs)
-        len_instances = len(dataset.instances)
+        instances = dataset.get_instances(instance_type)
+
         res = parallel_callback(
-            delayed(self._featurize_and_add_identifier)(dataset.instances[i], dataset.identifiers[i])
-            for i in range(len_instances))
+            delayed(self._featurize_and_add_identifier)(instance_representation, instance_id)
+            for instance_id, instance_representation in instances.items())
 
-        n_dimensional_features = dict(ChainMap(*res))
-        identifiers = list(n_dimensional_features.keys())
+        dataset.features[instance_type] = dict(ChainMap(*res))
 
-        features_array = np.stack(list(n_dimensional_features.values()), axis=0)
-
-        if self.output_shape_dimension <= 2:
-            features = pd.DataFrame(features_array, columns=self.features_names)
-            features = pd.concat((pd.DataFrame({dataset.instances_ids_field: identifiers}), features),
-                                 axis=1)
-
-            dataset.features_dataframe = features
-            dataset.features_dataframe.set_index(dataset.instances_ids_field, inplace=True)
-            dataset.features_dataframe.sort_index(inplace=True)
-            dataset.features_shape = features_array.shape
-
-        elif self.output_shape_dimension == 3:
-            sequences = dataset.identifiers
-            aa = np.arange(0, features_array.shape[1])
-            features_names = np.array(self.features_names)
-
-            maj_dim = 1
-            for dim in features_array.shape[:-1]:
-                maj_dim = maj_dim * dim
-            new_dims = (maj_dim, features_array.shape[-1])
-            features = features_array.reshape(new_dims)
-
-            midx = pd.MultiIndex.from_product([sequences, aa])
-
-            features_3d = pd.DataFrame(data=features, index=midx, columns=features_names)
-
-            dataset.features_dataframe = features_3d
-            dataset.features_dataframe.sort_index(inplace=True)
-            dataset.features_shape = features_array.shape
-
-        if dataset.features_fields is None:
-            dataset.features_fields = self.features_names
+        if instance_type not in dataset.features_fields:
+            dataset.features_fields[instance_type] = self.features_names
         else:
-            dataset.features_fields.extend(self.features_names)
+            dataset.features_fields[instance_type].extend(self.features_names)
         return dataset
 
     def _featurize_and_add_identifier(self, instance: Any, identifier: str) -> Dict[str, ndarray]:

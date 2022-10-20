@@ -21,7 +21,7 @@ class PropythiaWrapper(FeaturesGenerator):
             self.features_names.extend(instantiated_descriptor.get_features_out())
         return self.features_names
 
-    def _fit(self, dataset: Dataset):
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'PropythiaWrapper':
         """
         Abstract method that has to be implemented by all feature generators
 
@@ -36,6 +36,8 @@ class PropythiaWrapper(FeaturesGenerator):
         for descriptor in DESCRIPTORS_PRESETS[self.preset]:
             instantiated_descriptor = descriptor()
             self.descriptors.append(instantiated_descriptor)
+
+        return self
 
     def _featurize(self, protein_sequence: str) -> np.ndarray:
         """

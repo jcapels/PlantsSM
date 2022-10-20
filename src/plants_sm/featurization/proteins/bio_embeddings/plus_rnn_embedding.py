@@ -55,7 +55,7 @@ class PlusRNNEmbedding(FeaturesGenerator):
         """
         self.features_names = [f"{self.name}_{num}" for num in range(1, self.embedding_dimension + 1)]
 
-    def _fit(self, dataset: Dataset) -> 'PlusRNNEmbedding':
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'PlusRNNEmbedding':
         """
         Fit the model to the dataset
 

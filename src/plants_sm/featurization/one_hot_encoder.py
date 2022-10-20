@@ -36,7 +36,7 @@ class OneHotEncoder(FeaturesGenerator):
         for i, token in enumerate(self.alphabet):
             self.features_names.append(token)
 
-    def _fit(self, dataset: Dataset, **kwargs) -> 'OneHotEncoder':
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'OneHotEncoder':
         """
         Fit the OneHotEncoder with the alphabet of the dataset.
 
@@ -56,7 +56,7 @@ class OneHotEncoder(FeaturesGenerator):
 
         if not self.alphabet:
             self.alphabet = set()
-            for sequence in dataset.instances:
+            for sequence in list(dataset.get_instances(instance_type).values()):
                 for char in str(sequence):
                     self.alphabet.add(char)
         else:

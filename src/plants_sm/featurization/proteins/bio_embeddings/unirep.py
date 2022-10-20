@@ -47,7 +47,7 @@ class UniRepEmbeddings(FeaturesGenerator):
         """
         self.features_names = [f"{self.name}_{num}" for num in range(1, self.embedding_dimension + 1)]
 
-    def _fit(self, dataset: Dataset):
+    def _fit(self, dataset: Dataset, instance_type: str):
         """
         Load the parameters of the mLSTM model.
         """

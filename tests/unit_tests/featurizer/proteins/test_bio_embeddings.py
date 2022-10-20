@@ -17,55 +17,49 @@ from tests import TEST_DIR
 class TestEmbeddings(TestProteinFeaturizers):
 
     def test_unirep_embeddings(self):
-        dataset = UniRepEmbeddings().fit_transform(self.dataset)
-        self.assertEqual(dataset.features_dataframe.shape, (2, 1900))
-        self.assertAlmostEqual(0.016247222, dataset.features_dataframe.iloc[0, 0])
+        UniRepEmbeddings().fit_transform(self.dataset)
+        self.assertEqual(self.dataset.X().shape, (2, 1900))
+        self.assertAlmostEqual(0.016247222, self.dataset.X()[0, 0], delta=0.0001)
 
     def test_unirep_embeddings_3d(self):
-        dataset = UniRepEmbeddings(output_shape_dimension=3).fit_transform(self.dataset)
+        UniRepEmbeddings(output_shape_dimension=3).fit_transform(self.dataset)
 
-        features = dataset.features_dataframe.to_numpy() \
-            .reshape((len(dataset.identifiers), dataset.features_shape[1], len(dataset.features_fields)))
-
-        self.assertEqual((2, 454, 1900), features.shape)
+        self.assertEqual((2, 454, 1900), self.dataset.X().shape)
 
     def test_raise_errors_unirep(self):
         with self.assertRaises(NotImplementedError):
             UniRepEmbeddings(output_shape_dimension=2, device="2").fit_transform(self.dataset)
 
     def test_word2vec_embeddings_2d(self):
-        dataset = Word2Vec().fit_transform(self.dataset)
-        self.assertEqual(dataset.features_dataframe.shape, (2, 512))
-        self.assertAlmostEqual(-0.033494536, dataset.features_dataframe.iloc[0, 0], delta=0.0001)
+        Word2Vec().fit_transform(self.dataset)
+        self.assertEqual(self.dataset.X().shape, (2, 512))
+        self.assertAlmostEqual(-0.033494536, self.dataset.X()[0, 0], delta=0.001)
 
     def test_word2vec_embeddings_3d(self):
-        dataset = Word2Vec(output_shape_dimension=3).fit_transform(self.dataset)
+        Word2Vec(output_shape_dimension=3).fit_transform(self.dataset)
 
-        features = dataset.features_dataframe.to_numpy() \
-            .reshape((len(dataset.identifiers), dataset.features_shape[1], len(dataset.features_fields)))
-
-        self.assertEqual(dataset.dataframe.shape, (2, 2))
-        self.assertEqual(features.shape, (2, 453, 512))
+        self.assertEqual(self.dataset.dataframe.shape, (2, 2))
+        self.assertEqual(self.dataset.X().shape, (2, 453, 512))
 
     def test_prot_bert_embeddings(self):
-        dataset = ProtBert().fit_transform(self.dataset)
-        self.assertEqual(dataset.features_dataframe.shape, (2, 1024))
-        self.assertAlmostEqual(0.11366609, dataset.features_dataframe.iloc[0, 0], delta=0.0001)
+        ProtBert().fit_transform(self.dataset)
+        self.assertEqual(self.dataset.X().shape, (2, 1024))
+        self.assertAlmostEqual(0.11255153, self.dataset.X()[0, 0], delta=0.001)
 
     def test_prot_bert_embeddings_3d(self):
-        dataset = ProtBert(output_shape_dimension=3).fit_transform(self.dataset)
-        self.assertEqual(dataset.features_dataframe.shape, (906, 1024))
-        self.assertAlmostEqual(-0.006767738, dataset.features_dataframe.iloc[0, 0], delta=0.001)
+        ProtBert(output_shape_dimension=3).fit_transform(self.dataset)
+        self.assertEqual(self.dataset.X().shape, (2, 453, 1024))
+        self.assertAlmostEqual(-0.006767738, self.dataset.X()[0, 0, 0], delta=0.001)
 
     def test_plus_rnn_embeddings(self):
-        dataset = PlusRNNEmbedding(output_shape_dimension=2, device="cpu").fit_transform(self.dataset)
-        self.assertEqual(dataset.features_dataframe.shape, (2, 1024))
-        self.assertAlmostEqual(-0.006006486, dataset.features_dataframe.iloc[0, 0])
+        PlusRNNEmbedding(output_shape_dimension=2, device="cpu").fit_transform(self.dataset)
+        self.assertEqual(self.dataset.X().shape, (2, 1024))
+        self.assertAlmostEqual(-0.006006486, self.dataset.X()[0, 0], delta=0.001)
 
     def test_plus_rnn_embeddings_3d(self):
-        dataset = PlusRNNEmbedding(output_shape_dimension=3, device="cpu").fit_transform(self.dataset)
-        self.assertEqual(dataset.features_dataframe.shape, (906, 1024))
-        self.assertAlmostEqual(-0.013215046, dataset.features_dataframe.iloc[0, 0])
+        PlusRNNEmbedding(output_shape_dimension=3, device="cpu").fit_transform(self.dataset)
+        self.assertEqual(self.dataset.X().shape, (2, 453, 1024))
+        self.assertAlmostEqual(-0.013215046, self.dataset.X()[0, 0, 0], delta=0.001)
 
     @skip("No memory on CI")
     def test_esm_1b(self):
