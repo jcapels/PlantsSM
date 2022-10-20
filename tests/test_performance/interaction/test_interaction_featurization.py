@@ -12,7 +12,7 @@ from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrappe
 from tests import TEST_DIR
 
 
-# @skip("Just for performance testing")
+@skip("Just for performance testing")
 class TestInteractionFeaturization(TestCase):
     """Test the interaction featurization performance."""
 
@@ -58,11 +58,18 @@ class TestInteractionFeaturization(TestCase):
 
         self.assertEqual(len(self.multi_input_dataset_35000.X), 2)
 
-    @skip("No memory")
     def test_featurize_protbert_deepmol(self):
         """Test the featurization performance."""
 
-        ProtBert(n_jobs=8).fit_transform(self.multi_input_dataset_400, "proteins")
+        ProtBert(n_jobs=1, device="cuda").fit_transform(self.multi_input_dataset_400, "proteins")
         DeepMolDescriptors(n_jobs=8).fit_transform(self.multi_input_dataset_400, "ligands")
 
         self.assertEqual(len(self.multi_input_dataset_400.X), 2)
+
+    def test_featurize_protbert_deepmol_35000(self):
+        """Test the featurization performance."""
+
+        ProtBert(n_jobs=1, device="cuda").fit_transform(self.multi_input_dataset_35000, "proteins")
+        DeepMolDescriptors(n_jobs=8).fit_transform(self.multi_input_dataset_35000, "ligands")
+
+        self.assertEqual(len(self.multi_input_dataset_35000.X), 2)
