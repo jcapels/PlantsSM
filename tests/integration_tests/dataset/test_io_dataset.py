@@ -15,8 +15,6 @@ class TestIODataset(TestDataset):
         self.assertIn(286.154209, dataset.y)
         self.assertEqual(dataset.representation_fields, {'place_holder': 'SMILES'})
         self.assertEqual(dataset.labels_names, ["TargetedMZ"])
-        with self.assertRaises(AttributeError):
-            print(dataset.X)
 
     @skip("Not implemented yet")
     def test_write_excel_from_dataset(self):
@@ -42,8 +40,6 @@ class TestIODataset(TestDataset):
                          'MGWVGKKKSTAGQLAGTANELTKEVLERAVHRESPVIRPDVVVGIPAVDRRPKQ')
         self.assertEqual(dataset.representation_fields, {'place_holder': 'sequence'})
         self.assertEqual(dataset.instances_ids_field, "id")
-        with self.assertRaises(AttributeError):
-            features = dataset.features
 
     @skip("Not implemented yet")
     def test_write_csv_from_dataset(self):

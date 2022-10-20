@@ -78,6 +78,8 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                 self._features = {PLACEHOLDER_FIELD:
                                       self.dataframe.loc[:,
                                       self._features_fields[PLACEHOLDER_FIELD]].T.to_dict('list')}
+            else:
+                self._features = {}
 
         # in the case that the dataframe is None and the features field is not None, the features names will be set
 

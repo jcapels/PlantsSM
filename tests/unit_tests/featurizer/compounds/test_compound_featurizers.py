@@ -14,6 +14,7 @@ class TestCompoundFeaturizers(TestCase):
         self.dataset.identifiers = ["0", "1"]
         self.dataset.instances_ids_field = "identifiers"
         self.dataset.features_fields = {}
+        self.dataset.features = {}
         self.dataset.instances = [
             "CCCCCCCO", "C1=CC=C(C=C1)C=O"
         ]

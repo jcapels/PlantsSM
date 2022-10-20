@@ -21,6 +21,7 @@ class TestProteinFeaturizers(TestCase):
         self.dataset.identifiers = ["0", "1"]
         self.dataset.instances_ids_field = "identifiers"
         self.dataset.features_fields = {}
+        self.dataset.features = {}
         self.dataset.get_instances.return_value = {"0":
                                                        "MASLMLSLGSTSLLPREINKDKLKLGTSASNPFLKAKSFSRVTMTVAVKPSRFEGITMAPPDPILGVSEAFKADT"
                                                        "NGMKLNLGVGAYRTEELQPYVLNVVKKAENLMLERGDNKEYLPIEGLAAFNKATAELLFGAGHPVIKEQRVATIQG"
