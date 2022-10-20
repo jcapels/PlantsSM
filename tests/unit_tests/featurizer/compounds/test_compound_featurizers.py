@@ -13,7 +13,7 @@ class TestCompoundFeaturizers(TestCase):
         self.dataset.representation_field = "sequence"
         self.dataset.identifiers = ["0", "1"]
         self.dataset.instances_ids_field = "identifiers"
-        self.dataset.features_fields = None
+        self.dataset.features_fields = {}
         self.dataset.instances = [
             "CCCCCCCO", "C1=CC=C(C=C1)C=O"
         ]

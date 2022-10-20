@@ -1,7 +1,9 @@
+from copy import copy
+
 import pandas as pd
 
 from integration_tests.dataset.test_dataset import TestDataset
-from plants_sm.data_structures.dataset import SingleInputDataset
+from plants_sm.data_structures.dataset import SingleInputDataset, PLACEHOLDER_FIELD
 from plants_sm.featurization.proteins.bio_embeddings.plus_rnn_embedding import PlusRNNEmbedding
 from plants_sm.featurization.proteins.bio_embeddings.prot_bert import ProtBert
 from plants_sm.featurization.proteins.bio_embeddings.unirep import UniRepEmbeddings
@@ -11,26 +13,28 @@ from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
 class TestDatasetBioembeddings(TestDataset):
 
     def test_create_dataset_bioembeddings(self):
-        dataset = SingleInputDataset(dataframe=self.dataframe, representation_field="sequence")
+        dataframe = copy(self.dataframe)
+        dataset = SingleInputDataset(dataframe=dataframe, representation_field="sequence")
         unirep = UniRepEmbeddings()
         unirep.fit_transform(dataset)
 
         self.assertEqual(dataset.X.shape[0], 2)
         self.assertEqual(dataset.X.shape[1], 1900)
-        self.assertEqual(dataset.features_fields[0], "unirep_1")
+        self.assertEqual(dataset.features_fields[PLACEHOLDER_FIELD][0], "unirep_1")
         self.assertEqual(dataset.instances_ids_field, "identifier")
 
-        dataset = SingleInputDataset(dataframe=self.dataframe, representation_field="sequence",
-                                     instances_ids_field="ids")
+        dataframe = copy(self.dataframe)
+        dataset_2 = SingleInputDataset(dataframe=dataframe, representation_field="sequence",
+                                       instances_ids_field="ids")
 
         unirep = UniRepEmbeddings(output_shape_dimension=3)
-        unirep.fit_transform(dataset)
+        unirep.fit_transform(dataset_2)
 
-        self.assertEqual(dataset.X.shape[0], 2)
-        self.assertEqual(dataset.X.shape[1], 454)
-        self.assertEqual(dataset.X.shape[2], 1900)
-        self.assertEqual(dataset.features_fields[0], "unirep_1")
-        self.assertEqual(dataset.instances_ids_field, "ids")
+        self.assertEqual(dataset_2.X.shape[0], 2)
+        self.assertEqual(dataset_2.X.shape[1], 454)
+        self.assertEqual(dataset_2.X.shape[2], 1900)
+        self.assertEqual(dataset_2.features_fields[PLACEHOLDER_FIELD][0], "unirep_1")
+        self.assertEqual(dataset_2.instances_ids_field, "ids")
 
     def test_word2vec_dataset(self):
         dataset = SingleInputDataset(dataframe=self.dataframe, representation_field="sequence")
@@ -39,7 +43,7 @@ class TestDatasetBioembeddings(TestDataset):
 
         self.assertEqual(dataset.X.shape[0], 2)
         self.assertEqual(dataset.X.shape[1], 512)
-        self.assertEqual(dataset.features_fields[0], "word2vec_1")
+        self.assertEqual(dataset.features_fields[PLACEHOLDER_FIELD][0], "word2vec_1")
         self.assertEqual(dataset.instances_ids_field, "identifier")
 
         dataset = SingleInputDataset(dataframe=self.dataframe, representation_field="sequence")
@@ -49,7 +53,7 @@ class TestDatasetBioembeddings(TestDataset):
         self.assertEqual(dataset.X.shape[0], 2)
         self.assertEqual(dataset.X.shape[1], 453)
         self.assertEqual(dataset.X.shape[2], 512)
-        self.assertEqual(dataset.features_fields[0], "word2vec_1")
+        self.assertEqual(dataset.features_fields[PLACEHOLDER_FIELD][0], "word2vec_1")
         self.assertEqual(dataset.instances_ids_field, "identifier")
 
     def test_multithreading_features_extraction(self):
@@ -84,7 +88,7 @@ class TestDatasetBioembeddings(TestDataset):
 
         self.assertEqual(dataset.X.shape[0], 2)
         self.assertEqual(dataset.X.shape[1], 1024)
-        self.assertEqual(dataset.features_fields[0], "prot_bert_1")
+        self.assertEqual(dataset.features_fields[PLACEHOLDER_FIELD][0], "prot_bert_1")
         self.assertEqual(dataset.instances_ids_field, "identifier")
 
         dataset = SingleInputDataset(dataframe=self.dataframe, representation_field="sequence",
@@ -96,7 +100,7 @@ class TestDatasetBioembeddings(TestDataset):
         self.assertEqual(dataset.X.shape[0], 2)
         self.assertEqual(dataset.X.shape[1], 453)
         self.assertEqual(dataset.X.shape[2], 1024)
-        self.assertEqual(dataset.features_fields[0], "prot_bert_1")
+        self.assertEqual(dataset.features_fields[PLACEHOLDER_FIELD][0], "prot_bert_1")
         self.assertEqual(dataset.instances_ids_field, "ids")
 
     def test_create_dataset_plus_rnn(self):
@@ -106,7 +110,7 @@ class TestDatasetBioembeddings(TestDataset):
 
         self.assertEqual(dataset.X.shape[0], 2)
         self.assertEqual(dataset.X.shape[1], 1024)
-        self.assertEqual(dataset.features_fields[0], "plus_rnn_1")
+        self.assertEqual(dataset.features_fields[PLACEHOLDER_FIELD][0], "plus_rnn_1")
         self.assertEqual(dataset.instances_ids_field, "identifier")
 
         dataset = SingleInputDataset(dataframe=self.dataframe, representation_field="sequence")
@@ -116,5 +120,5 @@ class TestDatasetBioembeddings(TestDataset):
         self.assertEqual(dataset.X.shape[0], 2)
         self.assertEqual(dataset.X.shape[1], 453)
         self.assertEqual(dataset.X.shape[2], 1024)
-        self.assertEqual(dataset.features_fields[0], "plus_rnn_1")
+        self.assertEqual(dataset.features_fields[PLACEHOLDER_FIELD][0], "plus_rnn_1")
         self.assertEqual(dataset.instances_ids_field, "identifier")

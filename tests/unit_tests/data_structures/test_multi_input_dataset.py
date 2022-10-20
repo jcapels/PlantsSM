@@ -27,6 +27,8 @@ class TestMultiInputDataset(TestCase):
         self.assertEqual(list(dataset.get_instances('compounds').values()), ['representation5', 'representation4',
                                                                              'representation2'])
 
+        self.assertEqual(list(dataset.y), [1, 0, 1])
+
     def test_with_repetitive_instances(self) -> None:
         dataframe = pd.DataFrame(columns=['ids_interaction', 'ids_a', 'a', 'ids_b', 'b', 'labels'])
 

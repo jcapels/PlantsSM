@@ -15,7 +15,7 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
     _dataframe: pd.DataFrame
     _representation_field: str
     _labels_names: List[str]
-    _features_fields: Dict[str, Union[str, int]]
+    _features_fields: Dict[str, Union[str, int]] = {}
     _instances: Dict[str, Dict[str, Any]]
     _identifiers: List[Union[str, int]]
 
@@ -41,6 +41,7 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
         # and convert it to a list of strings
         super().__init__()
         if dataframe is not None:
+            self._features = {}
             self.instances_ids_field = instances_ids_field
 
             # the dataframe setter will derive the instance ids field if it is None
@@ -55,7 +56,7 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
                 else:
                     self.labels_names = labels_field
 
-                self._labels = self.dataframe.loc[:, self.labels_names].T.to_dict('list')
+                self._labels = self.dataframe.loc[:, self.labels_names].values
             else:
                 self._labels = None
 
@@ -107,7 +108,7 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
     def features_fields(self):
         return self._features_fields
 
-    def get_instances(self, instance_type):
+    def get_instances(self, instance_type: str = None):
         return self._instances[instance_type]
 
     def set_instances_and_ids(self):
@@ -154,8 +155,6 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
         """
         Property for features. It should return the features of the dataset.
         """
-        if self._features is None:
-            raise ValueError('Features are not defined')
         return self._features
 
     @features.setter
@@ -173,8 +172,22 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
 
     @cached_property
     def X(self):
-        pass
+
+        res = {}
+        feature_keys = self.features.keys()
+        for instance_type, instance in self.instances.items(): # probably 2 or a little bit more instances
+            res[instance_type] = []
+
+            if instance_type in feature_keys:
+                instance_ids = self.dataframe.loc[:, self.instances_ids_field[instance_type]]
+                for instance_id in instance_ids:
+                    res[instance_type].append(self.features[instance_type][instance_id])
+
+                res[instance_type] = np.array(res[instance_type])
+            else:
+                raise ValueError(f"Features for {instance_type} are not defined")
+        return res
 
     @property
     def y(self):
-        pass
+        return self.labels

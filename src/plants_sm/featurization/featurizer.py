@@ -57,12 +57,12 @@ class FeaturesGenerator(Transformer):
             delayed(self._featurize_and_add_identifier)(instance_representation, instance_id)
             for instance_id, instance_representation in instances.items())
 
-        dataset.features = {instance_type: dict(ChainMap(*res))}
+        dataset.features[instance_type] = dict(ChainMap(*res))
 
-        if dataset.features_fields is None:
-            dataset.features_fields = self.features_names
+        if instance_type not in dataset.features_fields:
+            dataset.features_fields[instance_type] = self.features_names
         else:
-            dataset.features_fields.extend(self.features_names)
+            dataset.features_fields[instance_type].extend(self.features_names)
         return dataset
 
     def _featurize_and_add_identifier(self, instance: Any, identifier: str) -> Dict[str, ndarray]:

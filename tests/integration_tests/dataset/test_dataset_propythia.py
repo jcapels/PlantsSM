@@ -1,5 +1,5 @@
 from integration_tests.dataset.test_dataset import TestDataset
-from plants_sm.data_structures.dataset import SingleInputDataset
+from plants_sm.data_structures.dataset import SingleInputDataset, PLACEHOLDER_FIELD
 from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
 
 
@@ -12,7 +12,7 @@ class TestDatasetPropythia(TestDataset):
 
         self.assertEqual(dataset.dataframe.shape[0], 2)
         self.assertEqual(dataset.X.shape[1], 9596)
-        self.assertEqual(dataset.features_fields[0], "length")
+        self.assertEqual(dataset.features_fields[PLACEHOLDER_FIELD][0], "length")
         self.assertEqual(dataset.instances_ids_field, "identifier")
 
     def test_different_orders_dictionary_dataframe(self):

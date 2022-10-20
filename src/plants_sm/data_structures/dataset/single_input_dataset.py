@@ -18,6 +18,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
     _dataframe: pd.DataFrame
     _labels_names: List[str]
     _instances: Dict[str, str]
+    _features_fields: Dict[str, Union[str, List[Union[str, int]], slice]]
 
     def __init__(self, dataframe: Any = None, representation_field: str = None,
                  features_fields: Union[str, List[Union[str, int]], slice] = None,
@@ -46,9 +47,11 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         if dataframe is not None:
             if not isinstance(features_fields, List) and not isinstance(features_fields, slice) and \
                     features_fields is not None:
-                self._features_fields = [features_fields]
+                self._features_fields = {PLACEHOLDER_FIELD: [features_fields]}
+            elif features_fields is not None:
+                self._features_fields = {PLACEHOLDER_FIELD: features_fields}
             else:
-                self._features_fields = features_fields
+                self._features_fields = {}
 
             # the instance ids field is defined here, however, if it is None, eventually is derived from the dataframe
             # setter
@@ -72,7 +75,9 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                 self._labels = None
 
             if self._features_fields:
-                self._features = {PLACEHOLDER_FIELD: self.dataframe.loc[:, self._features_fields].T.to_dict('list')}
+                self._features = {PLACEHOLDER_FIELD:
+                                      self.dataframe.loc[:,
+                                      self._features_fields[PLACEHOLDER_FIELD]].T.to_dict('list')}
 
         # in the case that the dataframe is None and the features field is not None, the features names will be set
 
@@ -256,7 +261,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             self.instances_ids_field = "identifier"
             identifiers_series = Series(list(range(self.dataframe.shape[0])), name="identifier")
 
-            if self._features_fields is not None:
+            if self._features_fields:
                 if isinstance(self._features_fields, slice):
                     if self._features_fields.start is not None:
                         start = self._features_fields.start
@@ -276,7 +281,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                     indexes_list = list(range(start, stop, step))
                     self._features_fields = [self._dataframe.columns[i] for i in indexes_list]
 
-                elif isinstance(self._features_fields[0], int):
+                elif isinstance(self._features_fields[PLACEHOLDER_FIELD][0], int):
                     self._features_fields = [self._dataframe.columns[i] for i in self._features_fields]
 
             self._dataframe = pd.concat((identifiers_series, self._dataframe), axis=1)
