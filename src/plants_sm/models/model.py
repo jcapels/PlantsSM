@@ -1,11 +1,9 @@
 from abc import ABCMeta, abstractmethod
 
-from pydantic import BaseModel
-
 from plants_sm.data_structures.dataset import Dataset
 
 
-class Model(metaclass=ABCMeta, BaseModel):
+class Model(metaclass=ABCMeta):
 
     @abstractmethod
     def _preprocess_data(self, dataset: Dataset):
@@ -19,15 +17,11 @@ class Model(metaclass=ABCMeta, BaseModel):
     def _predict_proba(self, dataset: Dataset):
         pass
 
-    def fit(self, dataset: Dataset, validation_dataset: Dataset):
-
+    def fit(self, dataset: Dataset, validation_dataset: Dataset = None):
         return self._fit_data(dataset, validation_dataset)
 
     def predict_proba(self, dataset: Dataset):
-
         return self._predict_proba(dataset)
 
     def preprocess(self, dataset: Dataset):
-
         return self._preprocess_data(dataset)
-

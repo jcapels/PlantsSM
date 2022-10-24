@@ -50,12 +50,17 @@ class FeaturesGenerator(Transformer):
             dataset object with features
         """
 
-        parallel_callback = Parallel(n_jobs=self.n_jobs)
-        instances = dataset.get_instances(instance_type)
+        if self.n_jobs > 1:
+            parallel_callback = Parallel(n_jobs=self.n_jobs, backend="multiprocessing")
+            instances = dataset.get_instances(instance_type)
 
-        res = parallel_callback(
-            delayed(self._featurize_and_add_identifier)(instance_representation, instance_id)
-            for instance_id, instance_representation in instances.items())
+            res = parallel_callback(
+                delayed(self._featurize_and_add_identifier)(instance_representation, instance_id)
+                for instance_id, instance_representation in instances.items())
+        else:
+            res = []
+            for instance_id, instance_representation in dataset.get_instances(instance_type).items():
+                res.append(self._featurize_and_add_identifier(instance_representation, instance_id))
 
         dataset.features[instance_type] = dict(ChainMap(*res))
 

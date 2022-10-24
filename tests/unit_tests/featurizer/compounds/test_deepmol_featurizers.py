@@ -12,8 +12,8 @@ class TestDeepMolDescriptors(TestCompoundFeaturizers):
         self.assertEqual(features.shape[0], 2048)
 
     def test_morgan_fingerprints_wrapper(self):
-        wrapper = DeepMolDescriptors(n_jobs=2, preset="morgan_fingerprints")
-        wrapper._fit(self.dataset, PLACEHOLDER_FIELD, size=1024)
+        wrapper = DeepMolDescriptors(n_jobs=2, preset="morgan_fingerprints", size=1024)
+        wrapper._fit(self.dataset, PLACEHOLDER_FIELD)
         features = wrapper._featurize(self.dataset.instances[0])
         self.assertEqual(features.shape[0], 1024)
 

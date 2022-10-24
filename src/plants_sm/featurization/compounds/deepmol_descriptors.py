@@ -22,7 +22,7 @@ class DeepMolDescriptors(FeaturesGenerator):
         else:
             self.features_names = []
 
-    def _fit(self, dataset: Dataset, instance_type: str, **kwargs) -> 'DeepMolDescriptors':
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'DeepMolDescriptors':
         """
         Method to fit the transformer
 
@@ -41,7 +41,7 @@ class DeepMolDescriptors(FeaturesGenerator):
             raise ValueError(f'Preset {self.preset} is not available.')
 
         descriptor = DEEPMOL_PRESETS[self.preset]
-        self.descriptor = descriptor(**kwargs)
+        self.descriptor = descriptor(**self.kwargs)
         return self
 
     def _featurize(self, molecule: str) -> np.ndarray:

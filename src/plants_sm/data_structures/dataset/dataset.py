@@ -42,7 +42,7 @@ class Dataset(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def X(self) -> np.ndarray:
+    def X(self) -> Dict[str, np.ndarray]:
         pass
 
     @property

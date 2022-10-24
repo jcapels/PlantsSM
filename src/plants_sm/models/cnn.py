@@ -5,12 +5,12 @@ import torch
 
 class Conv1D(nn.Module):
 
-    def __init__(self, input_size, size, output_size, num_layers, conv1_padding=0,
+    def __init__(self, in_channels, out_channels, output_size, num_layers, conv1_padding=0,
                  conv1_dilation=1, conv1_kernel_size=12, conv1_stride=1, max_pool_padding=0,
                  max_pool_dilation=1, max_pool_kernel_size=5, max_pool_stride=12):
         super(Conv1D, self).__init__()
         self.num_layers = num_layers
-        original_hidden_size = size
+        original_hidden_size = out_channels
 
         # ------------------- Calculation of max pool output size -------------------
 
@@ -22,7 +22,7 @@ class Conv1D(nn.Module):
         # max_pool_output *= hidden_size
         # ---------------------------------------------------------------------------
 
-        self.conv1 = nn.Conv1d(input_size, size, kernel_size=conv1_kernel_size,
+        self.conv1 = nn.Conv1d(in_channels, out_channels, kernel_size=conv1_kernel_size,
                                stride=conv1_stride, padding=conv1_padding, dilation=conv1_dilation)
         self.max_pool = nn.MaxPool1d(kernel_size=max_pool_kernel_size, stride=max_pool_stride,
                                      padding=max_pool_padding, dilation=max_pool_dilation)

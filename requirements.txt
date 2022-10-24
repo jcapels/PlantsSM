@@ -26,3 +26,4 @@ fair-esm==1.0.2
 cached-property==1.5.2
 deepmol[preprocessing]==0.0.3b0
 mol2vec @ git+https://github.com/samoturk/mol2vec#egg=mol2vec
+map4 @ git+https://github.com/reymond-group/map4@v1.0
