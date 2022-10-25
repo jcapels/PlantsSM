@@ -30,7 +30,7 @@ class ESM1bEncoder(FeaturesGenerator):
     batch_size: int = 16
 
     def set_features_names(self):
-        return [f"esm_feature_{i}" for i in range(1, 1280+1)]
+        self.features_names = [f"esm_feature_{i}" for i in range(1, 1280+1)]
 
     def _fit(self, dataset: Dataset, instance_type: str) -> 'ESM1bEncoder':
         """
