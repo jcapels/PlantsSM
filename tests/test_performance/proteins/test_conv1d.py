@@ -190,17 +190,28 @@ class TestConv1D(TestCase):
 
         input_size_proteins = self.dataset_35000_instances_train.X["proteins"].shape[1]
         input_size_compounds = self.dataset_35000_instances_train.X["ligands"].shape[1]
-        model = BaselineModel(input_size_proteins, input_size_compounds, [input_size_proteins * 3,
-                                                                          input_size_proteins * 4],
+        # model = BaselineModel(input_size_proteins, input_size_compounds, [input_size_proteins * 3,
+        #                                                                   input_size_proteins * 4],
+        #                       [input_size_compounds * 3,
+        #                        input_size_compounds * 4],
+        #                       [input_size_compounds * 2,
+        #                        input_size_compounds,
+        #                        input_size_compounds // 2])
+
+        model = BaselineModel(input_size_proteins, input_size_compounds, [input_size_proteins * 2,
+                                                                          input_size_proteins * 2,
+                                                                          input_size_proteins * 2],
                               [input_size_compounds * 3,
-                               input_size_compounds * 4],
-                              [input_size_compounds * 2,
+                               input_size_compounds * 3,
+                               input_size_compounds * 3],
+                              [input_size_compounds * 3,
                                input_size_compounds,
-                               input_size_compounds // 2])
+                               input_size_compounds // 2, input_size_compounds // 4])
+
         wrapper = PyTorchModel(model=model, loss_function=nn.BCELoss(),
                                validation_metric=balanced_accuracy_score,
-                               problem_type=BINARY, batch_size=75, epochs=50,
-                               optimizer=Adam(model.parameters(), lr=0.0001))
+                               problem_type=BINARY, batch_size=50, epochs=50,
+                               optimizer=Adam(model.parameters(), lr=0.0005))
         wrapper.fit(self.dataset_35000_instances_train, self.dataset_35000_instances_valid)
 
     def test_padding(self):

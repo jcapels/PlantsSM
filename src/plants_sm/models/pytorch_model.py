@@ -55,7 +55,7 @@ class PyTorchModel(Model):
 
         data_loader = DataLoader(
             dataset,
-            shuffle=False,
+            shuffle=True,
             batch_size=self.batch_size
         )
         return data_loader
