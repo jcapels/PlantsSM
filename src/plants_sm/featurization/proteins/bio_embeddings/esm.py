@@ -1,4 +1,5 @@
 from collections import ChainMap
+from typing import List
 
 import esm
 import numpy as np
@@ -31,6 +32,7 @@ class ESM1bEncoder(Transformer):
 
     preset: str = 'representations'
     batch_size: int = 16
+    features_names = List[str] = []
 
     def set_features_names(self):
         self.features_names = [f"esm_feature_{i}" for i in range(1, 1280 + 1)]
