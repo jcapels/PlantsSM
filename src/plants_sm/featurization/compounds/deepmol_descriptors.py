@@ -1,3 +1,5 @@
+from typing import Dict
+
 import numpy as np
 from rdkit.Chem import Descriptors, MolFromSmiles
 from rdkit.ML.Descriptors import MoleculeDescriptors
@@ -10,6 +12,7 @@ from plants_sm.featurization.featurizer import FeaturesGenerator
 class DeepMolDescriptors(FeaturesGenerator):
 
     preset: str = "morgan_fingerprints"
+    kwargs: Dict = {}
 
     def set_features_names(self):
         """

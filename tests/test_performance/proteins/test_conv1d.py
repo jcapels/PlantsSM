@@ -1,18 +1,19 @@
 import os
 from copy import copy
-from unittest import TestCase
+from unittest import TestCase, skip
 
 import torch
 from torch import nn, relu
 from torch.optim import Adam
 
+from plants_sm.data_standardization.compounds.deepmol_standardizers import DeepMolStandardizer
+from plants_sm.data_standardization.compounds.padding import SMILESPadder
+from plants_sm.data_standardization.proteins.padding import SequencePadder
+from plants_sm.data_standardization.proteins.standardization import ProteinStandardizer
 from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputDataset
-from plants_sm.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
 from plants_sm.featurization.compounds.map4_fingerprint import MAP4Fingerprint
+from plants_sm.featurization.one_hot_encoder import OneHotEncoder
 from plants_sm.featurization.proteins.bio_embeddings.prot_bert import ProtBert
-from plants_sm.featurization.proteins.bio_embeddings.unirep import UniRepEmbeddings
-from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
-from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
 from plants_sm.models.constants import BINARY
 from plants_sm.models.pytorch_model import PyTorchModel
 from sklearn.metrics import balanced_accuracy_score
@@ -22,22 +23,25 @@ from tests import TEST_DIR
 
 class InteractionModelDTU(nn.Module):
 
-    def __init__(self):
+    def __init__(self, protein_shape, compounds_shape):
         super().__init__()
-        self.conv1_proteins_1 = nn.Conv1d(190, 380, 1, stride=1, padding='valid')
-        self.conv1_proteins_2 = nn.Conv1d(380, 570, 1, stride=1, padding='valid')
-        self.conv1_proteins_3 = nn.Conv1d(570, 760, 1, stride=1, padding='valid')
-        self.maxpool1_proteins = nn.MaxPool1d(1)
+        self.conv1_proteins_1 = nn.Conv1d(protein_shape[1], protein_shape[1] * 2, 4, stride=1,
+                                          padding='valid')
+        self.conv1_proteins_2 = nn.Conv1d(protein_shape[1] * 2, protein_shape[1] * 3, 6, stride=1, padding='valid')
+        self.conv1_proteins_3 = nn.Conv1d(protein_shape[1] * 3, protein_shape[1] * 4, 8, stride=1, padding='valid')
+        self.maxpool1_proteins = nn.MaxPool1d(11)
 
-        self.conv1_compounds_1 = nn.Conv1d(1024, 2048, 1, stride=1, padding='valid')
-        self.conv1_compounds_2 = nn.Conv1d(2048, 3072, 1, stride=1, padding='valid')
-        self.conv1_compounds_3 = nn.Conv1d(3072, 760, 1, stride=1, padding='valid')
-        self.maxpool1_compounds = nn.MaxPool1d(1)
+        self.conv1_compounds_1 = nn.Conv1d(compounds_shape[1], compounds_shape[1] * 2, 4, stride=1, padding='valid')
+        self.conv1_compounds_2 = nn.Conv1d(compounds_shape[1] * 2, compounds_shape[1] * 3, 6, stride=1, padding='valid')
+        self.conv1_compounds_3 = nn.Conv1d(compounds_shape[1] * 3, compounds_shape[1] * 4, 8,
+                                           stride=1, padding='valid')
+        self.maxpool1_compounds = nn.MaxPool1d(11)
 
-        self.dense1_interaction = nn.Linear(760 + 760, 760)
-        self.dense2_interaction = nn.Linear(760, 500)
-        self.dense3_interaction = nn.Linear(500, 200)
-        self.final_layer = nn.Linear(200, 1)
+        self.dense1_interaction = nn.Linear(compounds_shape[1] * 4 + protein_shape[1] * 4, 1024)
+        self.dense2_interaction = nn.Linear(1024, 1024)
+        self.dense3_interaction = nn.Linear(1024, 512)
+        self.dropout = nn.Dropout(0.1)
+        self.final_layer = nn.Linear(512, 1)
 
     def forward(self, x):
         x_proteins = x[0]
@@ -57,8 +61,11 @@ class InteractionModelDTU(nn.Module):
         y = torch.cat([y_proteins, y_compounds], dim=1)
         y = y.reshape(y.shape[0], y.shape[1])
         y = relu(self.dense1_interaction(y))
+        y = self.dropout(y)
         y = relu(self.dense2_interaction(y))
+        y = self.dropout(y)
         y = relu(self.dense3_interaction(y))
+        y = self.dropout(y)
         y = torch.sigmoid(self.final_layer(y))
         return y
 
@@ -123,6 +130,7 @@ class BaselineModel(nn.Module):
         return y
 
 
+@skip("No memory")
 class TestConv1D(TestCase):
 
     def setUp(self) -> None:
@@ -150,11 +158,11 @@ class TestConv1D(TestCase):
     def test_conv1d(self):
         print(len(self.dataset_35000_instances_train.get_instances("proteins")))
         ProtBert(device="cuda").fit_transform(self.dataset_35000_instances_train,
-                                                     "proteins")
+                                              "proteins")
         MAP4Fingerprint(n_jobs=8, dimensions=1024).fit_transform(self.dataset_35000_instances_train, "ligands")
 
         ProtBert(device="cuda").fit_transform(self.dataset_35000_instances_valid,
-                                                     "proteins")
+                                              "proteins")
         MAP4Fingerprint(n_jobs=8, dimensions=1024).fit_transform(self.dataset_35000_instances_valid, "ligands")
 
         input_size_proteins = self.dataset_35000_instances_train.X["proteins"].shape[1]
@@ -170,4 +178,52 @@ class TestConv1D(TestCase):
                                validation_metric=balanced_accuracy_score,
                                problem_type=BINARY, batch_size=75, epochs=50,
                                optimizer=Adam(model.parameters(), lr=0.0001))
+        wrapper.fit(self.dataset_35000_instances_train, self.dataset_35000_instances_valid)
+
+    def test_padding(self):
+        HEAVY_STANDARDIZATION = {
+            'remove_isotope'.upper(): True,
+            'NEUTRALISE_CHARGE'.upper(): True,
+            'remove_stereo'.upper(): True,
+            'keep_biggest'.upper(): True,
+            'add_hydrogen'.upper(): True,
+            'kekulize'.upper(): False,
+            'neutralise_charge_late'.upper(): True
+        }
+
+        kwargs = {"params": HEAVY_STANDARDIZATION}
+
+        DeepMolStandardizer(preset="custom_standardizer", kwargs=kwargs, n_jobs=8).fit_transform(
+            self.dataset_35000_instances_train,
+            "ligands")
+        ProteinStandardizer(n_jobs=8).fit_transform(self.dataset_35000_instances_train, "proteins")
+
+        smiles_padder = SMILESPadder(n_jobs=8).fit(self.dataset_35000_instances_train, "ligands")
+        smiles_padder.transform(self.dataset_35000_instances_train, "ligands")
+
+        sequence_padder = SequencePadder(n_jobs=8).fit(self.dataset_35000_instances_train, "proteins")
+        sequence_padder.transform(self.dataset_35000_instances_train, "proteins")
+
+        proteins_one_hot = OneHotEncoder(n_jobs=8).fit(self.dataset_35000_instances_train, "proteins")
+        proteins_one_hot.transform(self.dataset_35000_instances_train, "proteins")
+        compounds_one_hot = OneHotEncoder(n_jobs=8).fit(self.dataset_35000_instances_train, "ligands")
+        compounds_one_hot.transform(self.dataset_35000_instances_train, "ligands")
+
+        DeepMolStandardizer(preset="custom_standardizer", kwargs=kwargs, n_jobs=8).fit_transform(
+            self.dataset_35000_instances_valid,
+            "ligands")
+        ProteinStandardizer(n_jobs=8).fit_transform(self.dataset_35000_instances_valid, "proteins")
+
+        smiles_padder.transform(self.dataset_35000_instances_valid, "ligands")
+        sequence_padder.transform(self.dataset_35000_instances_valid, "proteins")
+        proteins_one_hot.transform(self.dataset_35000_instances_valid, "proteins")
+        compounds_one_hot.transform(self.dataset_35000_instances_valid, "ligands")
+
+        proteins_shape = self.dataset_35000_instances_train.X["proteins"].shape
+        compounds_shape = self.dataset_35000_instances_train.X["ligands"].shape
+        dta = InteractionModelDTU(proteins_shape, compounds_shape)
+        wrapper = PyTorchModel(model=dta, loss_function=nn.BCELoss(),
+                               validation_metric=balanced_accuracy_score,
+                               problem_type=BINARY, batch_size=75, epochs=50,
+                               optimizer=Adam(dta.parameters(), lr=0.0001))
         wrapper.fit(self.dataset_35000_instances_train, self.dataset_35000_instances_valid)

@@ -12,14 +12,14 @@ class TestDeepMolDescriptors(TestCompoundFeaturizers):
         self.assertEqual(features.shape[0], 2048)
 
     def test_morgan_fingerprints_wrapper(self):
-        wrapper = DeepMolDescriptors(n_jobs=2, preset="morgan_fingerprints", size=1024)
+        wrapper = DeepMolDescriptors(n_jobs=2, preset="morgan_fingerprints", kwargs={"size": 1024})
         wrapper._fit(self.dataset, PLACEHOLDER_FIELD)
         features = wrapper._featurize(self.dataset.instances[0])
         self.assertEqual(features.shape[0], 1024)
 
     def test_atom_pair_wrapper(self):
-        wrapper = DeepMolDescriptors(n_jobs=2, preset="atompair_fingerprints")
-        wrapper._fit(self.dataset, PLACEHOLDER_FIELD, nBits=1024)
+        wrapper = DeepMolDescriptors(n_jobs=2, preset="atompair_fingerprints", kwargs={"nBits": 1024})
+        wrapper._fit(self.dataset, PLACEHOLDER_FIELD)
         features = wrapper._featurize(self.dataset.instances[0])
         self.assertEqual(features.shape[0], 1024)
 
