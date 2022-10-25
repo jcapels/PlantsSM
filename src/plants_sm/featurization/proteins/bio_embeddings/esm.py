@@ -77,11 +77,10 @@ class ESM1bEncoder(Transformer):
         batch = []
         batch_ids = []
         for instance_id, instance_representation in dataset.get_instances(instance_type).items():
-            batch.append(instance_representation)
+            batch.append((instance_id, instance_representation))
             batch_ids.append(instance_id)
             if len(batch) == self.batch_size:
                 representations = {}
-                print(self.batch_converter(batch))
                 batch_labels, batch_strs, batch_tokens = self.batch_converter(batch)
                 # Extract per-residue representations (on CPU)
                 with torch.no_grad():
