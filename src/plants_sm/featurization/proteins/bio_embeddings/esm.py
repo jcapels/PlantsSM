@@ -5,11 +5,11 @@ import numpy as np
 import torch
 
 from plants_sm.data_structures.dataset import Dataset
-from plants_sm.featurization.featurizer import FeaturesGenerator
 from plants_sm.featurization.proteins.bio_embeddings._utils import get_device
+from plants_sm.transformation.transformer import Transformer
 
 
-class ESM1bEncoder(FeaturesGenerator):
+class ESM1bEncoder(Transformer):
     """
     It encodes protein sequences with the embedding layer of the pre-trained model ESM-1B.
     The Esm1bEncoder operates only over pandas DataFrame.
