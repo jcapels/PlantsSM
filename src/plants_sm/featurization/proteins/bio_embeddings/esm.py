@@ -57,7 +57,7 @@ class ESM1bEncoder(FeaturesGenerator):
 
         return self
 
-    def _transform(self, dataset: Dataset, instance_type: str) -> np.ndarray:
+    def _transform(self, dataset: Dataset, instance_type: str) -> Dataset:
         """
         It encodes a protein sequence with the embedding layer of the pre-trained model ESM-1B.
 
@@ -86,7 +86,6 @@ class ESM1bEncoder(FeaturesGenerator):
                 with torch.no_grad():
                     results = self.model(batch_tokens, repr_layers=[33], return_contacts=True)
 
-                print(results)
                 representations['representations'] = results["representations"][33]
                 representations['features'] = results["logits"]
 
