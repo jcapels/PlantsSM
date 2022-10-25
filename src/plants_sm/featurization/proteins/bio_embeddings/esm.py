@@ -1,3 +1,5 @@
+from collections import ChainMap
+
 import esm
 import numpy as np
 import torch
@@ -30,7 +32,7 @@ class ESM1bEncoder(FeaturesGenerator):
     batch_size: int = 16
 
     def set_features_names(self):
-        self.features_names = [f"esm_feature_{i}" for i in range(1, 1280+1)]
+        self.features_names = [f"esm_feature_{i}" for i in range(1, 1280 + 1)]
 
     def _fit(self, dataset: Dataset, instance_type: str) -> 'ESM1bEncoder':
         """
@@ -55,7 +57,7 @@ class ESM1bEncoder(FeaturesGenerator):
 
         return self
 
-    def _featurize(self, sequence: str) -> np.ndarray:
+    def _transform(self, dataset: Dataset, instance_type: str) -> np.ndarray:
         """
         It encodes a protein sequence with the embedding layer of the pre-trained model ESM-1B.
 
@@ -70,20 +72,57 @@ class ESM1bEncoder(FeaturesGenerator):
             The encoded protein sequence.
         """
         # it has to run in batch of 16, otherwise can lead to OOM issues
-        representations = {}
-        batch_labels, batch_strs, batch_tokens = self.batch_converter(sequence)
-        # Extract per-residue representations (on CPU)
-        with torch.no_grad():
-            results = self.model(batch_tokens, repr_layers=[33], return_contacts=True)
 
-        print(results)
-        representations['representations'] = results["representations"][33]
-        representations['features'] = results["logits"]
+        res = []
+        batch = []
+        batch_ids = []
+        for instance_id, instance_representation in dataset.get_instances(instance_type).items():
+            batch.append(instance_representation)
+            batch_ids.append(instance_id)
+            if len(batch) == self.batch_size:
+                representations = {}
+                batch_labels, batch_strs, batch_tokens = self.batch_converter(batch)
+                # Extract per-residue representations (on CPU)
+                with torch.no_grad():
+                    results = self.model(batch_tokens, repr_layers=[33], return_contacts=True)
 
-        sequence_embedding = representations[self.preset][0].numpy()
+                print(results)
+                representations['representations'] = results["representations"][33]
+                representations['features'] = results["logits"]
 
-        return sequence_embedding
+                sequences_embedding = representations[self.preset][0].numpy()
 
+                temp_result = {}
+                for i, batch_instance_id in enumerate(batch_ids):
+                    temp_result[batch_instance_id] = sequences_embedding[i]
 
+                res.append(temp_result)
+                batch = []
+                batch_ids = []
 
+        if len(batch) != 0:
+            representations = {}
+            batch_labels, batch_strs, batch_tokens = self.batch_converter(batch)
+            # Extract per-residue representations (on CPU)
+            with torch.no_grad():
+                results = self.model(batch_tokens, repr_layers=[33], return_contacts=True)
 
+            representations['representations'] = results["representations"][33]
+            representations['features'] = results["logits"]
+
+            sequences_embedding = representations[self.preset][0].numpy()
+
+            temp_result = {}
+            for i, batch_instance_id in enumerate(batch_ids):
+                temp_result[batch_instance_id] = sequences_embedding[i]
+
+            res.append(temp_result)
+
+        dataset.features[instance_type] = dict(ChainMap(*res))
+
+        if instance_type not in dataset.features_fields:
+            dataset.features_fields[instance_type] = self.features_names
+        else:
+            dataset.features_fields[instance_type].extend(self.features_names)
+
+        return dataset
