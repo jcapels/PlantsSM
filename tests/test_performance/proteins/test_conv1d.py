@@ -130,7 +130,7 @@ class BaselineModel(nn.Module):
         return y
 
 
-@skip("No memory")
+# @skip("No memory")
 class TestConv1D(TestCase):
 
     def setUp(self) -> None:
@@ -156,7 +156,30 @@ class TestConv1D(TestCase):
                                                                         labels_field="Conversion")
 
     def test_conv1d(self):
-        print(len(self.dataset_35000_instances_train.get_instances("proteins")))
+        HEAVY_STANDARDIZATION = {
+            'remove_isotope'.upper(): True,
+            'NEUTRALISE_CHARGE'.upper(): True,
+            'remove_stereo'.upper(): True,
+            'keep_biggest'.upper(): True,
+            'add_hydrogen'.upper(): True,
+            'kekulize'.upper(): False,
+            'neutralise_charge_late'.upper(): True
+        }
+
+        kwargs = {"params": HEAVY_STANDARDIZATION}
+
+        DeepMolStandardizer(preset="custom_standardizer", kwargs=kwargs, n_jobs=8).fit_transform(
+            self.dataset_35000_instances_train,
+            "ligands")
+
+        ProteinStandardizer(n_jobs=8).fit_transform(self.dataset_35000_instances_valid, "proteins")
+
+        DeepMolStandardizer(preset="custom_standardizer", kwargs=kwargs, n_jobs=8).fit_transform(
+            self.dataset_35000_instances_valid,
+            "ligands")
+
+        ProteinStandardizer(n_jobs=8).fit_transform(self.dataset_35000_instances_train, "proteins")
+
         ProtBert(device="cuda").fit_transform(self.dataset_35000_instances_train,
                                               "proteins")
         MAP4Fingerprint(n_jobs=8, dimensions=1024).fit_transform(self.dataset_35000_instances_train, "ligands")
