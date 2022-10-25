@@ -75,6 +75,8 @@ class ESM1bEncoder(FeaturesGenerator):
         # Extract per-residue representations (on CPU)
         with torch.no_grad():
             results = self.model(batch_tokens, repr_layers=[33], return_contacts=True)
+
+        print(results)
         representations['representations'] = results["representations"][33]
         representations['features'] = results["logits"]
 
