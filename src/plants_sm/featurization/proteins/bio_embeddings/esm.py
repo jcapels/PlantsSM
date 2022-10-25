@@ -5,6 +5,7 @@ import numpy as np
 import torch
 
 from plants_sm.data_structures.dataset import Dataset
+from plants_sm.featurization._utils import call_set_features_names
 from plants_sm.featurization.proteins.bio_embeddings._utils import get_device
 from plants_sm.transformation.transformer import Transformer
 
@@ -57,6 +58,7 @@ class ESM1bEncoder(Transformer):
 
         return self
 
+    @call_set_features_names
     def _transform(self, dataset: Dataset, instance_type: str) -> Dataset:
         """
         It encodes a protein sequence with the embedding layer of the pre-trained model ESM-1B.
