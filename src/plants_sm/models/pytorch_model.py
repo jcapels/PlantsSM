@@ -139,7 +139,6 @@ class PyTorchModel(Model):
                 inputs, targets = inputs_targets[:-1], inputs_targets[-1]
 
                 batch_device = self.batch_devices[i % len(self.batch_devices)]
-                self.model.to(batch_device)
                 for j, inputs_elem in enumerate(inputs):
                     inputs[j] = inputs_elem.to(batch_device)
 
