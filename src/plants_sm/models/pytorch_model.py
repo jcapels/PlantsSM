@@ -41,7 +41,7 @@ class PyTorchModel(Model):
 
         self.multi_gpu = multi_gpu
         if self.multi_gpu:
-            self.batch_devices = [torch.device('cuda:{}'.format(i)) for i in range(torch.cuda.device_count())]
+            self.batch_devices = ['cuda:{}'.format(i) for i in range(torch.cuda.device_count())]
         else:
             self.batch_devices = [self.device]
 
@@ -83,6 +83,7 @@ class PyTorchModel(Model):
             for i, inputs_targets in enumerate(test_set):
                 inputs, targets = inputs_targets[:-1], inputs_targets[-1]
                 batch_device = self.batch_devices[i % len(self.batch_devices)]
+                print(batch_device)
                 for j, inputs_elem in enumerate(inputs):
                     inputs[j] = inputs_elem.to(batch_device)
 
