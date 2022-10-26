@@ -1,4 +1,5 @@
 import os
+import pickle
 from copy import copy
 from unittest import TestCase, skip
 
@@ -213,7 +214,7 @@ class TestConv1D(TestCase):
 
         wrapper = PyTorchModel(model=model, loss_function=nn.BCELoss(),
                                validation_metric=balanced_accuracy_score,
-                               problem_type=BINARY, batch_size=50, epochs=30,
+                               problem_type=BINARY, batch_size=50, epochs=10,
                                optimizer=Adam(model.parameters(), lr=0.0001))
         wrapper.fit(self.dataset_35000_instances_train, self.dataset_35000_instances_valid)
         # wrapper.save("test_conv1d.pt")
@@ -225,7 +226,7 @@ class TestConv1D(TestCase):
 
         print(wrapper.predict_proba(self.dataset_35000_instances_test))
 
-    def test_padding(self):
+    def test_pickle_dataset(self):
         HEAVY_STANDARDIZATION = {
             'remove_isotope'.upper(): True,
             'NEUTRALISE_CHARGE'.upper(): True,
@@ -241,34 +242,24 @@ class TestConv1D(TestCase):
         DeepMolStandardizer(preset="custom_standardizer", kwargs=kwargs, n_jobs=8).fit_transform(
             self.dataset_35000_instances_train,
             "ligands")
-        ProteinStandardizer(n_jobs=8).fit_transform(self.dataset_35000_instances_train, "proteins")
 
-        smiles_padder = SMILESPadder(n_jobs=8).fit(self.dataset_35000_instances_train, "ligands")
-        smiles_padder.transform(self.dataset_35000_instances_train, "ligands")
-
-        sequence_padder = SequencePadder(n_jobs=8).fit(self.dataset_35000_instances_train, "proteins")
-        sequence_padder.transform(self.dataset_35000_instances_train, "proteins")
-
-        proteins_one_hot = OneHotEncoder(n_jobs=8).fit(self.dataset_35000_instances_train, "proteins")
-        proteins_one_hot.transform(self.dataset_35000_instances_train, "proteins")
-        compounds_one_hot = OneHotEncoder(n_jobs=8).fit(self.dataset_35000_instances_train, "ligands")
-        compounds_one_hot.transform(self.dataset_35000_instances_train, "ligands")
+        ProteinStandardizer(n_jobs=8).fit_transform(self.dataset_35000_instances_valid, "proteins")
 
         DeepMolStandardizer(preset="custom_standardizer", kwargs=kwargs, n_jobs=8).fit_transform(
             self.dataset_35000_instances_valid,
             "ligands")
-        ProteinStandardizer(n_jobs=8).fit_transform(self.dataset_35000_instances_valid, "proteins")
 
-        smiles_padder.transform(self.dataset_35000_instances_valid, "ligands")
-        sequence_padder.transform(self.dataset_35000_instances_valid, "proteins")
-        proteins_one_hot.transform(self.dataset_35000_instances_valid, "proteins")
-        compounds_one_hot.transform(self.dataset_35000_instances_valid, "ligands")
+        ProteinStandardizer(n_jobs=8).fit_transform(self.dataset_35000_instances_train, "proteins")
 
-        proteins_shape = self.dataset_35000_instances_train.X["proteins"].shape
-        compounds_shape = self.dataset_35000_instances_train.X["ligands"].shape
-        dta = InteractionModelDTU(proteins_shape, compounds_shape)
-        wrapper = PyTorchModel(model=dta, loss_function=nn.BCELoss(),
-                               validation_metric=balanced_accuracy_score,
-                               problem_type=BINARY, batch_size=75, epochs=50,
-                               optimizer=Adam(dta.parameters(), lr=0.0001))
-        wrapper.fit(self.dataset_35000_instances_train, self.dataset_35000_instances_valid)
+        Word2Vec().fit_transform(self.dataset_35000_instances_train,
+                                 "proteins")
+
+        MAP4Fingerprint(n_jobs=8, dimensions=1024).fit_transform(self.dataset_35000_instances_train, "ligands")
+        file_pi = open('dataset.obj', 'wb')
+        pickle.dump(self.dataset_35000_instances_train, file_pi)
+
+    def test_get_dataset(self):
+        file_pi = open('dataset.obj', 'rb')
+        dataset = pickle.load(file_pi)
+        print(dataset.X)
+

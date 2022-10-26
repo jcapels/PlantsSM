@@ -8,8 +8,10 @@ from numpy import ndarray
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.featurization._utils import call_set_features_names
+from plants_sm.transformation._utils import tqdm_joblib
 from plants_sm.transformation.transformer import Transformer
 
+from tqdm import tqdm
 
 class FeaturesGenerator(Transformer):
     device: str = None
@@ -53,10 +55,10 @@ class FeaturesGenerator(Transformer):
         if self.n_jobs > 1:
             parallel_callback = Parallel(n_jobs=self.n_jobs, backend="multiprocessing", prefer="threads")
             instances = dataset.get_instances(instance_type)
-
-            res = parallel_callback(
-                delayed(self._featurize_and_add_identifier)(instance_representation, instance_id)
-                for instance_id, instance_representation in instances.items())
+            with tqdm_joblib(tqdm(desc="My calculation", total=len(instances.items()))):
+                res = parallel_callback(
+                    delayed(self._featurize_and_add_identifier)(instance_representation, instance_id)
+                    for instance_id, instance_representation in instances.items())
         else:
             res = []
             for instance_id, instance_representation in dataset.get_instances(instance_type).items():

@@ -6,7 +6,7 @@ from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrappe
 from tests import TEST_DIR
 
 
-@skip("Just for performance testing")
+# @skip("Just for performance testing")
 class TestReadData(TestCase):
 
     def setUp(self) -> None:
@@ -16,7 +16,7 @@ class TestReadData(TestCase):
                                                                  labels_field="LogSpActivity")
 
     def test_featurize_400_instances_propythia(self):
-        propythia = PropythiaWrapper(preset="all", n_jobs=8)
+        propythia = PropythiaWrapper(preset="all", n_jobs=50)
         propythia.fit_transform(self.dataset_400_instances)
 
     def test_featurize_400_instances_propythia_physicochemical(self):

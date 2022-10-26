@@ -6,6 +6,7 @@ from torch.nn.modules.loss import _Loss
 from torch.optim import Adam, Optimizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.models.constants import REGRESSION, QUANTILE, BINARY
@@ -35,6 +36,8 @@ class PyTorchModel(Model):
         self.problem_type = problem_type
         self.trigger_times = trigger_times
         self.last_loss = last_loss
+
+        self.writer = SummaryWriter()
 
         if not self.optimizer:
             self.optimizer = Adam(self.model.parameters())
@@ -80,8 +83,8 @@ class PyTorchModel(Model):
                 yhat = self.model(inputs)
                 yhat = yhat.cpu().detach().numpy()
                 actual = targets.cpu().numpy()
-                actual = actual.reshape((len(actual), )).tolist()
-                yhat = yhat.reshape((len(yhat), )).tolist()
+                actual = actual.reshape((len(actual),)).tolist()
+                yhat = yhat.reshape((len(yhat),)).tolist()
                 predictions.extend(yhat)
                 actuals.extend(actual)
 
@@ -142,6 +145,10 @@ class PyTorchModel(Model):
                 if i % 100 == 0 or i == len(train_dataset):
                     print(f'[{epoch}/{self.epochs}, {i}/{len(train_dataset)}] loss: {loss.item():.8}')
 
+            loss, validation_metric_result = self._validate(train_dataset)
+            self.writer.add_scalar("Loss/train", loss, epoch)
+            self.writer.add_scalar("Metric/train", validation_metric_result, epoch)
+
             # Early stopping
             if validation_dataset:
                 current_loss, validation_metric_result = self._validate(validation_dataset)
@@ -156,9 +163,14 @@ class PyTorchModel(Model):
                     print('trigger times: 0')
                     trigger_times = 0
 
+                self.writer.add_scalar("Loss/validation", current_loss, epoch)
+                self.writer.add_scalar("Metric/validation", validation_metric_result, epoch)
+
                 last_loss = current_loss
 
             self.scheduler.step(last_loss)
+
+        self.writer.flush()
 
     def get_pred_from_proba(self, y_pred_proba):
         if self.problem_type == BINARY:
@@ -199,7 +211,7 @@ class PyTorchModel(Model):
 
     def _predict_proba(self, dataset: Dataset):
 
-        dataset = self._preprocess_data(dataset)
+        dataset = self._preprocess_data(dataset, shuffle=False)
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
         if self.problem_type in [REGRESSION, QUANTILE]:
@@ -212,8 +224,10 @@ class PyTorchModel(Model):
         # the "shuffle" argument always has to be False in predicting probabilities in an evaluation context
 
         with torch.no_grad():
-            for inputs in dataset:
-                inputs = inputs[0].to(device)
+            for i, inputs_targets in enumerate(dataset):
+                inputs, targets = inputs_targets[:-1], inputs_targets[-1]
+                for j, inputs_elem in enumerate(inputs):
+                    inputs[j] = inputs_elem.to(self.device)
                 yhat = self.model(inputs)
                 yhat = yhat.cpu().detach().numpy()
                 predictions.extend(yhat)

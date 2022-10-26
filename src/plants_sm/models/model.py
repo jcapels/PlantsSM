@@ -33,7 +33,6 @@ class Model(metaclass=ABCMeta):
 
     def predict_proba(self, dataset: Dataset):
 
-        self.preprocess(dataset)
         return self._predict_proba(dataset)
 
     def preprocess(self, dataset: Dataset, **kwargs):
