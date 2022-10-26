@@ -12,7 +12,7 @@ from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrappe
 from tests import TEST_DIR
 
 
-@skip("Just for performance testing")
+# @skip("Just for performance testing")
 class TestInteractionFeaturization(TestCase):
     """Test the interaction featurization performance."""
 

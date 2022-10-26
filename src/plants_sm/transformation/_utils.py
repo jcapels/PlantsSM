@@ -7,7 +7,7 @@ from plants_sm.data_structures.dataset import Dataset
 
 
 def transform_instances(n_jobs: int, dataset: Dataset, func: Callable, instance_type: str) -> Dataset:
-    parallel_callback = Parallel(n_jobs=n_jobs)
+    parallel_callback = Parallel(n_jobs=n_jobs, prefer="threads")
     instances = dataset.get_instances(instance_type)
     res = parallel_callback(
         delayed(func)(instance_representation, instance_id)

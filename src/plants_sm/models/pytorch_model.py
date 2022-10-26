@@ -41,7 +41,14 @@ class PyTorchModel(Model):
         if not self.scheduler:
             self.scheduler = ReduceLROnPlateau(self.optimizer, 'min')
 
-    def _preprocess_data(self, dataset: Dataset):
+    def _save(self, path: str):
+        torch.save(self.model.state_dict(), path)
+
+    def _load(self, path: str):
+        self.model.load_state_dict(torch.load(path))
+        self.model.eval()
+
+    def _preprocess_data(self, dataset: Dataset, shuffle: bool = True):
 
         tensors = []
         for instance in dataset.X.keys():
@@ -55,7 +62,7 @@ class PyTorchModel(Model):
 
         data_loader = DataLoader(
             dataset,
-            shuffle=True,
+            shuffle=shuffle,
             batch_size=self.batch_size
         )
         return data_loader

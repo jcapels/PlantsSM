@@ -51,7 +51,7 @@ class FeaturesGenerator(Transformer):
         """
 
         if self.n_jobs > 1:
-            parallel_callback = Parallel(n_jobs=self.n_jobs, backend="multiprocessing")
+            parallel_callback = Parallel(n_jobs=self.n_jobs, backend="multiprocessing", prefer="threads")
             instances = dataset.get_instances(instance_type)
 
             res = parallel_callback(

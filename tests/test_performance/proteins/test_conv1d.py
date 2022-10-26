@@ -14,6 +14,8 @@ from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputData
 from plants_sm.featurization.compounds.map4_fingerprint import MAP4Fingerprint
 from plants_sm.featurization.one_hot_encoder import OneHotEncoder
 from plants_sm.featurization.proteins.bio_embeddings.prot_bert import ProtBert
+from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
+from plants_sm.featurization.proteins.encodings.blosum import BLOSSUMEncoder
 from plants_sm.models.constants import BINARY
 from plants_sm.models.pytorch_model import PyTorchModel
 from sklearn.metrics import balanced_accuracy_score
@@ -180,11 +182,12 @@ class TestConv1D(TestCase):
 
         ProteinStandardizer(n_jobs=8).fit_transform(self.dataset_35000_instances_train, "proteins")
 
-        ProtBert(device="cuda").fit_transform(self.dataset_35000_instances_train,
-                                              "proteins")
+        Word2Vec().fit_transform(self.dataset_35000_instances_train,
+                                                    "proteins")
+
         MAP4Fingerprint(n_jobs=8, dimensions=1024).fit_transform(self.dataset_35000_instances_train, "ligands")
 
-        ProtBert(device="cuda").fit_transform(self.dataset_35000_instances_valid,
+        Word2Vec().fit_transform(self.dataset_35000_instances_valid,
                                               "proteins")
         MAP4Fingerprint(n_jobs=8, dimensions=1024).fit_transform(self.dataset_35000_instances_valid, "ligands")
 
@@ -210,9 +213,17 @@ class TestConv1D(TestCase):
 
         wrapper = PyTorchModel(model=model, loss_function=nn.BCELoss(),
                                validation_metric=balanced_accuracy_score,
-                               problem_type=BINARY, batch_size=50, epochs=50,
-                               optimizer=Adam(model.parameters(), lr=0.0005))
+                               problem_type=BINARY, batch_size=50, epochs=30,
+                               optimizer=Adam(model.parameters(), lr=0.0001))
         wrapper.fit(self.dataset_35000_instances_train, self.dataset_35000_instances_valid)
+        # wrapper.save("test_conv1d.pt")
+
+        Word2Vec().fit_transform(self.dataset_35000_instances_test,
+                                 "proteins")
+
+        MAP4Fingerprint(n_jobs=8, dimensions=1024).fit_transform(self.dataset_35000_instances_test, "ligands")
+
+        print(wrapper.predict_proba(self.dataset_35000_instances_test))
 
     def test_padding(self):
         HEAVY_STANDARDIZATION = {
