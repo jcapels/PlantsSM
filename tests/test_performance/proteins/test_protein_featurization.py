@@ -18,6 +18,7 @@ class TestReadData(TestCase):
     def test_featurize_400_instances_propythia(self):
         propythia = PropythiaWrapper(preset="all", n_jobs=50)
         propythia.fit_transform(self.dataset_400_instances)
+        print(self.dataset_400_instances.features)
 
     def test_featurize_400_instances_propythia_physicochemical(self):
         propythia = PropythiaWrapper(preset="physicochemical", n_jobs=8)

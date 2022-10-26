@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Tuple
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.transformation._utils import transform_instances
@@ -71,7 +71,7 @@ class ProteinStandardizer(Transformer):
         """
         return transform_instances(self.n_jobs, dataset, self._protein_preprocessing, instance_type)
 
-    def _protein_preprocessing(self, sequence: str, identifier: str) -> Dict[str, str]:
+    def _protein_preprocessing(self, sequence: str, identifier: str) -> Tuple[str, str]:
         """
         Preprocess a protein sequence.
 
@@ -84,11 +84,11 @@ class ProteinStandardizer(Transformer):
 
         Returns
         -------
-        Dict[str, str]
+        Tuple[str, str]
             Dictionary with the identifier as key and the preprocessed sequence as value.
         """
         for key, value in self.replace_dict.items():
             sequence = sequence.replace(key, value)
-        return {identifier: sequence}
+        return identifier, sequence
 
 

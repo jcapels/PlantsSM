@@ -36,7 +36,7 @@ def transform_instances(n_jobs: int, dataset: Dataset, func: Callable, instance_
             delayed(func)(instance_representation, instance_id)
             for instance_id, instance_representation in instances.items())
 
-    sequences_dict = dict(ChainMap(*res))
+    sequences_dict = dict(res)
     dataset.instances[instance_type] = sequences_dict
 
     return dataset

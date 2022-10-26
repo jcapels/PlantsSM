@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from collections import ChainMap
-from typing import Any, List, Dict
+from typing import Any, List, Dict, Tuple
 
 import numpy as np
 from joblib import Parallel, delayed
@@ -12,6 +12,7 @@ from plants_sm.transformation._utils import tqdm_joblib
 from plants_sm.transformation.transformer import Transformer
 
 from tqdm import tqdm
+
 
 class FeaturesGenerator(Transformer):
     device: str = None
@@ -51,7 +52,6 @@ class FeaturesGenerator(Transformer):
         dataset with features: Dataset
             dataset object with features
         """
-
         if self.n_jobs > 1:
             parallel_callback = Parallel(n_jobs=self.n_jobs, backend="multiprocessing", prefer="threads")
             instances = dataset.get_instances(instance_type)
@@ -64,7 +64,7 @@ class FeaturesGenerator(Transformer):
             for instance_id, instance_representation in dataset.get_instances(instance_type).items():
                 res.append(self._featurize_and_add_identifier(instance_representation, instance_id))
 
-        dataset.features[instance_type] = dict(ChainMap(*res))
+        dataset.features[instance_type] = dict(res)
 
         if instance_type not in dataset.features_fields:
             dataset.features_fields[instance_type] = self.features_names
@@ -72,7 +72,7 @@ class FeaturesGenerator(Transformer):
             dataset.features_fields[instance_type].extend(self.features_names)
         return dataset
 
-    def _featurize_and_add_identifier(self, instance: Any, identifier: str) -> Dict[str, ndarray]:
+    def _featurize_and_add_identifier(self, instance: Any, identifier: str) -> Tuple[str, ndarray]:
         """
         Private method that calls the _featurize method and returns the dataframe with the features, adding the instance
         identifier to the dataframe.
@@ -96,7 +96,8 @@ class FeaturesGenerator(Transformer):
         # TODO: catch the correct exception
         except Exception as e:
             features_values = np.zeros(len(self.features_names))
-        temp_feature_dictionary = {identifier: features_values}
+
+        temp_feature_dictionary = (identifier, features_values)
 
         return temp_feature_dictionary
 

@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Tuple
 
 from rdkit.Chem import MolFromSmiles, MolToSmiles
 
@@ -50,7 +50,7 @@ class DeepMolStandardizer(Transformer):
         """
         return transform_instances(self.n_jobs, dataset, self._compound_preprocessing, instance_type)
 
-    def _compound_preprocessing(self, compound: str, identifier: str) -> Dict[str, str]:
+    def _compound_preprocessing(self, compound: str, identifier: str) -> Tuple[str, str]:
         """
         Method to preprocess a compound
 
@@ -69,4 +69,4 @@ class DeepMolStandardizer(Transformer):
             dictionary with the identifier of the compound and the preprocessed compound
         """
         mol = MolFromSmiles(compound)
-        return {identifier: MolToSmiles(self.descriptor._standardize(mol))}
+        return identifier, MolToSmiles(self.descriptor._standardize(mol))

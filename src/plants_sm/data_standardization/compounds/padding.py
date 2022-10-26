@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Tuple
 
 from plants_sm.data_standardization.padding_enumerators import PaddingEnumerators
 from plants_sm.data_structures.dataset import Dataset
@@ -61,7 +61,7 @@ class SMILESPadder(Transformer):
         """
         return transform_instances(self.n_jobs, dataset, self._pad_sequence, instance_type)
 
-    def _pad_sequence(self, instance: str, identifier: str) -> Dict[str, str]:
+    def _pad_sequence(self, instance: str, identifier: str) -> Tuple[str, str]:
         """
         Pad a sequence of variable length to a fixed length
 
@@ -97,4 +97,4 @@ class SMILESPadder(Transformer):
 
             padded = str(PaddingEnumerators.COMPOUNDS.value) * self.pad_width
 
-        return {identifier: padded}
+        return identifier, padded
