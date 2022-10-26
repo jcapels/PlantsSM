@@ -56,7 +56,8 @@ class OneHotEncoder(FeaturesGenerator):
 
         if not self.alphabet:
             self.alphabet = set()
-            for sequence in list(dataset.get_instances(instance_type).values()):
+            sequences = list(dataset.get_instances(instance_type).values())
+            for sequence in sequences:
                 for char in str(sequence):
                     self.alphabet.add(char)
         else:
