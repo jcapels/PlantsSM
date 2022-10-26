@@ -87,4 +87,4 @@ class OneHotEncoder(FeaturesGenerator):
             one-hot encoded sequence
         """
 
-        return np.array([self.tokenizer[i] for i in instance], dtype=np.float64)
+        return np.array([self.tokenizer[i] for i in instance], dtype=np.bool)

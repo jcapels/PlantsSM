@@ -61,4 +61,4 @@ class PropythiaWrapper(FeaturesGenerator):
             features = descriptor(protein_sequence)
             features_list.extend(features)
 
-        return np.array(features_list)
+        return np.array(features_list, dtype=np.float32)
