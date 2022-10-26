@@ -59,4 +59,4 @@ class BLOSSUMEncoder(FeaturesGenerator):
 
     def _featurize(self, sequence: Any) -> np.ndarray:
 
-        return np.array([np.array(self._blosum[aa]) for aa in sequence])
+        return np.array([np.array(self._blosum[aa]) for aa in sequence], dtype=np.float32)

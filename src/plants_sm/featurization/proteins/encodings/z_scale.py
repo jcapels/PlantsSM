@@ -41,4 +41,4 @@ class ZScaleEncoder(FeaturesGenerator):
         encoded_sequence: np.ndarray
             The encoded sequence.
         """
-        return np.array([np.array(ZS[aa]) for aa in sequence])
+        return np.array([np.array(ZS[aa]) for aa in sequence], dtype=np.float32)

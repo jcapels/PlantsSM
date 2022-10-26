@@ -31,7 +31,7 @@ def tqdm_joblib(tqdm_object):
 def transform_instances(n_jobs: int, dataset: Dataset, func: Callable, instance_type: str) -> Dataset:
     parallel_callback = Parallel(n_jobs=n_jobs, prefer="threads")
     instances = dataset.get_instances(instance_type)
-    with tqdm_joblib(tqdm(desc="My calculation", total=len(instances.items()))):
+    with tqdm_joblib(tqdm(desc="Featurizing", total=len(instances.items()))):
         res = parallel_callback(
             delayed(func)(instance_representation, instance_id)
             for instance_id, instance_representation in instances.items())

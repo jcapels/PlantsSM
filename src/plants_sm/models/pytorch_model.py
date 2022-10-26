@@ -20,7 +20,7 @@ class PyTorchModel(Model):
                  scheduler: ReduceLROnPlateau = None, epochs: int = 32, batch_size: int = 32,
                  patience: int = 4, validation_metric: Callable = None, problem_type: str = BINARY,
                  device: Union[str, torch.device] = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu'),
-                 trigger_times: int = 0, last_loss: int = None):
+                 trigger_times: int = 0, last_loss: int = None, multi_gpu=False):
 
         super().__init__()
 
@@ -38,6 +38,12 @@ class PyTorchModel(Model):
         self.last_loss = last_loss
 
         self.writer = SummaryWriter()
+
+        self.multi_gpu = multi_gpu
+        if self.multi_gpu:
+            self.batch_devices = [torch.device('cuda:{}'.format(i)) for i in range(torch.cuda.device_count())]
+        else:
+            self.batch_devices = [self.device]
 
         if not self.optimizer:
             self.optimizer = Adam(self.model.parameters())
@@ -76,11 +82,13 @@ class PyTorchModel(Model):
         with torch.no_grad():
             for i, inputs_targets in enumerate(test_set):
                 inputs, targets = inputs_targets[:-1], inputs_targets[-1]
+                batch_device = self.batch_devices[i % len(self.batch_devices)]
                 for j, inputs_elem in enumerate(inputs):
-                    inputs[j] = inputs_elem.to(self.device)
+                    inputs[j] = inputs_elem.to(batch_device)
 
-                targets = targets.to(self.device)
+                targets = targets.to(batch_device)
                 yhat = self.model(inputs)
+
                 yhat = yhat.cpu().detach().numpy()
                 actual = targets.cpu().numpy()
                 actual = actual.reshape((len(actual),)).tolist()
@@ -98,14 +106,16 @@ class PyTorchModel(Model):
         with torch.no_grad():
             for i, inputs_targets in enumerate(validation_set):
                 inputs, targets = inputs_targets[:-1], inputs_targets[-1]
+                batch_device = self.batch_devices[i % len(self.batch_devices)]
                 for j, inputs_elem in enumerate(inputs):
-                    inputs[j] = inputs_elem.to(self.device)
+                    inputs[j] = inputs_elem.to(batch_device)
 
-                targets = targets.to(self.device)
-
+                targets = targets.to(batch_device)
                 output = self.model(inputs)
+
                 loss = self.loss_function(output, targets)
                 loss_total += loss.item()
+                torch.cuda.empty_cache()
 
         validation_metric_result = None
         if self.validation_metric:
@@ -127,16 +137,19 @@ class PyTorchModel(Model):
 
             for i, inputs_targets in enumerate(train_dataset):
                 inputs, targets = inputs_targets[:-1], inputs_targets[-1]
-                for j, inputs_elem in enumerate(inputs):
-                    inputs[j] = inputs_elem.to(self.device)
 
-                targets = targets.to(self.device)
+                batch_device = self.batch_devices[i % len(self.batch_devices)]
+                for j, inputs_elem in enumerate(inputs):
+                    inputs[j] = inputs_elem.to(batch_device)
+
+                targets = targets.to(batch_device)
+
+                output = self.model(inputs)
 
                 # Zero the gradients
                 self.optimizer.zero_grad()
 
                 # Forward and backward propagation
-                output = self.model(inputs)
                 loss = self.loss_function(output, targets)
                 loss.backward()
                 self.optimizer.step()
@@ -144,6 +157,7 @@ class PyTorchModel(Model):
                 # Show progress
                 if i % 100 == 0 or i == len(train_dataset):
                     print(f'[{epoch}/{self.epochs}, {i}/{len(train_dataset)}] loss: {loss.item():.8}')
+                torch.cuda.empty_cache()
 
             loss, validation_metric_result = self._validate(train_dataset)
             self.writer.add_scalar("Loss/train", loss, epoch)
@@ -171,6 +185,7 @@ class PyTorchModel(Model):
             self.scheduler.step(last_loss)
 
         self.writer.flush()
+        self.model.to("cpu")
 
     def get_pred_from_proba(self, y_pred_proba):
         if self.problem_type == BINARY:
@@ -212,7 +227,6 @@ class PyTorchModel(Model):
     def _predict_proba(self, dataset: Dataset):
 
         dataset = self._preprocess_data(dataset, shuffle=False)
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
         if self.problem_type in [REGRESSION, QUANTILE]:
             y_pred = self.model.predict(dataset)
@@ -227,8 +241,11 @@ class PyTorchModel(Model):
             for i, inputs_targets in enumerate(dataset):
                 inputs, targets = inputs_targets[:-1], inputs_targets[-1]
                 for j, inputs_elem in enumerate(inputs):
-                    inputs[j] = inputs_elem.to(self.device)
+                    inputs[j] = inputs_elem.to("cpu")
+
+                targets.to("cpu")
                 yhat = self.model(inputs)
+
                 yhat = yhat.cpu().detach().numpy()
                 predictions.extend(yhat)
 

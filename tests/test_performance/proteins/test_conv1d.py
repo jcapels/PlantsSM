@@ -184,7 +184,7 @@ class TestConv1D(TestCase):
         ProteinStandardizer(n_jobs=8).fit_transform(self.dataset_35000_instances_train, "proteins")
 
         Word2Vec().fit_transform(self.dataset_35000_instances_train,
-                                                    "proteins")
+                                              "proteins")
 
         MAP4Fingerprint(n_jobs=8, dimensions=1024).fit_transform(self.dataset_35000_instances_train, "ligands")
 
@@ -214,13 +214,13 @@ class TestConv1D(TestCase):
 
         wrapper = PyTorchModel(model=model, loss_function=nn.BCELoss(),
                                validation_metric=balanced_accuracy_score,
-                               problem_type=BINARY, batch_size=50, epochs=10,
+                               problem_type=BINARY, batch_size=50, epochs=1,
                                optimizer=Adam(model.parameters(), lr=0.0001))
         wrapper.fit(self.dataset_35000_instances_train, self.dataset_35000_instances_valid)
         # wrapper.save("test_conv1d.pt")
 
         Word2Vec().fit_transform(self.dataset_35000_instances_test,
-                                 "proteins")
+                                              "proteins")
 
         MAP4Fingerprint(n_jobs=8, dimensions=1024).fit_transform(self.dataset_35000_instances_test, "ligands")
 
@@ -262,4 +262,3 @@ class TestConv1D(TestCase):
         file_pi = open('dataset.obj', 'rb')
         dataset = pickle.load(file_pi)
         print(dataset.X)
-

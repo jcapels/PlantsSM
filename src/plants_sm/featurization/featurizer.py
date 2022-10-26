@@ -52,17 +52,19 @@ class FeaturesGenerator(Transformer):
         dataset with features: Dataset
             dataset object with features
         """
+        instances = dataset.get_instances(instance_type)
         if self.n_jobs > 1:
             parallel_callback = Parallel(n_jobs=self.n_jobs, backend="multiprocessing", prefer="threads")
-            instances = dataset.get_instances(instance_type)
-            with tqdm_joblib(tqdm(desc="My calculation", total=len(instances.items()))):
+            with tqdm_joblib(tqdm(desc="Featurizing", total=len(instances.items()))):
                 res = parallel_callback(
                     delayed(self._featurize_and_add_identifier)(instance_representation, instance_id)
                     for instance_id, instance_representation in instances.items())
         else:
             res = []
+            pbar = tqdm(desc="Featurizing", total=len(instances.items()))
             for instance_id, instance_representation in dataset.get_instances(instance_type).items():
                 res.append(self._featurize_and_add_identifier(instance_representation, instance_id))
+                pbar.update(1)
 
         dataset.features[instance_type] = dict(res)
 
