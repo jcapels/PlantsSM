@@ -21,7 +21,7 @@ from plants_sm.models.constants import BINARY
 from plants_sm.models.pytorch_model import PyTorchModel
 from sklearn.metrics import balanced_accuracy_score
 
-from plants_sm.tokenisation.compounds.smilespe import SPETokenizer
+from plants_sm.tokenisation.compounds.smilespe import SPETokenizer, AtomLevelTokenizer, KmerTokenizer
 from tests import TEST_DIR
 
 
@@ -208,19 +208,19 @@ class TestConv1D(TestCase):
         #                        input_size_compounds // 2])
 
         model = BaselineModel(input_size_proteins, input_size_compounds, [input_size_proteins * 2,
-                                                                          input_size_proteins * 2,
-                                                                          input_size_proteins * 2],
-                              [input_size_compounds * 3,
-                               input_size_compounds * 3,
-                               input_size_compounds * 3],
-                              [input_size_compounds * 3,
-                               input_size_compounds,
-                               input_size_compounds // 2, input_size_compounds // 4])
+                                                                          input_size_proteins * 6,
+                                                                          input_size_proteins * 8],
+                              [input_size_compounds * 2,
+                               input_size_compounds * 6,
+                               input_size_compounds * 8],
+                              [input_size_proteins * 2,
+                               input_size_proteins,
+                               input_size_proteins // 2, input_size_proteins // 4])
 
         wrapper = PyTorchModel(model=model, loss_function=nn.BCELoss(),
                                validation_metric=balanced_accuracy_score,
                                problem_type=BINARY, batch_size=75, epochs=100,
-                               optimizer=Adam(model.parameters(), lr=0.001))
+                               optimizer=Adam(model.parameters(), lr=0.0001))
         wrapper.fit(self.dataset_35000_instances_train, self.dataset_35000_instances_valid)
         # wrapper.save("test_conv1d.pt")
 
