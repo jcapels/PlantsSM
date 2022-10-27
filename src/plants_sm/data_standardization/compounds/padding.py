@@ -95,6 +95,6 @@ class SMILESPadder(Transformer):
 
         except AssertionError:
 
-            padded = str(PaddingEnumerators.COMPOUNDS.value) * self.pad_width
+            padded = instance[:self.pad_width]
 
         return identifier, padded

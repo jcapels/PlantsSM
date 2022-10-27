@@ -21,6 +21,12 @@ class TestOneHotEncodings(TestProteinFeaturizers):
 
         self.assertEqual(self.dataset.X().shape, (2, 453, 20))
 
+    def test_one_hot_encodings_2d(self):
+        OneHotEncoder(output_shape_dimension=2).fit_transform(self.dataset)
+
+        self.assertEqual(self.dataset.X().shape, (2, 453))
+        print(self.dataset.X())
+
     @skip("Not implemented yet")
     def test_with_random_tokens(self):
         OneHotEncoder(alphabet=["AR"]).fit_transform(self.dataset)

@@ -1,6 +1,5 @@
 from abc import abstractmethod
-from collections import ChainMap
-from typing import Any, List, Dict, Tuple
+from typing import Any, List, Tuple
 
 import numpy as np
 from joblib import Parallel, delayed

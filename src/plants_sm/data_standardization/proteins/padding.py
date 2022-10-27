@@ -95,6 +95,6 @@ class SequencePadder(Transformer):
 
         except AssertionError:
 
-            padded = str(PaddingEnumerators.PROTEINS.value) * self.pad_width
+            padded = instance[:self.pad_width]
 
         return identifier, padded

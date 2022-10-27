@@ -1,9 +1,11 @@
+from copy import copy
 from typing import Any, List, Union, Set
 
 import numpy as np
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.featurization.featurizer import FeaturesGenerator
+from plants_sm.tokenisation.tokeniser import Tokenizer
 
 
 class OneHotEncoder(FeaturesGenerator):
@@ -21,6 +23,8 @@ class OneHotEncoder(FeaturesGenerator):
     """
     name = "one_hot_encoder"
     alphabet: Union[Set[str], str] = []
+    tokenizer: Tokenizer = None
+    max_length: int = None
 
     output_shape_dimension: int = 3
 
@@ -51,25 +55,33 @@ class OneHotEncoder(FeaturesGenerator):
             fitted OneHotEncoder
         """
 
-        if self.output_shape_dimension != 3:
-            raise ValueError(f'output_shape_dimension must be 3, got {self.output_shape_dimension}')
-
+        self.tokens = {}
+        lengths = []
         if not self.alphabet:
             self.alphabet = set()
             sequences = list(dataset.get_instances(instance_type).values())
             for sequence in sequences:
-                for char in str(sequence):
+                if self.tokenizer:
+                    tokenized_sequence = self.tokenizer.tokenize(sequence)
+                else:
+                    tokenized_sequence = copy(sequence)
+                lengths.append(len(tokenized_sequence))
+                for char in tokenized_sequence:
                     self.alphabet.add(char)
         else:
             if isinstance(self.alphabet, str):
                 self.alphabet = set(list(self.alphabet))
 
-        self.tokenizer = {}
+        if not self.max_length:
+            self.max_length = max(lengths)
 
         for i, token in enumerate(self.alphabet):
-            one_hot = np.zeros(len(self.alphabet))
-            one_hot[i] = 1
-            self.tokenizer[token] = one_hot
+            if self.output_shape_dimension == 3:
+                one_hot = np.zeros(len(self.alphabet))
+                one_hot[i] = 1
+                self.tokens[token] = one_hot
+            else:
+                self.tokens[token] = i + 1
 
         return self
 
@@ -87,5 +99,9 @@ class OneHotEncoder(FeaturesGenerator):
         one_hot_encoded_sequence: np.ndarray
             one-hot encoded sequence
         """
-
-        return np.array([self.tokenizer[i] for i in instance], dtype=np.bool)
+        res = np.zeros(self.max_length, dtype=np.int32)
+        if self.tokenizer:
+            instance = self.tokenizer.tokenize(instance)
+        for i, token in enumerate(instance[:self.max_length]):
+            res[i] = self.tokens[token]
+        return res
