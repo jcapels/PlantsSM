@@ -69,6 +69,8 @@ class OneHotEncoder(FeaturesGenerator):
                 for char in tokenized_sequence:
                     self.alphabet.add(char)
         else:
+            sequences = list(dataset.get_instances(instance_type).values())
+            self.max_length = max([len(sequence) for sequence in sequences])
             if isinstance(self.alphabet, str):
                 self.alphabet = set(list(self.alphabet))
 
@@ -103,5 +105,6 @@ class OneHotEncoder(FeaturesGenerator):
         if self.tokenizer:
             instance = self.tokenizer.tokenize(instance)
         for i, token in enumerate(instance[:self.max_length]):
-            res[i] = self.tokens[token]
+            if token in self.tokens:
+                res[i] = self.tokens[token]
         return res
