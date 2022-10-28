@@ -87,6 +87,7 @@ class PyTorchModel(Model):
                     inputs[j] = inputs_elem.to(batch_device)
 
                 targets = targets.to(batch_device)
+                self.model.to(batch_device)
                 yhat = self.model(inputs)
 
                 for j, inputs_elem in enumerate(inputs):
@@ -101,6 +102,7 @@ class PyTorchModel(Model):
                 predictions.extend(yhat)
                 actuals.extend(actual)
 
+        self.model.to(self.device)
         predictions = self.get_pred_from_proba(predictions)
         return self.validation_metric(actuals, predictions)
 
@@ -116,6 +118,7 @@ class PyTorchModel(Model):
                     inputs[j] = inputs_elem.to(batch_device)
 
                 targets = targets.to(batch_device)
+                self.model.to(batch_device)
                 output = self.model(inputs)
 
                 loss = self.loss_function(output, targets)
@@ -125,7 +128,7 @@ class PyTorchModel(Model):
                     inputs[j] = inputs_elem.to("cpu")
 
                 targets.to("cpu")
-
+        self.model.to(self.device)
         validation_metric_result = None
         if self.validation_metric:
             validation_metric_result = self._test(validation_set)
@@ -152,7 +155,7 @@ class PyTorchModel(Model):
                     inputs[j] = inputs_elem.to(batch_device)
 
                 targets = targets.to(batch_device)
-
+                self.model.to(batch_device)
                 output = self.model(inputs)
 
                 # Zero the gradients
@@ -172,6 +175,7 @@ class PyTorchModel(Model):
                     print(f'[{epoch}/{self.epochs}, {i}/{len(train_dataset)}] loss: {loss.item():.8}')
                 torch.cuda.empty_cache()
 
+            self.model.to(self.device)
             loss, validation_metric_result = self._validate(train_dataset)
             self.writer.add_scalar("Loss/train", loss, epoch)
             self.writer.add_scalar("Metric/train", validation_metric_result, epoch)
