@@ -3,6 +3,7 @@ import os
 
 import numpy as np
 from matplotlib import pyplot, pyplot as plt, cm
+from plotly.graph_objs.indicator.gauge import Axis
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support, balanced_accuracy_score, roc_curve, \
     roc_auc_score, precision_score, recall_score, f1_score, matthews_corrcoef
 
@@ -78,7 +79,7 @@ class ModelReport:
 
     def create_visual(self, metrics, y_val=30000):
         colors = []
-        colormap = plt.get_cmap('seismic_r')
+        colormap = plt.get_cmap('Blues')
 
         for values in metrics.values():
             # z_score = (y_val - mean) / stds[n]
@@ -99,7 +100,7 @@ class ModelReport:
         xAxis = [key for key, value in metrics.items()]
         yAxis = [value for key, value in metrics.items()]
 
-        barlist = plt.bar(xAxis,
+        bar = plt.bar(xAxis,
                           yAxis,
                           # yerr=[1.96 * std for std in stds],
                           # error_kw=dict(lw=1.5,
@@ -110,14 +111,17 @@ class ModelReport:
                           lw=.25,
                           color=colors,
                           width=.5)
+        plt.grid(False, zorder=0)
 
-        plt.title('Dynamic Coloration Demonstration',
+        plt.title('Model metrics',
                   fontsize=10,
                   alpha=0.8)
 
         i = list(np.arange(len(xAxis)))
         plt.xticks(i,
                    tuple(list(metrics.keys())))
+
+        plt.ylim([0, 1])
         # plt.xlim([-0.5, 3.5])
         plt.gca().tick_params(length=0)
 
@@ -130,7 +134,3 @@ class ModelReport:
             spine.set_visible(False)
 
         plt.gca().tick_params(length=0)
-
-        plt.axhline(color='green',
-                    lw=0.5,
-                    y=y_val)

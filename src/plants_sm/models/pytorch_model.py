@@ -89,6 +89,11 @@ class PyTorchModel(Model):
                 targets = targets.to(batch_device)
                 yhat = self.model(inputs)
 
+                for j, inputs_elem in enumerate(inputs):
+                    inputs[j] = inputs_elem.to("cpu")
+
+                targets.to("cpu")
+
                 yhat = yhat.cpu().detach().numpy()
                 actual = targets.cpu().numpy()
                 actual = actual.reshape((len(actual),)).tolist()
@@ -116,6 +121,10 @@ class PyTorchModel(Model):
                 loss = self.loss_function(output, targets)
                 loss_total += loss.item()
                 torch.cuda.empty_cache()
+                for j, inputs_elem in enumerate(inputs):
+                    inputs[j] = inputs_elem.to("cpu")
+
+                targets.to("cpu")
 
         validation_metric_result = None
         if self.validation_metric:
@@ -153,6 +162,10 @@ class PyTorchModel(Model):
                 loss = self.loss_function(output, targets)
                 loss.backward()
                 self.optimizer.step()
+                for j, inputs_elem in enumerate(inputs):
+                    inputs[j] = inputs_elem.to("cpu")
+
+                targets.to("cpu")
 
                 # Show progress
                 if i % 100 == 0 or i == len(train_dataset):

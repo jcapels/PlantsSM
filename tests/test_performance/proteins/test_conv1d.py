@@ -160,6 +160,21 @@ class TestConv1D(TestCase):
                                                                         instances_ids_field={"interaction": "index"},
                                                                         labels_field="activity")
 
+    def test_dnn_with_pickle(self):
+        self.dataset_35000_instances_valid = pickle.load(open("dataset_valid.obj", "rb"))
+        self.dataset_35000_instances_train = pickle.load(open("dataset_train.obj", "rb"))
+
+        input_size_proteins = self.dataset_35000_instances_train.X["proteins"].shape[1]
+        input_size_compounds = self.dataset_35000_instances_train.X["ligands"].shape[1]
+        model = BaselineModel(input_size_proteins, input_size_compounds, [500, 500],
+                              [500, 500], [500, 500, 250, 125, 250, 500, 500, 500])
+
+        wrapper = PyTorchModel(model=model, loss_function=nn.BCELoss(),
+                               validation_metric=f1_score,
+                               problem_type=BINARY, batch_size=50, epochs=2,
+                               optimizer=Adam(model.parameters(), lr=0.0001))
+        wrapper.fit(self.dataset_35000_instances_train, self.dataset_35000_instances_valid)
+
     def test_conv1d(self):
         HEAVY_STANDARDIZATION = {
             'remove_isotope'.upper(): True,
@@ -192,13 +207,14 @@ class TestConv1D(TestCase):
         #     self.dataset_35000_instances_train,
         #     "proteins")
         one_hot.transform(self.dataset_35000_instances_train,
-            "proteins")
+                          "proteins")
 
-        one_hot_compounds = OneHotEncoder(output_shape_dimension=2, tokenizer=AtomLevelTokenizer()).fit(self.dataset_35000_instances_train,
-                                                                                                  "ligands")
+        one_hot_compounds = OneHotEncoder(output_shape_dimension=2, tokenizer=AtomLevelTokenizer()).fit(
+            self.dataset_35000_instances_train,
+            "ligands")
         one_hot_compounds.transform(self.dataset_35000_instances_train, "ligands")
         one_hot.transform(self.dataset_35000_instances_valid,
-                                 "proteins")
+                          "proteins")
         one_hot_compounds.transform(self.dataset_35000_instances_valid, "ligands")
 
         input_size_proteins = self.dataset_35000_instances_train.X["proteins"].shape[1]
@@ -264,8 +280,15 @@ class TestConv1D(TestCase):
                                  "proteins")
 
         MAP4Fingerprint(n_jobs=8, dimensions=1024).fit_transform(self.dataset_35000_instances_train, "ligands")
-        file_pi = open('dataset.obj', 'wb')
+
+        Word2Vec().fit_transform(self.dataset_35000_instances_valid,
+                                 "proteins")
+
+        MAP4Fingerprint(n_jobs=8, dimensions=1024).fit_transform(self.dataset_35000_instances_valid, "ligands")
+        file_pi = open('dataset_train.obj', 'wb')
         pickle.dump(self.dataset_35000_instances_train, file_pi)
+        file_pi = open('dataset_valid.obj', 'wb')
+        pickle.dump(self.dataset_35000_instances_valid, file_pi)
 
     def test_get_dataset(self):
         file_pi = open('dataset.obj', 'rb')

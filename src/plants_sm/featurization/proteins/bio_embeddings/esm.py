@@ -4,6 +4,7 @@ from typing import List
 import esm
 import numpy as np
 import torch
+from tqdm import tqdm
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.featurization._utils import call_set_features_names
@@ -80,7 +81,9 @@ class ESM1bEncoder(Transformer):
         res = []
         batch = []
         batch_ids = []
-        for instance_id, instance_representation in dataset.get_instances(instance_type).items():
+        instances = dataset.get_instances(instance_type)
+        pbar = tqdm(desc="ESM", total=len(instances.items()))
+        for instance_id, instance_representation in instances.items():
             if len(instance_representation) <= 1024:
                 batch.append((instance_id, instance_representation))
             else:
@@ -105,6 +108,7 @@ class ESM1bEncoder(Transformer):
                 res.append(temp_result)
                 batch = []
                 batch_ids = []
+                pbar.update(self.batch_size)
 
         if len(batch) != 0:
             representations = {}
