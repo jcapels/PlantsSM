@@ -81,7 +81,10 @@ class ESM1bEncoder(Transformer):
         batch = []
         batch_ids = []
         for instance_id, instance_representation in dataset.get_instances(instance_type).items():
-            batch.append((instance_id, instance_representation))
+            if len(instance_representation) <= 1024:
+                batch.append((instance_id, instance_representation))
+            else:
+                batch.append((instance_id, instance_representation[:1024]))
             batch_ids.append(instance_id)
             if len(batch) == self.batch_size:
                 representations = {}
@@ -97,7 +100,7 @@ class ESM1bEncoder(Transformer):
 
                 temp_result = {}
                 for i, batch_instance_id in enumerate(batch_ids):
-                    temp_result[batch_instance_id] = sequences_embedding[i]
+                    res.append((batch_instance_id, sequences_embedding[i]))
 
                 res.append(temp_result)
                 batch = []
@@ -115,13 +118,10 @@ class ESM1bEncoder(Transformer):
 
             sequences_embedding = representations[self.preset][0].numpy()
 
-            temp_result = {}
             for i, batch_instance_id in enumerate(batch_ids):
-                temp_result[batch_instance_id] = sequences_embedding[i]
+                res.append((batch_instance_id, sequences_embedding[i]))
 
-            res.append(temp_result)
-
-        dataset.features[instance_type] = dict(ChainMap(*res))
+        dataset.features[instance_type] = dict(res)
 
         if instance_type not in dataset.features_fields:
             dataset.features_fields[instance_type] = self.features_names

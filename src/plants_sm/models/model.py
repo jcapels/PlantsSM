@@ -18,6 +18,10 @@ class Model(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def _predict(self, dataset: Dataset):
+        pass
+
+    @abstractmethod
     def _save(self, path: str):
         pass
 
@@ -34,6 +38,9 @@ class Model(metaclass=ABCMeta):
     def predict_proba(self, dataset: Dataset):
 
         return self._predict_proba(dataset)
+
+    def predict(self, dataset: Dataset):
+        return self._predict(dataset)
 
     def preprocess(self, dataset: Dataset, **kwargs):
         return self._preprocess_data(dataset, **kwargs)

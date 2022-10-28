@@ -19,8 +19,9 @@ from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
 from plants_sm.featurization.proteins.encodings.blosum import BLOSSUMEncoder
 from plants_sm.models.constants import BINARY
 from plants_sm.models.pytorch_model import PyTorchModel
-from sklearn.metrics import balanced_accuracy_score
+from sklearn.metrics import balanced_accuracy_score, classification_report, confusion_matrix, precision_score, f1_score
 
+from plants_sm.reports.model_report import ModelReport
 from plants_sm.tokenisation.compounds.smilespe import SPETokenizer, AtomLevelTokenizer, KmerTokenizer
 from tests import TEST_DIR
 
@@ -138,26 +139,26 @@ class BaselineModel(nn.Module):
 class TestConv1D(TestCase):
 
     def setUp(self) -> None:
-        csv_to_read = os.path.join(TEST_DIR, "performance_datasets", "phosphatase_chiral_binary_train.csv")
+        csv_to_read = os.path.join(TEST_DIR, "compound_protein_interaction", "train_balanced.csv")
         self.dataset_35000_instances_train = MultiInputDataset.from_csv(csv_to_read,
                                                                         representation_fields={"proteins": "SEQ",
                                                                                                "ligands": "SUBSTRATES"},
-                                                                        instances_ids_field={"interaction": "ids"},
-                                                                        labels_field="Conversion")
+                                                                        instances_ids_field={"interaction": "index"},
+                                                                        labels_field="activity")
 
-        csv_to_read = os.path.join(TEST_DIR, "performance_datasets", "phosphatase_chiral_binary_test.csv")
+        csv_to_read = os.path.join(TEST_DIR, "compound_protein_interaction", "test_balanced.csv")
         self.dataset_35000_instances_test = MultiInputDataset.from_csv(csv_to_read,
                                                                        representation_fields={"proteins": "SEQ",
                                                                                               "ligands": "SUBSTRATES"},
-                                                                       instances_ids_field={"interaction": "ids"},
-                                                                       labels_field="Conversion")
+                                                                       instances_ids_field={"interaction": "index"},
+                                                                       labels_field="activity")
 
-        csv_to_read = os.path.join(TEST_DIR, "performance_datasets", "phosphatase_chiral_binary_val.csv")
+        csv_to_read = os.path.join(TEST_DIR, "compound_protein_interaction", "valid_balanced.csv")
         self.dataset_35000_instances_valid = MultiInputDataset.from_csv(csv_to_read,
                                                                         representation_fields={"proteins": "SEQ",
                                                                                                "ligands": "SUBSTRATES"},
-                                                                        instances_ids_field={"interaction": "ids"},
-                                                                        labels_field="Conversion")
+                                                                        instances_ids_field={"interaction": "index"},
+                                                                        labels_field="activity")
 
     def test_conv1d(self):
         HEAVY_STANDARDIZATION = {
@@ -187,10 +188,13 @@ class TestConv1D(TestCase):
         one_hot = OneHotEncoder(output_shape_dimension=2, alphabet="ARNDCEQGHILKMFPSTWYV").fit(
             self.dataset_35000_instances_train,
             "proteins")
+        # one_hot = Word2Vec(output_shape_dimension=2).fit(
+        #     self.dataset_35000_instances_train,
+        #     "proteins")
         one_hot.transform(self.dataset_35000_instances_train,
             "proteins")
 
-        one_hot_compounds = OneHotEncoder(output_shape_dimension=2, tokenizer=SPETokenizer()).fit(self.dataset_35000_instances_train,
+        one_hot_compounds = OneHotEncoder(output_shape_dimension=2, tokenizer=AtomLevelTokenizer()).fit(self.dataset_35000_instances_train,
                                                                                                   "ligands")
         one_hot_compounds.transform(self.dataset_35000_instances_train, "ligands")
         one_hot.transform(self.dataset_35000_instances_valid,
@@ -199,27 +203,22 @@ class TestConv1D(TestCase):
 
         input_size_proteins = self.dataset_35000_instances_train.X["proteins"].shape[1]
         input_size_compounds = self.dataset_35000_instances_train.X["ligands"].shape[1]
-        # model = BaselineModel(input_size_proteins, input_size_compounds, [input_size_proteins * 3,
-        #                                                                   input_size_proteins * 4],
-        #                       [input_size_compounds * 3,
-        #                        input_size_compounds * 4],
-        #                       [input_size_compounds * 2,
-        #                        input_size_compounds,
-        #                        input_size_compounds // 2])
+        model = BaselineModel(input_size_proteins, input_size_compounds, [500, 500],
+                              [500, 500], [500, 500, 250, 125, 250, 500, 500, 500])
 
-        model = BaselineModel(input_size_proteins, input_size_compounds, [input_size_proteins * 2,
-                                                                          input_size_proteins * 6,
-                                                                          input_size_proteins * 8],
-                              [input_size_compounds * 2,
-                               input_size_compounds * 6,
-                               input_size_compounds * 8],
-                              [input_size_proteins * 2,
-                               input_size_proteins,
-                               input_size_proteins // 2, input_size_proteins // 4])
+        # model = BaselineModel(input_size_proteins, input_size_compounds, [input_size_proteins * 2,
+        #                                                                   input_size_proteins * 6,
+        #                                                                   input_size_proteins * 8],
+        #                       [input_size_compounds * 2,
+        #                        input_size_compounds * 6,
+        #                        input_size_compounds * 8],
+        #                       [input_size_proteins * 2,
+        #                        input_size_proteins,
+        #                        input_size_proteins // 2, input_size_proteins // 4])
 
         wrapper = PyTorchModel(model=model, loss_function=nn.BCELoss(),
-                               validation_metric=balanced_accuracy_score,
-                               problem_type=BINARY, batch_size=75, epochs=100,
+                               validation_metric=f1_score,
+                               problem_type=BINARY, batch_size=50, epochs=2,
                                optimizer=Adam(model.parameters(), lr=0.0001))
         wrapper.fit(self.dataset_35000_instances_train, self.dataset_35000_instances_valid)
         # wrapper.save("test_conv1d.pt")
@@ -228,8 +227,13 @@ class TestConv1D(TestCase):
         #                          "proteins")
         #
         # MAP4Fingerprint(n_jobs=8, dimensions=1024).fit_transform(self.dataset_35000_instances_test, "ligands")
-        #
-        # print(wrapper.predict_proba(self.dataset_35000_instances_test))
+
+        one_hot.transform(self.dataset_35000_instances_test,
+                          "proteins")
+        one_hot_compounds.transform(self.dataset_35000_instances_test, "ligands")
+        predictions = wrapper.predict(self.dataset_35000_instances_test)
+
+        ModelReport(wrapper, BINARY, self.dataset_35000_instances_test).generate_metrics_report()
 
     def test_pickle_dataset(self):
         HEAVY_STANDARDIZATION = {

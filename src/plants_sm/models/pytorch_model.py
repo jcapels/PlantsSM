@@ -244,9 +244,15 @@ class PyTorchModel(Model):
                     inputs[j] = inputs_elem.to("cpu")
 
                 targets.to("cpu")
+                self.model.to("cpu")
                 yhat = self.model(inputs)
 
                 yhat = yhat.cpu().detach().numpy()
                 predictions.extend(yhat)
 
         return self._convert_proba_to_unified_form(np.array(predictions))
+
+    def _predict(self, dataset: Dataset):
+        y_pred_proba = self._predict_proba(dataset)
+        y_pred = self.get_pred_from_proba(y_pred_proba)
+        return y_pred

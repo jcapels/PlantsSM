@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 runs
+compound_protein_interaction
 # C extensions
 *.so
 
