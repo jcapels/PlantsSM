@@ -18,13 +18,14 @@ import torch
 
 formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
 
-handler = TimedRotatingFileHandler('/pytorch_model.log', when='midnight', backupCount=20)
+handler = TimedRotatingFileHandler('./pytorch_model.log', when='midnight', backupCount=20)
 handler.setFormatter(formatter)
 logger = logging.getLogger(__name__)
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
 
 start_time = datetime.datetime.now()
+
 
 class PyTorchModel(Model):
 
@@ -37,7 +38,7 @@ class PyTorchModel(Model):
         super().__init__()
 
         self.device = device
-        self.model = model
+        self.model = model.to(self.device)
         self.loss_function = loss_function
         self.optimizer = optimizer
         self.scheduler = scheduler
