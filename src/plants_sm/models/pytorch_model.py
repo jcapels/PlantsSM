@@ -33,7 +33,7 @@ class PyTorchModel(Model):
                  scheduler: ReduceLROnPlateau = None, epochs: int = 32, batch_size: int = 32,
                  patience: int = 4, validation_metric: Callable = None, problem_type: str = BINARY,
                  device: Union[str, torch.device] = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
-                 trigger_times: int = 0, last_loss: int = None):
+                 trigger_times: int = 0, last_loss: int = None, progress: int = 100):
 
         super().__init__()
 
@@ -41,6 +41,7 @@ class PyTorchModel(Model):
         self.model = model.to(self.device)
         self.loss_function = loss_function
         self.optimizer = optimizer
+        self.progress = progress
         self.scheduler = scheduler
         self.epochs = epochs
         self.batch_size = batch_size
@@ -162,7 +163,7 @@ class PyTorchModel(Model):
                 self.optimizer.step()
 
                 # Show progress
-                if i % 500 == 0 or i == len_train_dataset - 1:
+                if i % self.progress == 0 or i == len_train_dataset - 1:
                     logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] loss: {loss.item():.8}')
                 torch.cuda.empty_cache()
 
