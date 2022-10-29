@@ -19,13 +19,13 @@ class PyTorchModel(Model):
     def __init__(self, model: nn.Module, loss_function: _Loss, optimizer: Optimizer = None,
                  scheduler: ReduceLROnPlateau = None, epochs: int = 32, batch_size: int = 32,
                  patience: int = 4, validation_metric: Callable = None, problem_type: str = BINARY,
-                 device: Union[str, torch.device] = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu'),
+                 device: Union[str, torch.device] = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
                  trigger_times: int = 0, last_loss: int = None):
 
         super().__init__()
 
         self.device = device
-        self.model = model.to(self.device)
+        self.model = model
         self.loss_function = loss_function
         self.optimizer = optimizer
         self.scheduler = scheduler
@@ -129,11 +129,11 @@ class PyTorchModel(Model):
             for i, inputs_targets in enumerate(train_dataset):
                 inputs, targets = inputs_targets[:-1], inputs_targets[-1]
 
-                for j, inputs_elem in enumerate(inputs):
-                    inputs[j] = inputs_elem.to(self.device)
+                if not isinstance(self.model, nn.DataParallel):
+                    for j, inputs_elem in enumerate(inputs):
+                        inputs[j] = inputs_elem.to(self.device)
 
-                targets = targets.to(self.device)
-                self.model.to(self.device)
+                    targets = targets.to(self.device)
                 output = self.model(inputs)
 
                 # Zero the gradients
