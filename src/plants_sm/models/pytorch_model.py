@@ -1,3 +1,6 @@
+import datetime
+import logging
+from logging.handlers import TimedRotatingFileHandler
 from typing import Callable, Union
 
 import numpy as np
@@ -13,6 +16,15 @@ from plants_sm.models.constants import REGRESSION, QUANTILE, BINARY
 from plants_sm.models.model import Model
 import torch
 
+formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
+
+handler = TimedRotatingFileHandler('/pytorch_model.log', when='midnight', backupCount=20)
+handler.setFormatter(formatter)
+logger = logging.getLogger(__name__)
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+
+start_time = datetime.datetime.now()
 
 class PyTorchModel(Model):
 
@@ -119,6 +131,8 @@ class PyTorchModel(Model):
         last_loss = 100
         trigger_times = 0
 
+        logging.info("starting to fit the data...")
+
         train_dataset = self._preprocess_data(train_dataset)
         if validation_dataset:
             validation_dataset = self._preprocess_data(validation_dataset)
@@ -134,10 +148,13 @@ class PyTorchModel(Model):
                         inputs[j] = inputs_elem.to(self.device)
 
                     targets = targets.to(self.device)
-                output = self.model(inputs)
 
-                # Zero the gradients
+                logging.info(f"zero in the gradients {i}...")
                 self.optimizer.zero_grad()
+
+                logging.info(f"starting to train batch number {i}...")
+                output = self.model(inputs)
+                # Zero the gradients
 
                 # Forward and backward propagation
                 loss = self.loss_function(output, targets)
