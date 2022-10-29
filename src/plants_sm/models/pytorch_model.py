@@ -16,16 +16,6 @@ from plants_sm.models.constants import REGRESSION, QUANTILE, BINARY
 from plants_sm.models.model import Model
 import torch
 
-formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
-
-handler = TimedRotatingFileHandler('./pytorch_model.log', when='midnight', backupCount=20)
-handler.setFormatter(formatter)
-logger = logging.getLogger(__name__)
-logger.addHandler(handler)
-logger.setLevel(logging.DEBUG)
-
-start_time = datetime.datetime.now()
-
 
 class PyTorchModel(Model):
 
@@ -33,9 +23,19 @@ class PyTorchModel(Model):
                  scheduler: ReduceLROnPlateau = None, epochs: int = 32, batch_size: int = 32,
                  patience: int = 4, validation_metric: Callable = None, problem_type: str = BINARY,
                  device: Union[str, torch.device] = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
-                 trigger_times: int = 0, last_loss: int = None, progress: int = 100):
+                 trigger_times: int = 0, last_loss: int = None, progress: int = 100, logger_path: str = None):
 
         super().__init__()
+
+        formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
+        if logger_path:
+            handler = TimedRotatingFileHandler(logger_path, when='midnight', backupCount=30)
+        else:
+            handler = TimedRotatingFileHandler('./pytorch_model.log', when='midnight', backupCount=20)
+        handler.setFormatter(formatter)
+        self.logger = logging.getLogger(__name__)
+        self.logger.addHandler(handler)
+        self.logger.setLevel(logging.DEBUG)
 
         self.device = device
         self.model = model.to(self.device)
@@ -61,7 +61,7 @@ class PyTorchModel(Model):
     def _save(self, path: str):
         torch.save(self.model.state_dict(), path)
 
-    def _load(self, path: str):
+    def load(self, path: str):
         self.model.load_state_dict(torch.load(path))
         self.model.eval()
 
@@ -109,7 +109,8 @@ class PyTorchModel(Model):
     def _validate(self, validation_set: DataLoader):
         self.model.eval()
         loss_total = 0
-
+        predictions, actuals = list(), list()
+        len_valid_dataset = len(validation_set)
         with torch.no_grad():
             for i, inputs_targets in enumerate(validation_set):
                 inputs, targets = inputs_targets[:-1], inputs_targets[-1]
@@ -119,21 +120,33 @@ class PyTorchModel(Model):
                 targets = targets.to(self.device)
                 output = self.model(inputs)
 
+                yhat = output.cpu().detach().numpy()
+                actual = targets.cpu().numpy()
+                actual = actual.reshape((len(actual),)).tolist()
+                yhat = yhat.reshape((len(yhat),)).tolist()
+                predictions.extend(yhat)
+                actuals.extend(actual)
+
                 loss = self.loss_function(output, targets)
                 loss_total += loss.item()
+
+                if i % self.progress == 0:
+                    self.logger.info(f'Validation set: [{i}/{len_valid_dataset}] loss: {loss.item():.8}')
+
                 torch.cuda.empty_cache()
         validation_metric_result = None
         if self.validation_metric:
-            validation_metric_result = self._test(validation_set)
+            predictions = self.get_pred_from_proba(predictions)
+            validation_metric_result = self.validation_metric(actuals, predictions)
 
-        return loss_total / len(validation_set), validation_metric_result
+        return loss_total / len_valid_dataset, validation_metric_result
 
     def _fit_data(self, train_dataset: Dataset, validation_dataset: Dataset = None):
 
         last_loss = 100
         trigger_times = 0
 
-        logger.info("starting to fit the data...")
+        self.logger.info("starting to fit the data...")
 
         train_dataset = self._preprocess_data(train_dataset)
         if validation_dataset:
@@ -164,7 +177,7 @@ class PyTorchModel(Model):
 
                 # Show progress
                 if i % self.progress == 0 or i == len_train_dataset - 1:
-                    logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] loss: {loss.item():.8}')
+                    self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] loss: {loss.item():.8}')
                 torch.cuda.empty_cache()
 
             loss, validation_metric_result = self._validate(train_dataset)
@@ -174,7 +187,7 @@ class PyTorchModel(Model):
             # Early stopping
             if validation_dataset:
                 current_loss, validation_metric_result = self._validate(validation_dataset)
-                logger.info(f'Validation loss: {current_loss:.8}; Validation metric: {validation_metric_result:.8}')
+                self.logger.info(f'Validation loss: {current_loss:.8}; Validation metric: {validation_metric_result:.8}')
                 if current_loss >= last_loss:
                     trigger_times += 1
 

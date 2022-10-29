@@ -26,11 +26,8 @@ class Model(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def _load(self, path: str):
-        pass
-
     def load(self, path: str):
-        self._load(path)
+        pass
 
     def fit(self, dataset: Dataset, validation_dataset: Dataset = None):
         return self._fit_data(dataset, validation_dataset)

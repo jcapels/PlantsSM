@@ -235,21 +235,28 @@ class TestConv1D(TestCase):
         wrapper = PyTorchModel(model=model, loss_function=nn.BCELoss(),
                                validation_metric=f1_score,
                                problem_type=BINARY, batch_size=50, epochs=2,
-                               optimizer=Adam(model.parameters(), lr=0.0001))
+                               optimizer=Adam(model.parameters(), lr=0.0001), progress=50,
+                               logger_path="small_dataset.log")
         wrapper.fit(self.dataset_35000_instances_train, self.dataset_35000_instances_valid)
         # wrapper.save("test_conv1d.pt")
+
+        # wrapper = PyTorchModel(model=model, loss_function=nn.BCELoss(),
+        #                        validation_metric=f1_score,
+        #                        problem_type=BINARY, batch_size=50, epochs=2,
+        #                        optimizer=Adam(model.parameters(), lr=0.0001), progress=50)
+        # wrapper.load(path="test_conv1d.pt")
 
         # Word2Vec().fit_transform(self.dataset_35000_instances_test,
         #                          "proteins")
         #
         # MAP4Fingerprint(n_jobs=8, dimensions=1024).fit_transform(self.dataset_35000_instances_test, "ligands")
 
-        one_hot.transform(self.dataset_35000_instances_test,
-                          "proteins")
-        one_hot_compounds.transform(self.dataset_35000_instances_test, "ligands")
-        predictions = wrapper.predict(self.dataset_35000_instances_test)
-
-        ModelReport(wrapper, BINARY, self.dataset_35000_instances_test).generate_metrics_report()
+        # one_hot.transform(self.dataset_35000_instances_test,
+        #                   "proteins")
+        # one_hot_compounds.transform(self.dataset_35000_instances_test, "ligands")
+        # predictions = wrapper.predict(self.dataset_35000_instances_test)
+        #
+        # ModelReport(wrapper, BINARY, self.dataset_35000_instances_test).generate_metrics_report()
 
     def test_pickle_dataset(self):
         HEAVY_STANDARDIZATION = {
