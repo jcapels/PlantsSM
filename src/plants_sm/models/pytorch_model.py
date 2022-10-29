@@ -162,7 +162,7 @@ class PyTorchModel(Model):
                 self.optimizer.step()
 
                 # Show progress
-                if i % 100 == 0 or i == len_train_dataset - 1:
+                if i % 500 == 0 or i == len_train_dataset - 1:
                     logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] loss: {loss.item():.8}')
                 torch.cuda.empty_cache()
 
