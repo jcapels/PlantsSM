@@ -132,7 +132,7 @@ class PyTorchModel(Model):
         last_loss = 100
         trigger_times = 0
 
-        logging.info("starting to fit the data...")
+        logger.info("starting to fit the data...")
 
         train_dataset = self._preprocess_data(train_dataset)
         if validation_dataset:
@@ -144,16 +144,15 @@ class PyTorchModel(Model):
             for i, inputs_targets in enumerate(train_dataset):
                 inputs, targets = inputs_targets[:-1], inputs_targets[-1]
 
-                if not isinstance(self.model, nn.DataParallel):
-                    for j, inputs_elem in enumerate(inputs):
-                        inputs[j] = inputs_elem.to(self.device)
+                for j, inputs_elem in enumerate(inputs):
+                    inputs[j] = inputs_elem.to(self.device)
 
-                    targets = targets.to(self.device)
+                targets = targets.to(self.device)
 
-                logging.info(f"zero in the gradients {i}...")
+                logger.info(f"zero in the gradients {i}...")
                 self.optimizer.zero_grad()
 
-                logging.info(f"starting to train batch number {i}...")
+                logger.info(f"starting to train batch number {i}...")
                 output = self.model(inputs)
                 # Zero the gradients
 
