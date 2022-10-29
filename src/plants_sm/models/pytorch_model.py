@@ -138,6 +138,8 @@ class PyTorchModel(Model):
         if validation_dataset:
             validation_dataset = self._preprocess_data(validation_dataset)
 
+        len_train_dataset = len(train_dataset)
+
         for epoch in range(1, self.epochs + 1):
             self.model.train()
 
@@ -149,10 +151,8 @@ class PyTorchModel(Model):
 
                 targets = targets.to(self.device)
 
-                logger.info(f"zero in the gradients {i}...")
                 self.optimizer.zero_grad()
 
-                logger.info(f"starting to train batch number {i}...")
                 output = self.model(inputs)
                 # Zero the gradients
 
@@ -162,8 +162,8 @@ class PyTorchModel(Model):
                 self.optimizer.step()
 
                 # Show progress
-                if i % 100 == 0 or i == len(train_dataset):
-                    print(f'[{epoch}/{self.epochs}, {i}/{len(train_dataset)}] loss: {loss.item():.8}')
+                if i % 100 == 0 or i == len_train_dataset - 1:
+                    logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] loss: {loss.item():.8}')
                 torch.cuda.empty_cache()
 
             loss, validation_metric_result = self._validate(train_dataset)
@@ -173,7 +173,7 @@ class PyTorchModel(Model):
             # Early stopping
             if validation_dataset:
                 current_loss, validation_metric_result = self._validate(validation_dataset)
-                print(f'Validation loss: {current_loss:.8}; Validation metric: {validation_metric_result:.8}')
+                logger.info(f'Validation loss: {current_loss:.8}; Validation metric: {validation_metric_result:.8}')
                 if current_loss >= last_loss:
                     trigger_times += 1
 
