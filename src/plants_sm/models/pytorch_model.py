@@ -156,7 +156,8 @@ class PyTorchModel(Model):
 
         for epoch in range(1, self.epochs + 1):
             self.model.train()
-
+            loss_total = 0
+            predictions, actuals = list(), list()
             for i, inputs_targets in enumerate(train_dataset):
                 inputs, targets = inputs_targets[:-1], inputs_targets[-1]
 
@@ -175,12 +176,21 @@ class PyTorchModel(Model):
                 loss.backward()
                 self.optimizer.step()
 
+                actual = targets.cpu().numpy()
+                actual = actual.reshape((len(actual),)).tolist()
+                yhat = output.reshape((len(output),)).tolist()
+                predictions.extend(yhat)
+                actuals.extend(actual)
+                loss_total += loss.item()
                 # Show progress
                 if i % self.progress == 0 or i == len_train_dataset - 1:
                     self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] loss: {loss.item():.8}')
                 torch.cuda.empty_cache()
 
-            loss, validation_metric_result = self._validate(train_dataset)
+            loss = loss_total / len_train_dataset
+
+            predictions = self.get_pred_from_proba(predictions)
+            validation_metric_result = self.validation_metric(actuals, predictions)
             self.writer.add_scalar("Loss/train", loss, epoch)
             self.writer.add_scalar("Metric/train", validation_metric_result, epoch)
 
