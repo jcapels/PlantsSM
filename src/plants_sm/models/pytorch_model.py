@@ -1,5 +1,6 @@
 import datetime
 import logging
+import os
 from logging.handlers import TimedRotatingFileHandler
 from typing import Callable, Union
 
@@ -212,6 +213,10 @@ class PyTorchModel(Model):
                 self.writer.add_scalar("Metric/validation", validation_metric_result, epoch)
 
                 last_loss = current_loss
+
+            os.makedirs("./.model_checkpoints", exist_ok=True)
+            os.makedirs(f"./.model_checkpoints/{self.__name__}/epoch_{epoch}", exist_ok=True)
+            torch.save(self.model.state_dict(), f"./model_checkpoints/{self.__name__}/epoch_{epoch}/model.pt")
 
             self.scheduler.step(last_loss)
 
