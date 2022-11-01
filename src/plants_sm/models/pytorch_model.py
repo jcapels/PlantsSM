@@ -136,6 +136,9 @@ class PyTorchModel(Model):
 
         validation_metric_result = None
         if self.validation_metric:
+            self.logger.info('Calculating validation metric...')
+            self.logger.info(f'Len Actuals: {len(actuals)}')
+            self.logger.info(f'Len Predictions: {len(predictions)}')
             predictions = self.get_pred_from_proba(predictions)
             validation_metric_result = self.validation_metric(actuals, predictions)
 
@@ -196,7 +199,8 @@ class PyTorchModel(Model):
             # Early stopping
             if validation_dataset:
                 current_loss, validation_metric_result = self._validate(validation_dataset)
-                self.logger.info(f'Validation loss: {current_loss:.8}; Validation metric: {validation_metric_result:.8}')
+                self.logger.info(
+                    f'Validation loss: {current_loss:.8}; Validation metric: {validation_metric_result:.8}')
                 if current_loss >= last_loss:
                     trigger_times += 1
 
