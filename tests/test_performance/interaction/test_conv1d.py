@@ -19,7 +19,8 @@ from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
 from plants_sm.featurization.proteins.encodings.blosum import BLOSSUMEncoder
 from plants_sm.models.constants import BINARY
 from plants_sm.models.pytorch_model import PyTorchModel
-from sklearn.metrics import balanced_accuracy_score, classification_report, confusion_matrix, precision_score, f1_score
+from sklearn.metrics import balanced_accuracy_score, classification_report, confusion_matrix, precision_score, f1_score, \
+    accuracy_score
 
 from plants_sm.reports.model_report import ModelReport
 from plants_sm.tokenisation.compounds.smilespe import SPETokenizer, AtomLevelTokenizer, KmerTokenizer
@@ -28,21 +29,23 @@ from tests import TEST_DIR
 
 class InteractionModelDTU(nn.Module):
 
-    def __init__(self, protein_shape, compounds_shape):
+    def __init__(self, protein_shape, compounds_shape, filters):
         super().__init__()
-        self.conv1_proteins_1 = nn.Conv1d(protein_shape[1], protein_shape[1] * 2, 4, stride=1,
+        self.proteins_embedding = nn.Embedding(num_embeddings=128, embedding_dim=protein_shape[1])
+        self.compounds_embedding = nn.Embedding(num_embeddings=128, embedding_dim=compounds_shape[1])
+        self.conv1_proteins_1 = nn.Conv1d(protein_shape[1], filters, 4, stride=1,
                                           padding='valid')
-        self.conv1_proteins_2 = nn.Conv1d(protein_shape[1] * 2, protein_shape[1] * 3, 6, stride=1, padding='valid')
-        self.conv1_proteins_3 = nn.Conv1d(protein_shape[1] * 3, protein_shape[1] * 4, 8, stride=1, padding='valid')
-        self.maxpool1_proteins = nn.MaxPool1d(11)
+        self.conv1_proteins_2 = nn.Conv1d(filters, filters * 2, 6, stride=1, padding='valid')
+        self.conv1_proteins_3 = nn.Conv1d(filters * 2, filters * 3, 8, stride=1, padding='valid')
+        self.maxpool1_proteins = nn.MaxPool1d(204)
 
-        self.conv1_compounds_1 = nn.Conv1d(compounds_shape[1], compounds_shape[1] * 2, 4, stride=1, padding='valid')
-        self.conv1_compounds_2 = nn.Conv1d(compounds_shape[1] * 2, compounds_shape[1] * 3, 6, stride=1, padding='valid')
-        self.conv1_compounds_3 = nn.Conv1d(compounds_shape[1] * 3, compounds_shape[1] * 4, 8,
+        self.conv1_compounds_1 = nn.Conv1d(compounds_shape[1], filters, 4, stride=1, padding='valid')
+        self.conv1_compounds_2 = nn.Conv1d(filters, filters * 2, 6, stride=1, padding='valid')
+        self.conv1_compounds_3 = nn.Conv1d(filters * 2, filters * 3, 8,
                                            stride=1, padding='valid')
-        self.maxpool1_compounds = nn.MaxPool1d(11)
+        self.maxpool1_compounds = nn.MaxPool1d(5)
 
-        self.dense1_interaction = nn.Linear(compounds_shape[1] * 4 + protein_shape[1] * 4, 1024)
+        self.dense1_interaction = nn.Linear(filters * 3 + filters * 3, 1024)
         self.dense2_interaction = nn.Linear(1024, 1024)
         self.dense3_interaction = nn.Linear(1024, 512)
         self.dropout = nn.Dropout(0.1)
@@ -50,18 +53,20 @@ class InteractionModelDTU(nn.Module):
 
     def forward(self, x):
         x_proteins = x[0]
-        x_proteins = x_proteins.unsqueeze(2)
+        x_proteins = x_proteins.to(torch.int64)
+        x_proteins = self.proteins_embedding(x_proteins)
         y = relu(self.conv1_proteins_1(x_proteins))
         y = relu(self.conv1_proteins_2(y))
-        y = relu(self.conv1_proteins_3(y))
-        y_proteins = self.maxpool1_proteins(y)
+        y_proteins = relu(self.conv1_proteins_3(y))
+        y_proteins = nn.MaxPool1d(y_proteins.shape[2] - 1)(y_proteins)
 
         x_compounds = x[1]
-        x_compounds = x_compounds.unsqueeze(2)
+        x_compounds = x_compounds.to(torch.int64)
+        x_compounds = self.compounds_embedding(x_compounds)
         y = relu(self.conv1_compounds_1(x_compounds))
         y = relu(self.conv1_compounds_2(y))
-        y = relu(self.conv1_compounds_3(y))
-        y_compounds = self.maxpool1_compounds(y)
+        y_compounds = relu(self.conv1_compounds_3(y))
+        y_compounds = nn.MaxPool1d(y_compounds.shape[2] - 1)(y_compounds)
 
         y = torch.cat([y_proteins, y_compounds], dim=1)
         y = y.reshape(y.shape[0], y.shape[1])
@@ -135,6 +140,74 @@ class BaselineModel(nn.Module):
         return y
 
 
+class TestDeepDta(TestCase):
+    def setUp(self):
+        csv_to_read = os.path.join(TEST_DIR, "compound_protein_interaction", "train_small.csv")
+        self.dataset_35000_instances_train = MultiInputDataset.from_csv(csv_to_read,
+                                                                        representation_fields={"proteins": "SEQ",
+                                                                                               "ligands": "SUBSTRATES"},
+                                                                        instances_ids_field={"interaction": "index"},
+                                                                        labels_field="activity")
+
+        csv_to_read = os.path.join(TEST_DIR, "compound_protein_interaction", "test_small.csv")
+        self.dataset_35000_instances_valid = MultiInputDataset.from_csv(csv_to_read,
+                                                                        representation_fields={"proteins": "SEQ",
+                                                                                               "ligands": "SUBSTRATES"},
+                                                                        instances_ids_field={"interaction": "index"},
+                                                                        labels_field="activity")
+
+    def test_deep_dta(self):
+        HEAVY_STANDARDIZATION = {
+            'remove_isotope'.upper(): True,
+            'NEUTRALISE_CHARGE'.upper(): True,
+            'remove_stereo'.upper(): True,
+            'keep_biggest'.upper(): True,
+            'add_hydrogen'.upper(): True,
+            'kekulize'.upper(): False,
+            'neutralise_charge_late'.upper(): True
+        }
+
+        kwargs = {"params": HEAVY_STANDARDIZATION}
+
+        DeepMolStandardizer(preset="custom_standardizer", kwargs=kwargs, n_jobs=8).fit_transform(
+            self.dataset_35000_instances_train,
+            "ligands")
+
+        ProteinStandardizer(n_jobs=8).fit_transform(self.dataset_35000_instances_valid, "proteins")
+
+        DeepMolStandardizer(preset="custom_standardizer", kwargs=kwargs, n_jobs=8).fit_transform(
+            self.dataset_35000_instances_valid,
+            "ligands")
+
+        ProteinStandardizer(n_jobs=8).fit_transform(self.dataset_35000_instances_train, "proteins")
+
+        one_hot = OneHotEncoder(output_shape_dimension=2, alphabet="ARNDCEQGHILKMFPSTWYV").fit(
+            self.dataset_35000_instances_train,
+            "proteins")
+        one_hot.transform(self.dataset_35000_instances_train,
+                          "proteins")
+        one_hot.transform(self.dataset_35000_instances_valid,
+                          "proteins")
+
+        one_hot_compounds = OneHotEncoder(output_shape_dimension=2, tokenizer=AtomLevelTokenizer()).fit(
+            self.dataset_35000_instances_train,
+            "ligands")
+        one_hot_compounds.transform(self.dataset_35000_instances_train, "ligands")
+
+        one_hot_compounds.transform(self.dataset_35000_instances_valid, "ligands")
+
+        input_size_proteins = self.dataset_35000_instances_train.X["proteins"].shape
+        input_size_compounds = self.dataset_35000_instances_train.X["ligands"].shape
+        model = InteractionModelDTU(input_size_proteins, input_size_compounds, 32)
+
+        wrapper = PyTorchModel(model=model, loss_function=nn.BCELoss(),
+                               validation_metric=accuracy_score,
+                               problem_type=BINARY, batch_size=50, epochs=50,
+                               optimizer=Adam(model.parameters(), lr=0.0001), progress=50,
+                               logger_path="small_dataset.log")
+        wrapper.fit(self.dataset_35000_instances_train, self.dataset_35000_instances_valid)
+
+
 # @skip("No memory")
 class TestConv1D(TestCase):
 
@@ -203,9 +276,6 @@ class TestConv1D(TestCase):
         one_hot = OneHotEncoder(output_shape_dimension=2, alphabet="ARNDCEQGHILKMFPSTWYV").fit(
             self.dataset_35000_instances_train,
             "proteins")
-        # one_hot = Word2Vec(output_shape_dimension=2).fit(
-        #     self.dataset_35000_instances_train,
-        #     "proteins")
         one_hot.transform(self.dataset_35000_instances_train,
                           "proteins")
 
@@ -220,7 +290,7 @@ class TestConv1D(TestCase):
         input_size_proteins = self.dataset_35000_instances_train.X["proteins"].shape[1]
         input_size_compounds = self.dataset_35000_instances_train.X["ligands"].shape[1]
         model = BaselineModel(input_size_proteins, input_size_compounds, [500, 500],
-                              [500, 500], [500, 500, 250, 125, 250, 500, 500, 500])
+                              [500, 500], [500, 500])
 
         # model = BaselineModel(input_size_proteins, input_size_compounds, [input_size_proteins * 2,
         #                                                                   input_size_proteins * 6,
@@ -234,7 +304,7 @@ class TestConv1D(TestCase):
 
         wrapper = PyTorchModel(model=model, loss_function=nn.BCELoss(),
                                validation_metric=f1_score,
-                               problem_type=BINARY, batch_size=50, epochs=2,
+                               problem_type=BINARY, batch_size=50, epochs=50,
                                optimizer=Adam(model.parameters(), lr=0.0001), progress=50,
                                logger_path="small_dataset.log")
         wrapper.fit(self.dataset_35000_instances_train, self.dataset_35000_instances_valid)

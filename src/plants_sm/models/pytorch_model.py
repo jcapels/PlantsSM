@@ -134,7 +134,6 @@ class PyTorchModel(Model):
                 if i % self.progress == 0:
                     self.logger.info(f'Validation set: [{i}/{len_valid_dataset}] loss: {loss.item():.8}')
 
-                torch.cuda.empty_cache()
         validation_metric_result = None
         if self.validation_metric:
             predictions = self.get_pred_from_proba(predictions)
@@ -186,7 +185,6 @@ class PyTorchModel(Model):
                 # Show progress
                 if i % self.progress == 0 or i == len_train_dataset - 1:
                     self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] loss: {loss.item():.8}')
-                torch.cuda.empty_cache()
 
             loss = loss_total / len_train_dataset
 
@@ -284,6 +282,8 @@ class PyTorchModel(Model):
 
                 yhat = yhat.cpu().detach().numpy()
                 predictions.extend(yhat)
+
+                actuals.extend(targets.cpu().numpy())
 
         return self._convert_proba_to_unified_form(np.array(predictions))
 
