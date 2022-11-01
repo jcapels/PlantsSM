@@ -188,11 +188,18 @@ class PyTorchModel(Model):
                 # Show progress
                 if i % self.progress == 0 or i == len_train_dataset - 1:
                     self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] loss: {loss.item():.8}')
+                    predictions = self.get_pred_from_proba(predictions)
+                    validation_metric_result = self.validation_metric(actuals, predictions)
+                    self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] '
+                                     f'metric result: {validation_metric_result:.8}')
+
 
             loss = loss_total / len_train_dataset
 
             predictions = self.get_pred_from_proba(predictions)
             validation_metric_result = self.validation_metric(actuals, predictions)
+            self.logger.info(
+                f'Training loss: {loss:.8};  Metric result: {validation_metric_result:.8}')
             self.writer.add_scalar("Loss/train", loss, epoch)
             self.writer.add_scalar("Metric/train", validation_metric_result, epoch)
 
