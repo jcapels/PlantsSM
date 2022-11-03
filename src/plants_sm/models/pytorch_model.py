@@ -136,9 +136,6 @@ class PyTorchModel(Model):
 
         validation_metric_result = None
         if self.validation_metric:
-            self.logger.info('Calculating validation metric...')
-            self.logger.info(f'Len Actuals: {len(actuals)}')
-            self.logger.info(f'Len Predictions: {len(predictions)}')
             predictions = self.get_pred_from_proba(predictions)
             validation_metric_result = self.validation_metric(actuals, predictions)
 
@@ -192,7 +189,6 @@ class PyTorchModel(Model):
                     validation_metric_result = self.validation_metric(actuals, predictions)
                     self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] '
                                      f'metric result: {validation_metric_result:.8}')
-
 
             loss = loss_total / len_train_dataset
 

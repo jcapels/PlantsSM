@@ -1,6 +1,6 @@
 from unittest import skip
 
-from plants_sm.featurization.one_hot_encoder import OneHotEncoder
+from plants_sm.featurization.encoding.one_hot_encoder import OneHotEncoder
 from unit_tests.featurizer.proteins.test_protein_featurizers import TestProteinFeaturizers
 
 

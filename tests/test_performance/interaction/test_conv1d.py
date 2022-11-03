@@ -1,49 +1,53 @@
 import os
 import pickle
+import sys
 from copy import copy
-from unittest import TestCase, skip
+from unittest import TestCase
 
 import torch
 from torch import nn, relu
 from torch.optim import Adam
 
 from plants_sm.data_standardization.compounds.deepmol_standardizers import DeepMolStandardizer
-from plants_sm.data_standardization.compounds.padding import SMILESPadder
-from plants_sm.data_standardization.proteins.padding import SequencePadder
 from plants_sm.data_standardization.proteins.standardization import ProteinStandardizer
 from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputDataset
 from plants_sm.featurization.compounds.map4_fingerprint import MAP4Fingerprint
-from plants_sm.featurization.one_hot_encoder import OneHotEncoder
-from plants_sm.featurization.proteins.bio_embeddings.prot_bert import ProtBert
+from plants_sm.featurization.encoding.one_hot_encoder import OneHotEncoder
 from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
-from plants_sm.featurization.proteins.encodings.blosum import BLOSSUMEncoder
 from plants_sm.models.constants import BINARY
 from plants_sm.models.pytorch_model import PyTorchModel
-from sklearn.metrics import balanced_accuracy_score, classification_report, confusion_matrix, precision_score, f1_score, \
+from sklearn.metrics import f1_score, \
     accuracy_score
 
-from plants_sm.reports.model_report import ModelReport
-from plants_sm.tokenisation.compounds.smilespe import SPETokenizer, AtomLevelTokenizer, KmerTokenizer
+from plants_sm.tokenisation.compounds.smilespe import AtomLevelTokenizer
 from tests import TEST_DIR
+
+environment_name = sys.executable.split('/')[-3]
+print('Environment:', environment_name)
+os.environ[environment_name] = str(123)
+os.environ['PYTHONHASHSEED'] = str(123)
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
+torch.manual_seed(123)
 
 
 class InteractionModelDTU(nn.Module):
 
-    def __init__(self, protein_shape, compounds_shape, filters):
+    def __init__(self, protein_shape, compounds_shape, protein_char_set_n, compound_char_set_n, filters):
         super().__init__()
-        self.proteins_embedding = nn.Embedding(num_embeddings=128, embedding_dim=protein_shape[1])
-        self.compounds_embedding = nn.Embedding(num_embeddings=128, embedding_dim=compounds_shape[1])
+        self.proteins_embedding = nn.Embedding(num_embeddings=protein_char_set_n + 1, embedding_dim=128, padding_idx=0)
+        self.compounds_embedding = nn.Embedding(num_embeddings=compound_char_set_n + 1, embedding_dim=128,
+                                                padding_idx=0)
         self.conv1_proteins_1 = nn.Conv1d(protein_shape[1], filters, 4, stride=1,
                                           padding='valid')
         self.conv1_proteins_2 = nn.Conv1d(filters, filters * 2, 6, stride=1, padding='valid')
         self.conv1_proteins_3 = nn.Conv1d(filters * 2, filters * 3, 8, stride=1, padding='valid')
-        self.maxpool1_proteins = nn.MaxPool1d(204)
+        self.maxpool1_proteins = nn.MaxPool1d(2)
 
         self.conv1_compounds_1 = nn.Conv1d(compounds_shape[1], filters, 4, stride=1, padding='valid')
         self.conv1_compounds_2 = nn.Conv1d(filters, filters * 2, 6, stride=1, padding='valid')
         self.conv1_compounds_3 = nn.Conv1d(filters * 2, filters * 3, 8,
                                            stride=1, padding='valid')
-        self.maxpool1_compounds = nn.MaxPool1d(5)
+        self.maxpool1_compounds = nn.MaxPool1d(2)
 
         self.dense1_interaction = nn.Linear(filters * 3 + filters * 3, 1024)
         self.dense2_interaction = nn.Linear(1024, 1024)
@@ -53,7 +57,7 @@ class InteractionModelDTU(nn.Module):
 
     def forward(self, x):
         x_proteins = x[0]
-        x_proteins = x_proteins.to(torch.int64)
+        x_proteins = x_proteins.to(torch.int32)
         x_proteins = self.proteins_embedding(x_proteins)
         y = relu(self.conv1_proteins_1(x_proteins))
         y = relu(self.conv1_proteins_2(y))
@@ -61,7 +65,7 @@ class InteractionModelDTU(nn.Module):
         y_proteins = nn.MaxPool1d(y_proteins.shape[2] - 1)(y_proteins)
 
         x_compounds = x[1]
-        x_compounds = x_compounds.to(torch.int64)
+        x_compounds = x_compounds.to(torch.int32)
         x_compounds = self.compounds_embedding(x_compounds)
         y = relu(self.conv1_compounds_1(x_compounds))
         y = relu(self.conv1_compounds_2(y))
@@ -198,11 +202,14 @@ class TestDeepDta(TestCase):
 
         input_size_proteins = self.dataset_35000_instances_train.X["proteins"].shape
         input_size_compounds = self.dataset_35000_instances_train.X["ligands"].shape
-        model = InteractionModelDTU(input_size_proteins, input_size_compounds, 32)
 
-        wrapper = PyTorchModel(model=model, loss_function=nn.BCELoss(),
+        n_char_proteins = 20
+        n_char_compounds = len(one_hot_compounds.tokens)
+        model = InteractionModelDTU(input_size_proteins, input_size_compounds, n_char_proteins, n_char_compounds, 32)
+
+        wrapper = PyTorchModel(model=model, loss_function=nn.BCELoss(), device="cpu",
                                validation_metric=accuracy_score,
-                               problem_type=BINARY, batch_size=50, epochs=50,
+                               problem_type=BINARY, batch_size=2, epochs=50,
                                optimizer=Adam(model.parameters(), lr=0.0001), progress=50,
                                logger_path="small_dataset.log")
         wrapper.fit(self.dataset_35000_instances_train, self.dataset_35000_instances_valid)

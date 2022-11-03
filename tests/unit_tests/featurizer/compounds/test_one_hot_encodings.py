@@ -1,7 +1,6 @@
 from unittest import skip
 
-from plants_sm.data_standardization.compounds.padding import SMILESPadder
-from plants_sm.featurization.one_hot_encoder import OneHotEncoder
+from plants_sm.featurization.encoding.one_hot_encoder import OneHotEncoder
 from plants_sm.tokenisation.compounds.smilespe import AtomLevelTokenizer, SPETokenizer, KmerTokenizer
 from unit_tests.featurizer.compounds.test_compound_featurizers import TestCompoundFeaturizers
 

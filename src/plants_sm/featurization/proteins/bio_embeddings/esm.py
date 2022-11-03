@@ -99,11 +99,9 @@ class ESM1bEncoder(Transformer):
                 representations['representations'] = results["representations"][33]
                 representations['features'] = results["logits"]
 
-                sequences_embedding = representations[self.preset][0].numpy()
-
                 temp_result = {}
                 for i, batch_instance_id in enumerate(batch_ids):
-                    res.append((batch_instance_id, sequences_embedding[i]))
+                    res.append((batch_instance_id, representations[self.preset][i, 1: len(batch[i][1]) + 1].mean(0)))
 
                 res.append(temp_result)
                 batch = []
