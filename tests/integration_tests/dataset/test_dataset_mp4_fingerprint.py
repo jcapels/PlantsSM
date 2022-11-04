@@ -1,12 +1,8 @@
-import os
 from unittest import skip
 
 from integration_tests.dataset.test_dataset import TestDataset
 from plants_sm.data_structures.dataset import SingleInputDataset, PLACEHOLDER_FIELD
 from plants_sm.featurization.compounds.map4_fingerprint import MAP4Fingerprint
-from plants_sm.io import read_csv
-
-from tests import TEST_DIR
 
 
 @skip("Requires conda")

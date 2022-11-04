@@ -36,8 +36,13 @@ def get_device(device: Union[None, str, torch.device] = None, cuda_as_default=Fa
     """
     if isinstance(device, torch.device):
         return device
-    elif device:
-        return torch.device(device)
+    elif device == "cuda":
+        is_available = torch.cuda.is_available()
+        if is_available:
+            return torch.device(device)
+        else:
+            logger.warning("CUDA is not available, falling back to CPU.")
+            return torch.device("cpu")
     elif torch.cuda.is_available() and cuda_as_default:
         return torch.device("cuda")
     else:

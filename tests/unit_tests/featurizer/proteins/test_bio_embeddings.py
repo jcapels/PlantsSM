@@ -1,10 +1,11 @@
 import os
 from unittest import skip
 
+from esm.pretrained import esm2_t6_8M_UR50D
 from yaml import YAMLError
 
 from plants_sm.featurization.proteins.bio_embeddings._utils import get_model_file, get_device, read_config_file
-from plants_sm.featurization.proteins.bio_embeddings.esm import ESM1bEncoder
+from plants_sm.featurization.proteins.bio_embeddings.esm import ESMEncoder
 from plants_sm.featurization.proteins.bio_embeddings.plus_rnn_embedding import PlusRNNEmbedding
 from plants_sm.featurization.proteins.bio_embeddings.prot_bert import ProtBert
 from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
@@ -63,7 +64,12 @@ class TestEmbeddings(TestProteinFeaturizers):
 
     @skip("No memory on CI")
     def test_esm_1b(self):
-        dataset = ESM1bEncoder(device="cpu").fit_transform(self.dataset)
+        dataset = ESMEncoder(device="cpu").fit_transform(self.dataset)
+
+    def test_esm_2(self):
+        ESMEncoder(device="cuda", esm_function="esm2_t6_8M_UR50D", batch_size=2).fit_transform(self.dataset)
+        self.assertEqual(self.dataset.X().shape, (2, 320))
+        self.assertAlmostEqual(-0.014742036, self.dataset.X()[0, 0], delta=0.001)
 
     def test_get_model_function(self):
         self.assertIn("plants_sm/word2vec/model_file", get_model_file("word2vec", "model_file"))

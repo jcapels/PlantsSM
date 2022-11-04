@@ -1,7 +1,3 @@
-from collections import ChainMap
-from typing import List
-
-import esm
 import numpy as np
 import torch
 from tqdm import tqdm
@@ -9,10 +5,11 @@ from tqdm import tqdm
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.featurization._utils import call_set_features_names
 from plants_sm.featurization.proteins.bio_embeddings._utils import get_device
+from plants_sm.featurization.proteins.bio_embeddings.constants import ESM_DIMENSIONS, ESM_FUNCTIONS, ESM_LAYERS
 from plants_sm.transformation.transformer import Transformer
 
 
-class ESM1bEncoder(Transformer):
+class ESMEncoder(Transformer):
     """
     It encodes protein sequences with the embedding layer of the pre-trained model ESM-1B.
     The Esm1bEncoder operates only over pandas DataFrame.
@@ -31,14 +28,15 @@ class ESM1bEncoder(Transformer):
 
     """
 
-    preset: str = 'representations'
     batch_size: int = 16
     features_names = list = []
+    esm_function: str = "esm2_t6_8M_UR50D"
+    device: str = "cpu"
 
     def set_features_names(self):
-        self.features_names = [f"esm_feature_{i}" for i in range(1, 1280 + 1)]
+        self.features_names = [f"ESM_{i}" for i in range(ESM_DIMENSIONS[self.esm_function])]
 
-    def _fit(self, dataset: Dataset, instance_type: str) -> 'ESM1bEncoder':
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'ESMEncoder':
         """
         Fit the Esm1bEncoder. It loads the pre-trained model and the batch converter.
 
@@ -52,14 +50,23 @@ class ESM1bEncoder(Transformer):
         encoder: a fitted Esm1bEncoder
         """
 
-        model, alphabet = esm.pretrained.esm1b_t33_650M_UR50S()
-        device = get_device()
+        if self.esm_function in ESM_DIMENSIONS:
 
-        self.model = model.to(device)
-        self.model = model.eval()
-        self.batch_converter = alphabet.get_batch_converter()
+            self.esm_callable = ESM_FUNCTIONS[self.esm_function]
 
-        return self
+            model, alphabet = self.esm_callable()
+
+            device = get_device(self.device)
+
+            self.model = model.to(device)
+            self.model = model.eval()
+            self.batch_converter = alphabet.get_batch_converter()
+
+            self.layers = ESM_LAYERS[self.esm_function]
+
+            return self
+        else:
+            raise ValueError(f"Invalid esm_function. Available functions are: {list(ESM_DIMENSIONS.keys())}")
 
     @call_set_features_names
     def _transform(self, dataset: Dataset, instance_type: str) -> Dataset:
@@ -68,8 +75,10 @@ class ESM1bEncoder(Transformer):
 
         Parameters
         ----------
-        sequence: str
-            The protein sequence to be encoded.
+        dataset: Dataset
+            The dataset to be used to encode the protein sequences.
+        instance_type: str
+            The instance type to be encoded.
 
         Returns
         -------
@@ -94,16 +103,13 @@ class ESM1bEncoder(Transformer):
                 batch_labels, batch_strs, batch_tokens = self.batch_converter(batch)
                 # Extract per-residue representations (on CPU)
                 with torch.no_grad():
-                    results = self.model(batch_tokens, repr_layers=[33], return_contacts=True)
+                    results = self.model(batch_tokens, repr_layers=[self.layers], return_contacts=True)
 
-                representations['representations'] = results["representations"][33]
-                representations['features'] = results["logits"]
+                representations['representations'] = results["representations"][self.layers].numpy()
 
-                temp_result = {}
                 for i, batch_instance_id in enumerate(batch_ids):
-                    res.append((batch_instance_id, representations[self.preset][i, 1: len(batch[i][1]) + 1].mean(0)))
+                    res.append((batch_instance_id, representations['representations'][i, 1: len(batch[i][1]) + 1].mean(0)))
 
-                res.append(temp_result)
                 batch = []
                 batch_ids = []
                 pbar.update(self.batch_size)
@@ -113,12 +119,11 @@ class ESM1bEncoder(Transformer):
             batch_labels, batch_strs, batch_tokens = self.batch_converter(batch)
             # Extract per-residue representations (on CPU)
             with torch.no_grad():
-                results = self.model(batch_tokens, repr_layers=[33], return_contacts=True)
+                results = self.model(batch_tokens, repr_layers=[self.layers], return_contacts=True)
 
-            representations['representations'] = results["representations"][33]
-            representations['features'] = results["logits"]
+            representations['representations'] = results["representations"][self.layers].numpy()
 
-            sequences_embedding = representations[self.preset][0].numpy()
+            sequences_embedding = representations['representations'][0].numpy()
 
             for i, batch_instance_id in enumerate(batch_ids):
                 res.append((batch_instance_id, sequences_embedding[i]))
