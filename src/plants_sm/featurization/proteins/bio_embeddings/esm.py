@@ -56,9 +56,7 @@ class ESMEncoder(Transformer):
 
             model, alphabet = self.esm_callable()
 
-            device = get_device(self.device)
-
-            self.model = model.to(device)
+            self.model = model.to(self.device)
             self.model = model.eval()
             self.batch_converter = alphabet.get_batch_converter()
 
@@ -109,7 +107,8 @@ class ESMEncoder(Transformer):
                 representations['representations'] = results["representations"][self.layers].cpu().detach().numpy()
 
                 for i, batch_instance_id in enumerate(batch_ids):
-                    res.append((batch_instance_id, representations['representations'][i, 1: len(batch[i][1]) + 1].mean(0)))
+                    res.append((batch_instance_id,
+                                representations['representations'][i, 1: len(batch[i][1]) + 1].mean(0)))
 
                 batch = []
                 batch_ids = []
@@ -125,10 +124,8 @@ class ESMEncoder(Transformer):
 
             representations['representations'] = results["representations"][self.layers].cpu().detach().numpy()
 
-            sequences_embedding = representations['representations'][0].numpy()
-
             for i, batch_instance_id in enumerate(batch_ids):
-                res.append((batch_instance_id, sequences_embedding[i]))
+                res.append((batch_instance_id, representations['representations'][i, 1: len(batch[i][1]) + 1].mean(0)))
 
         dataset.features[instance_type] = dict(res)
 

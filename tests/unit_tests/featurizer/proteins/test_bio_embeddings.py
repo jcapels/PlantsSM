@@ -67,7 +67,7 @@ class TestEmbeddings(TestProteinFeaturizers):
         dataset = ESMEncoder(device="cpu").fit_transform(self.dataset)
 
     def test_esm_2(self):
-        ESMEncoder(device="cuda", esm_function="esm2_t6_8M_UR50D", batch_size=2).fit_transform(self.dataset)
+        ESMEncoder(device="cpu", esm_function="esm2_t6_8M_UR50D", batch_size=2).fit_transform(self.dataset)
         self.assertEqual(self.dataset.X().shape, (2, 320))
         self.assertAlmostEqual(-0.014742036, self.dataset.X()[0, 0], delta=0.001)
 
