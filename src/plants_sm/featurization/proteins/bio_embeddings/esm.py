@@ -93,9 +93,9 @@ class ESMEncoder(Transformer):
                 representations = {}
                 batch_labels, batch_strs, batch_tokens = self.batch_converter(batch)
                 # Extract per-residue representations (on CPU)
-                # with torch.no_grad():
-                batch_tokens = batch_tokens.to(self.device)
-                results = self.model(batch_tokens, repr_layers=[self.layers], return_contacts=True)
+                with torch.no_grad():
+                    batch_tokens = batch_tokens.to(self.device)
+                    results = self.model(batch_tokens, repr_layers=[self.layers], return_contacts=True)
 
                 representations['representations'] = results["representations"][self.layers].cpu().detach().numpy()
 
@@ -111,9 +111,9 @@ class ESMEncoder(Transformer):
             representations = {}
             batch_labels, batch_strs, batch_tokens = self.batch_converter(batch)
             # Extract per-residue representations (on CPU)
-            # with torch.no_grad():
-            batch_tokens = batch_tokens.to(self.device)
-            results = self.model(batch_tokens, repr_layers=[self.layers], return_contacts=True)
+            with torch.no_grad():
+                batch_tokens = batch_tokens.to(self.device)
+                results = self.model(batch_tokens, repr_layers=[self.layers], return_contacts=True)
 
             representations['representations'] = results["representations"][self.layers].cpu().detach().numpy()
 
