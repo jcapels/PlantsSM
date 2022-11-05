@@ -16,13 +16,6 @@ class ESMEncoder(Transformer):
 
     Parameters
     ----------
-    preset: str, optional (default='representations')
-        The possible output from esm1b model. Available presets are:
-        - 'representations': Preset to obtain the transformer representation of the protein sequences. This preset
-        creats a 1280 x length of sequence matrix as an output for each sequence. More information can be accessed in
-        https://github.com/facebookresearch/esm
-        - 'features': Preset to obtain the input features to the transformers layers. This preset creates a
-        33 x length of sequence matrix as an output for each sequence.
     batch_size: int, optional (default=16)
         The batch size to be used in the encoding process. Higher batch sizes can lead to OOM issues.
 

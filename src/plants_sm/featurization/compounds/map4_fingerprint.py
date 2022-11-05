@@ -15,11 +15,15 @@ class MAP4Fingerprint(FeaturesGenerator):
     def set_features_names(self):
         return [f"map4_fingerprint_{i}" for i in range(self.dimensions)]
 
-    def _fit(self, dataset: Dataset, instance_type: str, **kwargs) -> 'FeaturesGenerator':
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'FeaturesGenerator':
         self.fingerprint = MAP4Calculator(self.dimensions, self.radius, self.is_counted, True)
         return self
 
     def _featurize(self, molecule: str) -> np.ndarray:
         mol = MolFromSmiles(molecule)
         map4_fingerprint = self.fingerprint.calculate(mol)
+        try:
+            assert isinstance(map4_fingerprint, np.ndarray)
+        except AssertionError:
+            map4_fingerprint = np.zeros(self.dimensions)
         return np.array(map4_fingerprint)
