@@ -22,7 +22,7 @@ class MAP4Fingerprint(FeaturesGenerator):
     def _featurize(self, molecule: str) -> np.ndarray:
         mol = MolFromSmiles(molecule)
         map4_fingerprint = self.fingerprint.calculate(mol)
-        print(map4_fingerprint.shape)
+        np.array(map4_fingerprint, dtype=np.int8)
         try:
             assert map4_fingerprint.shape == (self.dimensions,)
         except AssertionError:
