@@ -102,10 +102,11 @@ class ESMEncoder(Transformer):
                 representations = {}
                 batch_labels, batch_strs, batch_tokens = self.batch_converter(batch)
                 # Extract per-residue representations (on CPU)
-                with torch.no_grad():
-                    results = self.model(batch_tokens, repr_layers=[self.layers], return_contacts=True)
+                # with torch.no_grad():
+                batch_tokens = batch_tokens.to(self.device)
+                results = self.model(batch_tokens, repr_layers=[self.layers], return_contacts=True)
 
-                representations['representations'] = results["representations"][self.layers].numpy()
+                representations['representations'] = results["representations"][self.layers].cpu().detach().numpy()
 
                 for i, batch_instance_id in enumerate(batch_ids):
                     res.append((batch_instance_id, representations['representations'][i, 1: len(batch[i][1]) + 1].mean(0)))
@@ -118,10 +119,11 @@ class ESMEncoder(Transformer):
             representations = {}
             batch_labels, batch_strs, batch_tokens = self.batch_converter(batch)
             # Extract per-residue representations (on CPU)
-            with torch.no_grad():
-                results = self.model(batch_tokens, repr_layers=[self.layers], return_contacts=True)
+            # with torch.no_grad():
+            batch_tokens = batch_tokens.to(self.device)
+            results = self.model(batch_tokens, repr_layers=[self.layers], return_contacts=True)
 
-            representations['representations'] = results["representations"][self.layers].numpy()
+            representations['representations'] = results["representations"][self.layers].cpu().detach().numpy()
 
             sequences_embedding = representations['representations'][0].numpy()
 

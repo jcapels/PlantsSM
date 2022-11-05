@@ -3,6 +3,7 @@ from typing import Any, List, Tuple
 
 import numpy as np
 from joblib import Parallel, delayed
+from joblib.externals.loky import set_loky_pickler
 from numpy import ndarray
 
 from plants_sm.data_structures.dataset import Dataset
