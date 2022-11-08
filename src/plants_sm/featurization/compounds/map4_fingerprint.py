@@ -13,7 +13,7 @@ class MAP4Fingerprint(FeaturesGenerator):
     is_counted = False
 
     def set_features_names(self):
-        return [f"map4_fingerprint_{i}" for i in range(self.dimensions)]
+        self.features_names = [f"map4_fingerprint_{i}" for i in range(self.dimensions)]
 
     def _fit(self, dataset: Dataset, instance_type: str) -> 'FeaturesGenerator':
         self.fingerprint = MAP4Calculator(self.dimensions, self.radius, self.is_counted, True)
