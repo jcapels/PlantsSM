@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 
 class FeaturesGenerator(Transformer):
-    device: str = None
+    device: str = "cpu"
     output_shape_dimension: int = 2
     features_names: List[str] = []
 

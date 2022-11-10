@@ -29,6 +29,13 @@ class Model(metaclass=ABCMeta):
     def load(self, path: str):
         pass
 
+    @property
+    @abstractmethod
+    def history(self):
+        """
+        Returns the underlying model.
+        """
+
     def fit(self, dataset: Dataset, validation_dataset: Dataset = None):
         return self._fit_data(dataset, validation_dataset)
 

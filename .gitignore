@@ -12,6 +12,8 @@ compound_protein_interaction
 #propythia
 tests/aaindex[0-9]
 
+examples/rhea_case_study
+
 # Distribution / packaging
 .Python
 .idea

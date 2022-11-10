@@ -1,4 +1,5 @@
 import os.path
+import pickle
 import re
 from abc import abstractmethod
 from typing import Any
@@ -37,6 +38,17 @@ class DictMixin:
                 return value
         else:
             return None
+
+
+class PickleMixin:
+    def to_pickle(self, file_path: FilePathOrBuffer):
+        file_pi = open(file_path, 'wb')
+        pickle.dump(self, file_pi)
+
+    @classmethod
+    def from_pickle(cls, file_path: FilePathOrBuffer):
+        file_pi = open(file_path, 'wb')
+        return pickle.load(file_pi)
 
 
 class CSVMixin:

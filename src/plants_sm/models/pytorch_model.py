@@ -1,11 +1,11 @@
-import datetime
 import logging
 import os
 from logging.handlers import TimedRotatingFileHandler
-from typing import Callable, Union
+from typing import Callable, Union, Tuple, List
 
 import numpy as np
-from torch import nn
+import pandas as pd
+from torch import nn, Tensor
 from torch.nn.modules.loss import _Loss
 from torch.optim import Adam, Optimizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -25,6 +25,41 @@ class PyTorchModel(Model):
                  patience: int = 4, validation_metric: Callable = None, problem_type: str = BINARY,
                  device: Union[str, torch.device] = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
                  trigger_times: int = 0, last_loss: int = None, progress: int = 100, logger_path: str = None):
+
+        """
+        Constructor for PyTorchModel
+
+        Parameters
+        ----------
+        model: nn.Module
+            PyTorch model
+        loss_function: _Loss
+            PyTorch loss function
+        optimizer: Optimizer
+            PyTorch optimizer
+        scheduler: ReduceLROnPlateau
+            PyTorch scheduler
+        epochs: int
+            Number of epochs
+        batch_size: int
+            Batch size
+        patience: int
+            Number of epochs to wait before early stopping
+        validation_metric: Callable
+            Sklearn metric function to use for validation
+        problem_type: str
+            Type of problem
+        device: Union[str, torch.device]
+            Device to use for training
+        trigger_times: int
+            Number of times the model has been triggered
+        last_loss: int
+            Last loss value
+        progress: int
+            Number of batches to wait before logging progress
+        logger_path: str
+            Path to save the logger
+        """
 
         super().__init__()
 
@@ -52,6 +87,15 @@ class PyTorchModel(Model):
         self.trigger_times = trigger_times
         self.last_loss = last_loss
 
+        loss_dataframe = pd.DataFrame(columns=["epoch", "train_loss", "valid_loss"])
+        loss_dataframe.set_index("epoch", inplace=True)
+
+        metric_dataframe = pd.DataFrame(columns=["epoch", "train_metric_result", "valid_metric_result"])
+        metric_dataframe.set_index("epoch", inplace=True)
+
+        self._history = {'loss': loss_dataframe,
+                         'metric_results': metric_dataframe}
+
         self.writer = SummaryWriter()
 
         if not self.optimizer:
@@ -59,14 +103,53 @@ class PyTorchModel(Model):
         if not self.scheduler:
             self.scheduler = ReduceLROnPlateau(self.optimizer, 'min')
 
+    @property
+    def history(self):
+        return self._history
+
     def _save(self, path: str):
+        """
+        Save the model to a file
+
+        Parameters
+        ----------
+        path: str
+            Path to save the model
+
+        Returns
+        -------
+        """
         torch.save(self.model.state_dict(), path)
 
     def load(self, path: str):
+        """
+        Load the model from a file
+
+        Parameters
+        ----------
+        path: str
+            Path to load the model
+
+        """
         self.model.load_state_dict(torch.load(path))
         self.model.eval()
 
-    def _preprocess_data(self, dataset: Dataset, shuffle: bool = True):
+    def _preprocess_data(self, dataset: Dataset, shuffle: bool = True) -> DataLoader:
+        """
+        Preprocess the data for training
+
+        Parameters
+        ----------
+        dataset: Dataset
+            Dataset to preprocess
+        shuffle: bool
+            Whether to shuffle the data
+
+        Returns
+        -------
+        DataLoader
+            Preprocessed data
+        """
 
         tensors = []
         for instance in dataset.X.keys():
@@ -85,29 +168,19 @@ class PyTorchModel(Model):
         )
         return data_loader
 
-    def _test(self, test_set):
-        self.model.eval()
-        predictions, actuals = list(), list()
-        with torch.no_grad():
-            for i, inputs_targets in enumerate(test_set):
-                inputs, targets = inputs_targets[:-1], inputs_targets[-1]
-                for j, inputs_elem in enumerate(inputs):
-                    inputs[j] = inputs_elem.to(self.device)
+    def _validate(self, validation_set: DataLoader) -> Tuple[float, float]:
+        """
+        Validate the model
 
-                targets = targets.to(self.device)
-                yhat = self.model(inputs)
+        Parameters
+        ----------
+        validation_set: DataLoader
+            Validation set
 
-                yhat = yhat.cpu().detach().numpy()
-                actual = targets.cpu().numpy()
-                actual = actual.reshape((len(actual),)).tolist()
-                yhat = yhat.reshape((len(yhat),)).tolist()
-                predictions.extend(yhat)
-                actuals.extend(actual)
+        Returns
+        -------
 
-        predictions = self.get_pred_from_proba(predictions)
-        return self.validation_metric(actuals, predictions)
-
-    def _validate(self, validation_set: DataLoader):
+        """
         self.model.eval()
         loss_total = 0
         predictions, actuals = list(), list()
@@ -136,12 +209,83 @@ class PyTorchModel(Model):
 
         validation_metric_result = None
         if self.validation_metric:
-            predictions = self.get_pred_from_proba(predictions)
+            predictions = self.get_pred_from_proba(np.array(predictions))
             validation_metric_result = self.validation_metric(actuals, predictions)
 
         return loss_total / len_valid_dataset, validation_metric_result
 
+    def _train(self, inputs_targets: Tensor) -> Tuple[List[float], List[float], Tensor]:
+        """
+        Train the model
+
+        Parameters
+        ----------
+        inputs_targets: Tensor
+            Inputs and targets
+
+        Returns
+        -------
+        Tuple[List[float], List[float], Tensor]
+            Loss, predictions, targets
+        """
+
+        inputs, targets = inputs_targets[:-1], inputs_targets[-1]
+
+        for j, inputs_elem in enumerate(inputs):
+            inputs[j] = inputs_elem.to(self.device)
+
+        targets = targets.to(self.device)
+
+        self.optimizer.zero_grad()
+
+        output = self.model(inputs)
+        # Zero the gradients
+
+        # Forward and backward propagation
+        loss = self.loss_function(output, targets)
+        loss.backward()
+        self.optimizer.step()
+
+        actual = targets.cpu().numpy()
+        actual = actual.reshape((len(actual),)).tolist()
+        yhat = output.reshape((len(output),)).tolist()
+
+        return actual, yhat, loss
+
+    def _register_history(self, loss: float, epoch: int, metric_result: float, train: bool = True):
+        """
+        Register the history of the model
+
+        Parameters
+        ----------
+        loss: float
+            Loss
+        epoch: int
+            Epoch
+        metric_result: float
+            Metric result
+        train: bool
+            Whether it is training or validation
+
+        """
+        dataset_type = "train" if train else "valid"
+
+        self.writer.add_scalar(f"Loss/{dataset_type}", loss, epoch)
+        self._history["loss"].at[epoch - 1, f"{dataset_type}_loss"] = loss
+        self.writer.add_scalar(f"Metric/{dataset_type}", metric_result, epoch)
+        self._history["metric_results"].at[epoch - 1, f"{dataset_type}_metric_result"] = metric_result
+
     def _fit_data(self, train_dataset: Dataset, validation_dataset: Dataset = None):
+        """
+        Fit the model to the data
+
+        Parameters
+        ----------
+        train_dataset: Dataset
+            Training dataset
+        validation_dataset: Dataset
+            Validation dataset
+        """
 
         last_loss = 100
         trigger_times = 0
@@ -159,26 +303,8 @@ class PyTorchModel(Model):
             loss_total = 0
             predictions, actuals = list(), list()
             for i, inputs_targets in enumerate(train_dataset):
-                inputs, targets = inputs_targets[:-1], inputs_targets[-1]
+                actual, yhat, loss = self._train(inputs_targets)
 
-                for j, inputs_elem in enumerate(inputs):
-                    inputs[j] = inputs_elem.to(self.device)
-
-                targets = targets.to(self.device)
-
-                self.optimizer.zero_grad()
-
-                output = self.model(inputs)
-                # Zero the gradients
-
-                # Forward and backward propagation
-                loss = self.loss_function(output, targets)
-                loss.backward()
-                self.optimizer.step()
-
-                actual = targets.cpu().numpy()
-                actual = actual.reshape((len(actual),)).tolist()
-                yhat = output.reshape((len(output),)).tolist()
                 predictions.extend(yhat)
                 actuals.extend(actual)
                 loss_total += loss.item()
@@ -196,8 +322,7 @@ class PyTorchModel(Model):
             validation_metric_result = self.validation_metric(actuals, predictions)
             self.logger.info(
                 f'Training loss: {loss:.8};  Metric result: {validation_metric_result:.8}')
-            self.writer.add_scalar("Loss/train", loss, epoch)
-            self.writer.add_scalar("Metric/train", validation_metric_result, epoch)
+            self._register_history(loss, epoch, validation_metric_result)
 
             # Early stopping
             if validation_dataset:
@@ -214,8 +339,7 @@ class PyTorchModel(Model):
                     print('trigger times: 0')
                     trigger_times = 0
 
-                self.writer.add_scalar("Loss/validation", current_loss, epoch)
-                self.writer.add_scalar("Metric/validation", validation_metric_result, epoch)
+                self._register_history(current_loss, epoch, validation_metric_result, train=False)
 
                 last_loss = current_loss
 
@@ -228,7 +352,18 @@ class PyTorchModel(Model):
 
         self.writer.flush()
 
-    def get_pred_from_proba(self, y_pred_proba):
+    def get_pred_from_proba(self, y_pred_proba: np.ndarray) -> np.ndarray:
+        """
+        Get the prediction from the probability
+
+        Parameters
+        ----------
+        y_pred_proba: list
+            List of probabilities
+        Returns
+        -------
+
+        """
         if self.problem_type == BINARY:
             y_pred = [1 if pred >= 0.5 else 0 for pred in y_pred_proba]
         elif self.problem_type == REGRESSION:
@@ -241,12 +376,22 @@ class PyTorchModel(Model):
                 y_pred = np.argmax(y_pred_proba, axis=1)
         return y_pred
 
-    def _convert_proba_to_unified_form(self, y_pred_proba):
+    def _convert_proba_to_unified_form(self, y_pred_proba: np.ndarray) -> np.ndarray:
         """
-        Ensures that y_pred_proba is in a consistent form across all models.
-        For binary classification, converts y_pred_proba to a 1 dimensional array of prediction probabilities of the positive class.
-        For multiclass and softclass classification, keeps y_pred_proba as a 2 dimensional array of prediction probabilities for each class.
-        For regression, converts y_pred_proba to a 1 dimensional array of predictions.
+        Ensures that y_pred_proba is in a consistent form across all models. For binary classification,
+        converts y_pred_proba to a 1 dimensional array of prediction probabilities of the positive class. For
+        multiclass and softclass classification, keeps y_pred_proba as a 2 dimensional array of prediction
+        probabilities for each class. For regression, converts y_pred_proba to a 1 dimensional array of predictions.
+
+        Parameters
+        ----------
+        y_pred_proba: np.ndarray
+            Array of prediction probabilities
+
+        Returns
+        -------
+        np.ndarray
+            Array of prediction probabilities in a consistent form across all models
         """
         if self.problem_type == REGRESSION:
             if len(y_pred_proba.shape) == 1:
@@ -265,7 +410,20 @@ class PyTorchModel(Model):
         else:  # Unknown problem type
             raise AssertionError(f'Unknown y_pred_proba format for `problem_type="{self.problem_type}"`.')
 
-    def _predict_proba(self, dataset: Dataset):
+    def _predict_proba(self, dataset: Dataset) -> np.ndarray:
+        """
+        Predicts the probability of each class for each sample in the dataset.
+
+        Parameters
+        ----------
+        dataset: Dataset
+            Dataset to predict on
+
+        Returns
+        -------
+        np.ndarray
+            Array of prediction probabilities
+        """
 
         dataset = self._preprocess_data(dataset, shuffle=False)
 
@@ -294,7 +452,20 @@ class PyTorchModel(Model):
 
         return self._convert_proba_to_unified_form(np.array(predictions))
 
-    def _predict(self, dataset: Dataset):
+    def _predict(self, dataset: Dataset) -> np.ndarray:
+        """
+        Predicts the class for each sample in the dataset.
+
+        Parameters
+        ----------
+        dataset: Dataset
+            Dataset to predict on
+
+        Returns
+        -------
+        np.ndarray
+            Array of predictions
+        """
         y_pred_proba = self._predict_proba(dataset)
         y_pred = self.get_pred_from_proba(y_pred_proba)
         return y_pred

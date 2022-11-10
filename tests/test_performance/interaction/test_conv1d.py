@@ -11,7 +11,7 @@ from torch.optim import Adam
 from plants_sm.data_standardization.compounds.deepmol_standardizers import DeepMolStandardizer
 from plants_sm.data_standardization.proteins.standardization import ProteinStandardizer
 from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputDataset
-from plants_sm.featurization.compounds.map4_fingerprint import MAP4Fingerprint
+from plants_sm.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
 from plants_sm.featurization.encoding.one_hot_encoder import OneHotEncoder
 from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
 from plants_sm.models.constants import BINARY
@@ -219,21 +219,21 @@ class TestDeepDta(TestCase):
 class TestConv1D(TestCase):
 
     def setUp(self) -> None:
-        csv_to_read = os.path.join(TEST_DIR, "compound_protein_interaction", "train_balanced.csv")
+        csv_to_read = os.path.join(TEST_DIR, "compound_protein_interaction", "super_train.csv")
         self.dataset_35000_instances_train = MultiInputDataset.from_csv(csv_to_read,
                                                                         representation_fields={"proteins": "SEQ",
                                                                                                "ligands": "SUBSTRATES"},
                                                                         instances_ids_field={"interaction": "index"},
                                                                         labels_field="activity")
 
-        csv_to_read = os.path.join(TEST_DIR, "compound_protein_interaction", "test_balanced.csv")
+        csv_to_read = os.path.join(TEST_DIR, "compound_protein_interaction", "super_test.csv")
         self.dataset_35000_instances_test = MultiInputDataset.from_csv(csv_to_read,
                                                                        representation_fields={"proteins": "SEQ",
                                                                                               "ligands": "SUBSTRATES"},
                                                                        instances_ids_field={"interaction": "index"},
                                                                        labels_field="activity")
 
-        csv_to_read = os.path.join(TEST_DIR, "compound_protein_interaction", "valid_balanced.csv")
+        csv_to_read = os.path.join(TEST_DIR, "compound_protein_interaction", "super_valid.csv")
         self.dataset_35000_instances_valid = MultiInputDataset.from_csv(csv_to_read,
                                                                         representation_fields={"proteins": "SEQ",
                                                                                                "ligands": "SUBSTRATES"},
@@ -363,12 +363,12 @@ class TestConv1D(TestCase):
         Word2Vec().fit_transform(self.dataset_35000_instances_train,
                                  "proteins")
 
-        MAP4Fingerprint(n_jobs=8, dimensions=1024).fit_transform(self.dataset_35000_instances_train, "ligands")
+        DeepMolDescriptors(n_jobs=8).fit_transform(self.dataset_35000_instances_train, "ligands")
 
         Word2Vec().fit_transform(self.dataset_35000_instances_valid,
                                  "proteins")
 
-        MAP4Fingerprint(n_jobs=8, dimensions=1024).fit_transform(self.dataset_35000_instances_valid, "ligands")
+        DeepMolDescriptors(n_jobs=8).fit_transform(self.dataset_35000_instances_valid, "ligands")
         file_pi = open('dataset_train.obj', 'wb')
         pickle.dump(self.dataset_35000_instances_train, file_pi)
         file_pi = open('dataset_valid.obj', 'wb')

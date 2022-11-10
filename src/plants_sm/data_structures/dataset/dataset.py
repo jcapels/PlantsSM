@@ -1,10 +1,12 @@
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod
 from typing import Any, Dict
 
 import numpy as np
 
+from plants_sm.mixins.mixins import PickleMixin
 
-class Dataset(metaclass=ABCMeta):
+
+class Dataset(PickleMixin):
     representation_fields: Dict[str, Any]
 
     def __init__(self):
