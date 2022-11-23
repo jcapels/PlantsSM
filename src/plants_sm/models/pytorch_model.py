@@ -13,6 +13,7 @@ from torch.utils.data import TensorDataset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from plants_sm.data_structures.dataset import Dataset
+from plants_sm.models._utils import _convert_proba_to_unified_form
 from plants_sm.models.constants import REGRESSION, QUANTILE, BINARY
 from plants_sm.models.model import Model
 import torch
@@ -376,40 +377,6 @@ class PyTorchModel(Model):
                 y_pred = np.argmax(y_pred_proba, axis=1)
         return y_pred
 
-    def _convert_proba_to_unified_form(self, y_pred_proba: np.ndarray) -> np.ndarray:
-        """
-        Ensures that y_pred_proba is in a consistent form across all models. For binary classification,
-        converts y_pred_proba to a 1 dimensional array of prediction probabilities of the positive class. For
-        multiclass and softclass classification, keeps y_pred_proba as a 2 dimensional array of prediction
-        probabilities for each class. For regression, converts y_pred_proba to a 1 dimensional array of predictions.
-
-        Parameters
-        ----------
-        y_pred_proba: np.ndarray
-            Array of prediction probabilities
-
-        Returns
-        -------
-        np.ndarray
-            Array of prediction probabilities in a consistent form across all models
-        """
-        if self.problem_type == REGRESSION:
-            if len(y_pred_proba.shape) == 1:
-                return y_pred_proba
-            else:
-                return y_pred_proba[:, 1]
-        elif self.problem_type == BINARY:
-            if len(y_pred_proba.shape) == 1:
-                return y_pred_proba
-            elif y_pred_proba.shape[1] > 1:
-                return y_pred_proba[:, 1]
-            else:
-                return y_pred_proba
-        elif y_pred_proba.shape[1] > 2:  # Multiclass, Softclass
-            return y_pred_proba
-        else:  # Unknown problem type
-            raise AssertionError(f'Unknown y_pred_proba format for `problem_type="{self.problem_type}"`.')
-
     def _predict_proba(self, dataset: Dataset) -> np.ndarray:
         """
         Predicts the probability of each class for each sample in the dataset.
@@ -450,7 +417,7 @@ class PyTorchModel(Model):
 
                 actuals.extend(targets.cpu().numpy())
 
-        return self._convert_proba_to_unified_form(np.array(predictions))
+        return _convert_proba_to_unified_form(self.problem_type, np.array(predictions))
 
     def _predict(self, dataset: Dataset) -> np.ndarray:
         """

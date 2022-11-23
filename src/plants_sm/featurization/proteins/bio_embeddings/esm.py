@@ -4,7 +4,6 @@ from tqdm import tqdm
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.featurization._utils import call_set_features_names
-from plants_sm.featurization.proteins.bio_embeddings._utils import get_device
 from plants_sm.featurization.proteins.bio_embeddings.constants import ESM_DIMENSIONS, ESM_FUNCTIONS, ESM_LAYERS
 from plants_sm.transformation.transformer import Transformer
 
