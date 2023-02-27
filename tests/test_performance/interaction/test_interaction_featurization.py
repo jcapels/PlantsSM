@@ -1,5 +1,5 @@
 import os
-from unittest import TestCase
+from unittest import TestCase, skip
 
 from plants_sm.data_standardization.compounds.deepmol_standardizers import DeepMolStandardizer
 from plants_sm.data_standardization.proteins.standardization import ProteinStandardizer
@@ -12,7 +12,7 @@ from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrappe
 from tests import TEST_DIR
 
 
-# @skip("Just for performance testing")
+@skip("Just for performance testing")
 class TestInteractionFeaturization(TestCase):
     """Test the interaction featurization performance."""
 

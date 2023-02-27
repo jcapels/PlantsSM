@@ -3,7 +3,6 @@ from typing import Any, List, Tuple
 
 import numpy as np
 from joblib import Parallel, delayed
-from joblib.externals.loky import set_loky_pickler
 from numpy import ndarray
 
 from plants_sm.data_structures.dataset import Dataset
@@ -15,6 +14,7 @@ from tqdm import tqdm
 
 
 class FeaturesGenerator(Transformer):
+
     device: str = "cpu"
     output_shape_dimension: int = 2
     features_names: List[str] = []
@@ -55,13 +55,13 @@ class FeaturesGenerator(Transformer):
         instances = dataset.get_instances(instance_type)
         if self.n_jobs > 1:
             parallel_callback = Parallel(n_jobs=self.n_jobs, backend="multiprocessing", prefer="threads")
-            with tqdm_joblib(tqdm(desc="Featurizing", total=len(instances.items()))):
+            with tqdm_joblib(tqdm(desc=self.__class__.__name__, total=len(instances.items()))):
                 res = parallel_callback(
                     delayed(self._featurize_and_add_identifier)(instance_representation, instance_id)
                     for instance_id, instance_representation in instances.items())
         else:
             res = []
-            pbar = tqdm(desc="Featurizing", total=len(instances.items()))
+            pbar = tqdm(desc=self.__class__.__name__, total=len(instances.items()))
             for instance_id, instance_representation in dataset.get_instances(instance_type).items():
                 res.append(self._featurize_and_add_identifier(instance_representation, instance_id))
                 pbar.update(1)
@@ -96,7 +96,7 @@ class FeaturesGenerator(Transformer):
         try:
             features_values = self._featurize(instance)
         # TODO: catch the correct exception
-        except Exception as e:
+        except Exception:
             features_values = np.zeros(len(self.features_names))
 
         temp_feature_dictionary = (identifier, features_values)

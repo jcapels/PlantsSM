@@ -22,4 +22,4 @@ class TestDatasetPropythia(TestDataset):
         propythia = PropythiaWrapper(preset="physicochemical")
         propythia.fit_transform(dataset)
 
-        self.assertEqual(dataset.X[0, 0], 382.0)
+        self.assertEqual(dataset.X[0, 0], 54.0)

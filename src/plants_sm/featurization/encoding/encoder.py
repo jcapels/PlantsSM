@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from copy import copy
-from typing import Any, Union, Set
+from typing import Any, Union, Set, Iterable
 
 import numpy as np
 
@@ -105,10 +105,16 @@ class Encoder(FeaturesGenerator):
         -------
         encoded_sequence: np.ndarray
         """
-        res = np.zeros(self.max_length, dtype=np.int32)
+        if self.output_shape_dimension == 3:
+            res = np.zeros((self.max_length, len(self.alphabet)), dtype=np.int32)
+        else:
+            res = np.zeros(self.max_length, dtype=np.int32)
         if self.tokenizer:
             instance = self.tokenizer.tokenize(instance)
         for i, token in enumerate(instance[:self.max_length]):
             if token in self.tokens:
-                res[i] = self.tokens[token]
+                if self.output_shape_dimension == 3:
+                    res[i, :] = self.tokens[token]
+                else:
+                    res[i] = self.tokens[token]
         return res

@@ -7,7 +7,6 @@ from plants_sm.featurization.featurizer import FeaturesGenerator
 
 
 class MAP4Fingerprint(FeaturesGenerator):
-    name = "map4_fingerprint"
     dimensions = 1024
     radius = 2
     is_counted = False

@@ -9,7 +9,7 @@ from plants_sm.featurization.proteins.propythia.propythia_descriptors.presets im
 
 class PropythiaWrapper(FeaturesGenerator):
 
-    preset: str
+    preset: str = 'all'
 
     def set_features_names(self) -> List[str]:
         """

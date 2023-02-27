@@ -12,6 +12,7 @@ class OneHotEncoder(Encoder):
     ----------
     """
     name = "one_hot_encoder"
+    output_shape_dimension = 3
 
     def _set_tokens(self, i: int, token: str):
         one_hot = np.zeros(len(self.alphabet))

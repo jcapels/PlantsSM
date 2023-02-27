@@ -105,7 +105,15 @@ class PyTorchModel(Model):
             self.scheduler = ReduceLROnPlateau(self.optimizer, 'min')
 
     @property
-    def history(self):
+    def history(self) -> dict:
+        """
+        Get the history of the model
+
+        Returns
+        -------
+        dict
+            History of the model
+        """
         return self._history
 
     def _save(self, path: str):
@@ -180,7 +188,8 @@ class PyTorchModel(Model):
 
         Returns
         -------
-
+        Tuple[float, float]
+            Validation loss and validation metric result
         """
         self.model.eval()
         loss_total = 0
@@ -253,7 +262,7 @@ class PyTorchModel(Model):
 
         return actual, yhat, loss
 
-    def _register_history(self, loss: float, epoch: int, metric_result: float, train: bool = True):
+    def _register_history(self, loss: float, epoch: int, metric_result: float, train: bool = True) -> None:
         """
         Register the history of the model
 
@@ -267,7 +276,6 @@ class PyTorchModel(Model):
             Metric result
         train: bool
             Whether it is training or validation
-
         """
         dataset_type = "train" if train else "valid"
 
@@ -276,7 +284,7 @@ class PyTorchModel(Model):
         self.writer.add_scalar(f"Metric/{dataset_type}", metric_result, epoch)
         self._history["metric_results"].at[epoch - 1, f"{dataset_type}_metric_result"] = metric_result
 
-    def _fit_data(self, train_dataset: Dataset, validation_dataset: Dataset = None):
+    def _fit_data(self, train_dataset: Dataset, validation_dataset: Dataset = None) -> nn.Module:
         """
         Fit the model to the data
 
@@ -286,6 +294,11 @@ class PyTorchModel(Model):
             Training dataset
         validation_dataset: Dataset
             Validation dataset
+
+        Returns
+        -------
+        nn.Module
+            Trained model
         """
 
         last_loss = 100
@@ -352,6 +365,7 @@ class PyTorchModel(Model):
             self.scheduler.step(last_loss)
 
         self.writer.flush()
+        return self.model
 
     def get_pred_from_proba(self, y_pred_proba: np.ndarray) -> np.ndarray:
         """
@@ -363,7 +377,8 @@ class PyTorchModel(Model):
             List of probabilities
         Returns
         -------
-
+        np.ndarray
+            Array of predictions
         """
         if self.problem_type == BINARY:
             y_pred = [1 if pred >= 0.5 else 0 for pred in y_pred_proba]

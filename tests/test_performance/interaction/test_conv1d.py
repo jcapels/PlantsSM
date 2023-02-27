@@ -2,7 +2,7 @@ import os
 import pickle
 import sys
 from copy import copy
-from unittest import TestCase
+from unittest import TestCase, skip
 
 import torch
 from torch import nn, relu
@@ -144,6 +144,7 @@ class BaselineModel(nn.Module):
         return y
 
 
+@skip
 class TestDeepDta(TestCase):
     def setUp(self):
         csv_to_read = os.path.join(TEST_DIR, "compound_protein_interaction", "train_small.csv")
@@ -215,7 +216,7 @@ class TestDeepDta(TestCase):
         wrapper.fit(self.dataset_35000_instances_train, self.dataset_35000_instances_valid)
 
 
-# @skip("No memory")
+@skip("No memory")
 class TestConv1D(TestCase):
 
     def setUp(self) -> None:

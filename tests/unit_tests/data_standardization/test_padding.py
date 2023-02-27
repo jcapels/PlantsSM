@@ -86,33 +86,31 @@ class TestSequencePadding(TestCase):
 
         instances = self.dataset.instances[PLACEHOLDER_FIELD]
 
-        self.assertEqual(instances["0"], "-----")
+        self.assertEqual(instances["0"], "MASXM")
 
-    @skip("Test not adapted")
     def test_pad_sequence(self):
         padder = SequencePadder(padding="left").fit(self.dataset)
 
-        pad_dict = padder._pad_sequence(self.dataset.dataframe["sequence"][1], "1")
-        self.assertEqual(pad_dict["1"],
-                         self.dataset.instances[1] +
-                         str(PaddingEnumerators.PROTEINS.value) *
-                         (len(self.dataset.instances[0]) - len(self.dataset.instances[1])))
-        self.assertEqual(len(pad_dict["1"]), len(self.dataset.instances[0]))
+        pad_dict = padder._pad_sequence(self.dataset.instances[PLACEHOLDER_FIELD]["1"], "1")
+        self.assertEqual(pad_dict[1],
+                         self.dataset.instances[PLACEHOLDER_FIELD]["1"].ljust(padder.pad_width,
+                                                                              str(PaddingEnumerators.PROTEINS.value)))
+        self.assertEqual(len(pad_dict[1]), len(self.dataset.instances[PLACEHOLDER_FIELD]["0"]))
 
         padder = SequencePadder(padding="right").fit(self.dataset)
 
-        pad_dict = padder._pad_sequence(self.dataset.dataframe["sequence"][1], "1")
-        self.assertEqual(pad_dict["1"],
-                         str(PaddingEnumerators.PROTEINS.value) *
-                         (len(self.dataset.instances[0]) - len(self.dataset.instances[1]))
-                         + self.dataset.instances[1])
-        self.assertEqual(len(pad_dict["1"]), len(self.dataset.instances[0]))
+        pad_dict = padder._pad_sequence(self.dataset.instances[PLACEHOLDER_FIELD]["1"], "1")
+        self.assertEqual(pad_dict[1],
+                         self.dataset.instances[PLACEHOLDER_FIELD]["1"].rjust(padder.pad_width,
+                                                                              str(PaddingEnumerators.PROTEINS.value)))
+        self.assertEqual(len(pad_dict[1]), len(self.dataset.instances[PLACEHOLDER_FIELD]["0"]))
 
         padder = SequencePadder(padding="center").fit(self.dataset)
-        pad_dict = padder._pad_sequence(self.dataset.dataframe["sequence"][1], "1")
-        self.assertEqual(pad_dict["1"],
-                         self.dataset.instances[1].center(padder.pad_width, PaddingEnumerators.PROTEINS.value))
-        self.assertEqual(len(pad_dict["1"]), len(self.dataset.instances[0]))
+        pad_dict = padder._pad_sequence(self.dataset.instances[PLACEHOLDER_FIELD]["1"], "1")
+        self.assertEqual(pad_dict[1],
+                         self.dataset.instances[PLACEHOLDER_FIELD]["1"].center(padder.pad_width,
+                                                                               str(PaddingEnumerators.PROTEINS.value)))
+        self.assertEqual(len(pad_dict[1]), len(self.dataset.instances[PLACEHOLDER_FIELD]["0"]))
 
     def test_raise_type_error(self):
         with self.assertRaises(ValueError):

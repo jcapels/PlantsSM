@@ -25,6 +25,7 @@ class BLOSSUMEncoder(FeaturesGenerator):
     blosum: str = "blosum62"
     _blosum: dict = None
     output_shape_dimension = 3
+    name = f"blosum_{blosum}"
 
     def set_features_names(self):
         """

@@ -1,3 +1,4 @@
+import warnings
 from typing import Dict, Any, Callable, Union, Tuple, List
 
 import numpy as np
@@ -30,7 +31,6 @@ class UniRepEmbeddings(FeaturesGenerator):
     https://doi.org/10.1101/2020.05.11.088344
     """
 
-    name = "unirep"
     # An integer representing the size of the embedding.
     embedding_dimension = 1900
     # An integer representing the number of layers from the RAW output of the LM.
@@ -45,19 +45,19 @@ class UniRepEmbeddings(FeaturesGenerator):
         """
         The method features_names will set the names of the features
         """
-        self.features_names = [f"{self.name}_{num}" for num in range(1, self.embedding_dimension + 1)]
+        self.features_names = [f"unirep_{num}" for num in range(1, self.embedding_dimension + 1)]
 
     def _fit(self, dataset: Dataset, instance_type: str):
         """
         Load the parameters of the mLSTM model.
         """
-
+        self.n_jobs = 1
         self._params = load_params()[1]
         _, self._apply_fun = mLSTM(output_dim=self.embedding_dimension)
         validate_mLSTM_params(self._params, n_outputs=self.embedding_dimension)
 
         if self.device:
-            raise NotImplementedError("UniRep does not allow configuring the device")
+            warnings.warn("It will run on CPU, because UniRep does not allow configuring the device")
 
     def _featurize(self, sequence: str) -> ndarray:
         """
