@@ -193,7 +193,7 @@ class PyTorchModel(Model):
         """
         self.model.eval()
         loss_total = 0
-        predictions, actuals = list(), list()
+        predictions, actuals = np.array([]), np.array([])
         len_valid_dataset = len(validation_set)
         with torch.no_grad():
             for i, inputs_targets in enumerate(validation_set):
@@ -206,10 +206,11 @@ class PyTorchModel(Model):
 
                 yhat = output.cpu().detach().numpy()
                 actual = targets.cpu().numpy()
-                actual = actual.reshape((len(actual),)).tolist()
-                yhat = yhat.reshape((len(yhat),)).tolist()
-                predictions.extend(yhat)
-                actuals.extend(actual)
+                actual = actual.reshape((len(actual),))
+                yhat = yhat.reshape((len(yhat),))
+
+                predictions = np.concatenate((predictions, yhat))
+                actuals = np.concatenate((actuals, actual))
 
                 loss = self.loss_function(output, targets)
                 loss_total += loss.item()
@@ -224,7 +225,7 @@ class PyTorchModel(Model):
 
         return loss_total / len_valid_dataset, validation_metric_result
 
-    def _train(self, inputs_targets: Tensor) -> Tuple[List[float], List[float], Tensor]:
+    def _train(self, inputs_targets: Tensor) -> Tuple[np.ndarray, np.ndarray, Tensor]:
         """
         Train the model
 
@@ -257,8 +258,9 @@ class PyTorchModel(Model):
         self.optimizer.step()
 
         actual = targets.cpu().numpy()
-        actual = actual.reshape((len(actual),)).tolist()
-        yhat = output.reshape((len(output),)).tolist()
+        actual = actual.reshape((len(actual),))
+        yhat = output.cpu().detach().numpy()
+        yhat = yhat.reshape((len(yhat),))
 
         return actual, yhat, loss
 
@@ -315,12 +317,12 @@ class PyTorchModel(Model):
         for epoch in range(1, self.epochs + 1):
             self.model.train()
             loss_total = 0
-            predictions, actuals = list(), list()
+            predictions, actuals = np.array([]), np.array([])
             for i, inputs_targets in enumerate(train_dataset):
                 actual, yhat, loss = self._train(inputs_targets)
 
-                predictions.extend(yhat)
-                actuals.extend(actual)
+                predictions = np.concatenate((predictions, yhat))
+                actuals = np.concatenate((actuals, actual))
                 loss_total += loss.item()
                 # Show progress
                 if i % self.progress == 0 or i == len_train_dataset - 1:
@@ -350,7 +352,6 @@ class PyTorchModel(Model):
                         return self.model
 
                 else:
-                    print('trigger times: 0')
                     trigger_times = 0
 
                 self._register_history(current_loss, epoch, validation_metric_result, train=False)
@@ -381,7 +382,7 @@ class PyTorchModel(Model):
             Array of predictions
         """
         if self.problem_type == BINARY:
-            y_pred = [1 if pred >= 0.5 else 0 for pred in y_pred_proba]
+            y_pred = np.array([1 if pred >= 0.5 else 0 for pred in y_pred_proba])
         elif self.problem_type == REGRESSION:
             y_pred = y_pred_proba
         elif self.problem_type == QUANTILE:
@@ -390,6 +391,7 @@ class PyTorchModel(Model):
             y_pred = []
             if not len(y_pred_proba) == 0:
                 y_pred = np.argmax(y_pred_proba, axis=1)
+                return y_pred
         return y_pred
 
     def _predict_proba(self, dataset: Dataset) -> np.ndarray:
@@ -414,7 +416,7 @@ class PyTorchModel(Model):
             return y_pred
 
         self.model.eval()
-        predictions, actuals = list(), list()
+        predictions, actuals = np.array([]), np.array([])
 
         # the "shuffle" argument always has to be False in predicting probabilities in an evaluation context
 
@@ -428,9 +430,9 @@ class PyTorchModel(Model):
                 yhat = self.model(inputs)
 
                 yhat = yhat.cpu().detach().numpy()
-                predictions.extend(yhat)
 
-                actuals.extend(targets.cpu().numpy())
+                predictions = np.concatenate((predictions, yhat))
+                actuals = np.concatenate((actuals, targets))
 
         return _convert_proba_to_unified_form(self.problem_type, np.array(predictions))
 

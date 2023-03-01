@@ -26,13 +26,13 @@ class Model(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def _fit_data(self, dataset: Dataset, validation_dataset: Dataset):
+    def _fit_data(self, train_dataset: Dataset, validation_dataset: Dataset):
         """
         Fits the model to the data.
 
         Parameters
         ----------
-        dataset: Dataset
+        train_dataset: Dataset
             The dataset to fit the model to.
         validation_dataset: Dataset
             The dataset to validate the model on.
@@ -99,13 +99,13 @@ class Model(metaclass=ABCMeta):
         Returns the underlying model.
         """
 
-    def fit(self, dataset: Dataset, validation_dataset: Dataset = None) -> 'Model':
+    def fit(self, train_dataset: Dataset, validation_dataset: Dataset = None) -> 'Model':
         """
         Fits the model to the data.
 
         Parameters
         ----------
-        dataset: Dataset
+        train_dataset: Dataset
             The dataset to fit the model to.
         validation_dataset: Dataset
             The dataset to validate the model on.
@@ -114,7 +114,7 @@ class Model(metaclass=ABCMeta):
         -------
         self
         """
-        return self._fit_data(dataset, validation_dataset)
+        return self._fit_data(train_dataset, validation_dataset)
 
     def predict_proba(self, dataset: Dataset) -> np.ndarray:
         """
