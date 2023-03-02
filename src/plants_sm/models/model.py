@@ -1,3 +1,4 @@
+import os
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
@@ -80,9 +81,9 @@ class Model(metaclass=ABCMeta):
         path: str
             The path to save the model to.
         """
-
+    @classmethod
     @abstractmethod
-    def load(self, path: str):
+    def load(cls, path: str):
         """
         Loads the model from a file.
 
@@ -175,4 +176,13 @@ class Model(metaclass=ABCMeta):
         path: str
             The path to save the model to.
         """
-        self._save(path)
+        if os.path.exists(path):
+            if os.path.isdir(path):
+                self._save(path)
+            else:
+                raise ValueError(f'Path {path} is not a directory.')
+
+        else:
+            os.makedirs(path)
+            self._save(path)
+

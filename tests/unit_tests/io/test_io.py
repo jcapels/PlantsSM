@@ -1,9 +1,16 @@
+import h5py
+import numpy as np
+import pandas as pd
+
 from plants_sm.io import read_csv, write_csv, CSVReader, CSVWriter
 
 import os
 from unittest import TestCase
 
 from plants_sm.io.excel import read_excel, write_excel, ExcelReader, ExcelWriter
+from plants_sm.io.h5 import H5Reader, write_h5, read_h5
+from plants_sm.io.json import write_json, read_json
+from plants_sm.io.pickle import write_pickle, read_pickle
 from plants_sm.io.yaml import YAMLReader, YAMLWriter, read_yaml, write_yaml
 from tests import TEST_DIR
 
@@ -17,12 +24,21 @@ class TestIO(TestCase):
         self.df_path_to_write_xlsx = os.path.join(TEST_DIR, "data", "test.xlsx")
         self.test_read_yaml = os.path.join(TEST_DIR, "data", "defaults.yml")
         self.test_write_yaml = os.path.join(TEST_DIR, "data", "defaults_temp.yml")
+        self.test_read_pickle = os.path.join(TEST_DIR, "data", "test.pkl")
+        self.test_write_pickle = os.path.join(TEST_DIR, "data", "test2.pkl")
+        self.test_json_reader = os.path.join(TEST_DIR, "data", "test.json")
+        self.test_json_writer = os.path.join(TEST_DIR, "data", "test2.json")
+        self.test_h5_reader = os.path.join(TEST_DIR, "data", "test.h5")
+        self.test_h5_writer = os.path.join(TEST_DIR, "data", "test2.h5")
 
     def tearDown(self) -> None:
 
         paths_to_remove = [self.df_path_to_write_csv,
                            self.df_path_to_write_xlsx,
-                           self.test_write_yaml]
+                           self.test_write_yaml,
+                           self.test_write_pickle,
+                           self.test_json_writer,
+                           self.test_h5_writer]
 
         for path in paths_to_remove:
             if os.path.exists(path):
@@ -144,3 +160,39 @@ class TestIO(TestCase):
 
         self.assertEqual(config["word2vec"]["model_file"],
                          "http://data.bioembeddings.com/public/embeddings/embedding_models/word2vec/word2vec.model")
+
+    def test_pickle_reader(self):
+        dataframe = read_pickle(self.test_read_pickle)
+        self.assertTrue(isinstance(dataframe, pd.DataFrame))
+        self.assertEqual(dataframe.shape, (0, 0))
+
+    def test_pickle_writer(self):
+        write_pickle(pd.DataFrame(), self.test_write_pickle)
+
+        dataframe = read_pickle(self.test_write_pickle)
+        self.assertTrue(isinstance(dataframe, pd.DataFrame))
+        self.assertEqual(dataframe.shape, (0, 0))
+
+    def test_json_reader(self):
+        config = read_json(self.test_json_reader)
+        self.assertTrue(isinstance(config, dict))
+        self.assertEqual(config["test"], "test")
+
+    def test_json_writer(self):
+        write_json({"test": "test"}, self.test_json_reader)
+
+        config = read_json(self.test_json_reader)
+        self.assertTrue(isinstance(config, dict))
+        self.assertEqual(config["test"], "test")
+
+    def test_h5_reader(self):
+        h5_file = read_h5(self.test_h5_reader)
+        self.assertTrue(isinstance(h5_file, np.ndarray))
+        self.assertEqual(h5_file.shape, (0,))
+
+    def test_h5_writer(self):
+        write_h5(np.array([]), self.test_h5_writer)
+
+        h5_file = read_h5(self.test_h5_reader)
+        self.assertTrue(isinstance(h5_file, np.ndarray))
+        self.assertEqual(h5_file.shape, (0,))

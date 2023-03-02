@@ -13,7 +13,9 @@ from torch.utils.data import TensorDataset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from plants_sm.data_structures.dataset import Dataset
-from plants_sm.models._utils import _convert_proba_to_unified_form
+from plants_sm.io.pickle import read_pickle
+from plants_sm.models._utils import _convert_proba_to_unified_form, read_pytorch_model, save_pytorch_model, \
+    write_model_parameters_to_pickle
 from plants_sm.models.constants import REGRESSION, QUANTILE, BINARY
 from plants_sm.models.model import Model
 import torch
@@ -128,9 +130,27 @@ class PyTorchModel(Model):
         Returns
         -------
         """
-        torch.save(self.model.state_dict(), path)
+        save_pytorch_model(self.model, path)
 
-    def load(self, path: str):
+        model_parameters = {
+            'loss_function': self.loss_function,
+            'optimizer': self.optimizer,
+            'scheduler': self.scheduler,
+            'epochs': self.epochs,
+            'batch_size': self.batch_size,
+            'patience': self.patience,
+            'validation_metric': self.validation_metric,
+            'problem_type': self.problem_type,
+            'device': self.device,
+            'trigger_times': self.trigger_times,
+            'last_loss': self.last_loss,
+            'progress': self.progress
+        }
+
+        write_model_parameters_to_pickle(model_parameters, path)
+
+    @classmethod
+    def load(cls, path: str) -> 'PyTorchModel':
         """
         Load the model from a file
 
@@ -140,8 +160,9 @@ class PyTorchModel(Model):
             Path to load the model
 
         """
-        self.model.load_state_dict(torch.load(path))
-        self.model.eval()
+        model = read_pytorch_model(path)
+        model_parameters = read_pickle(os.path.join(path, 'model_parameters.pkl'))
+        return cls(model, **model_parameters)
 
     def _preprocess_data(self, dataset: Dataset, shuffle: bool = True) -> DataLoader:
         """
@@ -206,8 +227,6 @@ class PyTorchModel(Model):
 
                 yhat = output.cpu().detach().numpy()
                 actual = targets.cpu().numpy()
-                actual = actual.reshape((len(actual),))
-                yhat = yhat.reshape((len(yhat),))
 
                 predictions = np.concatenate((predictions, yhat))
                 actuals = np.concatenate((actuals, actual))
@@ -258,9 +277,7 @@ class PyTorchModel(Model):
         self.optimizer.step()
 
         actual = targets.cpu().numpy()
-        actual = actual.reshape((len(actual),))
         yhat = output.cpu().detach().numpy()
-        yhat = yhat.reshape((len(yhat),))
 
         return actual, yhat, loss
 
@@ -392,6 +409,7 @@ class PyTorchModel(Model):
             if not len(y_pred_proba) == 0:
                 y_pred = np.argmax(y_pred_proba, axis=1)
                 return y_pred
+
         return y_pred
 
     def _predict_proba(self, dataset: Dataset) -> np.ndarray:

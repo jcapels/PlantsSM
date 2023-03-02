@@ -1,7 +1,12 @@
+import os
+from typing import Union
+
 import numpy as np
+from keras.callbacks import History
 
 from plants_sm.data_structures.dataset import Dataset
-from plants_sm.models._utils import _convert_proba_to_unified_form
+from plants_sm.io.pickle import read_pickle
+from plants_sm.models._utils import _convert_proba_to_unified_form,  write_model_parameters_to_pickle
 from plants_sm.models.constants import REGRESSION, QUANTILE
 from plants_sm.models.model import Model
 
@@ -33,22 +38,36 @@ class TensorflowModel(Model):
         self.batch_size = batch_size
         self.callbacks = callbacks
         self.problem_type = problem_type
+        self._history = None
 
     def _preprocess_data(self, dataset: Dataset, **kwargs):
-        pass
-
-    def _fit_data(self, dataset: Dataset, validation_dataset: Dataset) -> None:
         """
-        Fit the model to the data.
+        Preprocess the data.
 
         Parameters
         ----------
         dataset: Dataset
             Dataset to be used for training.
+        kwargs: dict
+            Keyword arguments to be used for preprocessing.
+
+        """
+        pass
+
+    def _fit_data(self, train_dataset: Dataset, validation_dataset: Dataset) -> None:
+        """
+        Fit the model to the data.
+
+        Parameters
+        ----------
+        train_dataset: Dataset
+            Dataset to be used for training.
         validation_dataset: Dataset
             Dataset to be used for validation.
         """
-        self._history = self.model.fit(dataset.X.values(), dataset.y,
+        self._preprocess_data(train_dataset)
+        self._preprocess_data(validation_dataset)
+        self._history = self.model.fit(train_dataset.X.values(), train_dataset.y,
                                        epochs=self.epochs,
                                        batch_size=self.batch_size,
                                        callbacks=self.callbacks,
@@ -68,7 +87,7 @@ class TensorflowModel(Model):
         np.ndarray
             Predicted probabilities for each class.
         """
-        return self.model.predict_proba(dataset.X.values())
+        return self.model.predict(dataset.X.values())
 
     def _predict(self, dataset: Dataset) -> np.ndarray:
         """
@@ -100,9 +119,16 @@ class TensorflowModel(Model):
         path: str
             Path to save the model.
         """
-        self.model.save(path)
+        self.model.save(os.path.join(path, "model.h5"))
+        # get the class attributes and save them
+        parameters = {'epochs': self.epochs,
+                      'batch_size': self.batch_size,
+                      'callbacks': self.callbacks,
+                      'problem_type': self.problem_type}
+        write_model_parameters_to_pickle(parameters, path)
 
-    def load(self, path: str) -> None:
+    @classmethod
+    def load(cls, path: str) -> 'TensorflowModel':
         """
         Load the model from the specified path.
 
@@ -111,10 +137,12 @@ class TensorflowModel(Model):
         path: str
             Path to load the model from.
         """
-        self.model.load(path)
+        model = tf.keras.models.load_model(os.path.join(path, "model.h5"))
+        parameters = read_pickle(os.path.join(path, "model_parameters.pkl"))
+        return cls(model, **parameters)
 
     @property
-    def history(self) -> dict:
+    def history(self) -> Union[dict, History, None]:
         """
         Get the history of the model.
 
@@ -123,4 +151,7 @@ class TensorflowModel(Model):
         dict
             History of the model.
         """
-        return self._history
+        if self._history is None:
+            return None
+        else:
+            return self._history

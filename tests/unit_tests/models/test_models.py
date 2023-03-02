@@ -1,4 +1,6 @@
 import logging
+import os
+import shutil
 from unittest import TestCase
 from unittest.mock import MagicMock
 
@@ -7,6 +9,8 @@ import torch
 from pandas import DataFrame
 
 from plants_sm.data_structures.dataset import SingleInputDataset, PLACEHOLDER_FIELD
+
+from tests import TEST_DIR
 
 
 class TestModels(TestCase):
@@ -57,7 +61,7 @@ class TestModels(TestCase):
         self.train_dataset.dataframe["identifiers"] = self.train_dataset.identifiers
         torch.seed()
         self.train_dataset.X = {PLACEHOLDER_FIELD:
-                                np.random.randint(0, 100, size=(len(self.train_dataset.identifiers), 100))}
+                                    np.random.randint(0, 100, size=(len(self.train_dataset.identifiers), 100))}
 
         self.validation_dataset = MagicMock(spec=SingleInputDataset)
         self.validation_dataset.dataframe = DataFrame(columns=["sequence", "identifiers"])
@@ -100,3 +104,9 @@ class TestModels(TestCase):
         torch.seed()
         self.validation_dataset.X = {PLACEHOLDER_FIELD:
                                      np.random.randint(0, 100, size=(len(self.train_dataset.identifiers), 100))}
+
+        self.path_to_save = os.path.join(TEST_DIR, "data", "test_save_model")
+
+    def tearDown(self) -> None:
+        if os.path.exists(self.path_to_save):
+            shutil.rmtree(self.path_to_save)

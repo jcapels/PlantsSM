@@ -26,7 +26,11 @@ class Writer(metaclass=ABCMeta):
         """
 
         self.path = get_path(file_path_or_buffer)
-        self.buffer = get_buffer(file_path_or_buffer, mode="w")
+        if "mode" in kwargs:
+            mode = kwargs.pop("mode")
+        else:
+            mode = "w"
+        self.buffer = get_buffer(file_path_or_buffer, mode=mode)
         self.kwargs = kwargs
 
     def close_buffer(self):
