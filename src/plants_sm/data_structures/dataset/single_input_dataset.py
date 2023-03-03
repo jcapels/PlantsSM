@@ -194,7 +194,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         return np.array(list(self.labels.values()))
 
     @property
-    def instances(self) -> dict[str, dict]:
+    def instances(self) -> Dict[str, dict]:
         """
         This property will contain the instances of the dataset.
         Returns
