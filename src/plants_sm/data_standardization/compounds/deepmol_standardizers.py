@@ -1,6 +1,6 @@
-from typing import Dict
+from typing import Dict, Tuple
 
-from rdkit.Chem import MolFromSmiles
+from rdkit.Chem import MolFromSmiles, MolToSmiles
 
 from plants_sm.data_standardization.compounds._presets import DEEPMOL_STANDARDIZERS
 from plants_sm.data_structures.dataset import Dataset
@@ -10,8 +10,9 @@ from plants_sm.transformation.transformer import Transformer
 
 class DeepMolStandardizer(Transformer):
     preset: str = "custom_standardizer"
+    kwargs: Dict = {}
 
-    def _fit(self, dataset: Dataset, instance_type: str, **kwargs) -> 'DeepMolStandardizer':
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'DeepMolStandardizer':
         """
         Method to fit the transformer
 
@@ -29,7 +30,7 @@ class DeepMolStandardizer(Transformer):
             raise ValueError(f'Preset {self.preset} is not available.')
 
         descriptor = DEEPMOL_STANDARDIZERS[self.preset]
-        self.descriptor = descriptor(**kwargs)
+        self.descriptor = descriptor(**self.kwargs)
         return self
 
     def _transform(self, dataset: Dataset, instance_type: str) -> Dataset:
@@ -49,7 +50,7 @@ class DeepMolStandardizer(Transformer):
         """
         return transform_instances(self.n_jobs, dataset, self._compound_preprocessing, instance_type)
 
-    def _compound_preprocessing(self, compound: str, identifier: str) -> Dict[str, str]:
+    def _compound_preprocessing(self, compound: str, identifier: str) -> Tuple[str, str]:
         """
         Method to preprocess a compound
 
@@ -68,4 +69,4 @@ class DeepMolStandardizer(Transformer):
             dictionary with the identifier of the compound and the preprocessed compound
         """
         mol = MolFromSmiles(compound)
-        return {identifier: self.descriptor._standardize(mol)}
+        return identifier, MolToSmiles(self.descriptor._standardize(mol))

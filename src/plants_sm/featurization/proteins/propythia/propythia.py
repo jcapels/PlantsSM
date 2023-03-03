@@ -9,7 +9,7 @@ from plants_sm.featurization.proteins.propythia.propythia_descriptors.presets im
 
 class PropythiaWrapper(FeaturesGenerator):
 
-    preset: str
+    preset: str = 'all'
 
     def set_features_names(self) -> List[str]:
         """
@@ -61,4 +61,4 @@ class PropythiaWrapper(FeaturesGenerator):
             features = descriptor(protein_sequence)
             features_list.extend(features)
 
-        return np.array(features_list)
+        return np.array(features_list, dtype=np.float32)

@@ -5,7 +5,7 @@ from plants_sm.data_standardization.compounds.deepmol_standardizers import DeepM
 from plants_sm.data_standardization.proteins.standardization import ProteinStandardizer
 from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputDataset
 from plants_sm.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
-from plants_sm.featurization.one_hot_encoder import OneHotEncoder
+from plants_sm.featurization.encoding.one_hot_encoder import OneHotEncoder
 from plants_sm.featurization.proteins.bio_embeddings.prot_bert import ProtBert
 from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
 

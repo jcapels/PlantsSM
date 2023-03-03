@@ -3,11 +3,16 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+runs
+compound_protein_interaction
 # C extensions
 *.so
 
+.model_checkpoints
 #propythia
 tests/aaindex[0-9]
+
+examples/rhea_case_study
 
 # Distribution / packaging
 .Python
@@ -61,6 +66,7 @@ coverage.xml
 
 # Django stuff:
 *.log
+*.log.*
 local_settings.py
 db.sqlite3
 db.sqlite3-journal

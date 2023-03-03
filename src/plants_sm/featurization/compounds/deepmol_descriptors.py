@@ -1,3 +1,5 @@
+from typing import Dict
+
 import numpy as np
 from rdkit.Chem import Descriptors, MolFromSmiles
 from rdkit.ML.Descriptors import MoleculeDescriptors
@@ -10,6 +12,7 @@ from plants_sm.featurization.featurizer import FeaturesGenerator
 class DeepMolDescriptors(FeaturesGenerator):
 
     preset: str = "morgan_fingerprints"
+    kwargs: Dict = {}
 
     def set_features_names(self):
         """
@@ -22,7 +25,7 @@ class DeepMolDescriptors(FeaturesGenerator):
         else:
             self.features_names = []
 
-    def _fit(self, dataset: Dataset, instance_type: str, **kwargs) -> 'DeepMolDescriptors':
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'DeepMolDescriptors':
         """
         Method to fit the transformer
 
@@ -41,7 +44,7 @@ class DeepMolDescriptors(FeaturesGenerator):
             raise ValueError(f'Preset {self.preset} is not available.')
 
         descriptor = DEEPMOL_PRESETS[self.preset]
-        self.descriptor = descriptor(**kwargs)
+        self.descriptor = descriptor(**self.kwargs)
         return self
 
     def _featurize(self, molecule: str) -> np.ndarray:

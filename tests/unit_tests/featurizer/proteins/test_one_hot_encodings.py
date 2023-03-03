@@ -1,6 +1,7 @@
 from unittest import skip
 
-from plants_sm.featurization.one_hot_encoder import OneHotEncoder
+from plants_sm.featurization.encoding.label_encoder import LabelEncoder
+from plants_sm.featurization.encoding.one_hot_encoder import OneHotEncoder
 from unit_tests.featurizer.proteins.test_protein_featurizers import TestProteinFeaturizers
 
 
@@ -20,6 +21,12 @@ class TestOneHotEncodings(TestProteinFeaturizers):
         OneHotEncoder().fit_transform(self.dataset)
 
         self.assertEqual(self.dataset.X().shape, (2, 453, 20))
+
+    def test_one_hot_encodings_2d(self):
+        LabelEncoder().fit_transform(self.dataset)
+
+        self.assertEqual(self.dataset.X().shape, (2, 453))
+        print(self.dataset.X())
 
     @skip("Not implemented yet")
     def test_with_random_tokens(self):

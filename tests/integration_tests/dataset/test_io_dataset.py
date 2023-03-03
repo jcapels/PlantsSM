@@ -29,7 +29,6 @@ class TestIODataset(TestDataset):
         self.assertIn(286.154209, dataset.y)
         self.assertEqual(dataset.representation_fields, "SMILES")
         self.assertEqual(dataset.labels_names, ["TargetedMZ"])
-        print(dataset.identifiers)
         with self.assertRaises(AttributeError):
             print(dataset.features)
 
@@ -63,5 +62,3 @@ class TestIODataset(TestDataset):
                                                                 instances_ids_field={"interaction": "ids"},
                                                                 labels_field="LogSpActivity")
 
-        print(self.dataset_400_instances.instances_ids_field)
-        print(self.dataset_400_instances.instances["ligands"])

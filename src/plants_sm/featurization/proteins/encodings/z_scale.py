@@ -20,6 +20,7 @@ class ZScaleEncoder(FeaturesGenerator):
     """
 
     output_shape_dimension = 3
+    name = "z_scale"
 
     def set_features_names(self):
         self.features_names = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5']
@@ -41,4 +42,4 @@ class ZScaleEncoder(FeaturesGenerator):
         encoded_sequence: np.ndarray
             The encoded sequence.
         """
-        return np.array([np.array(ZS[aa]) for aa in sequence])
+        return np.array([np.array(ZS[aa]) for aa in sequence], dtype=np.float32)

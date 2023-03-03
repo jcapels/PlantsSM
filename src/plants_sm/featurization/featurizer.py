@@ -1,6 +1,5 @@
 from abc import abstractmethod
-from collections import ChainMap
-from typing import Any, List, Dict
+from typing import Any, List, Tuple
 
 import numpy as np
 from joblib import Parallel, delayed
@@ -8,11 +7,15 @@ from numpy import ndarray
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.featurization._utils import call_set_features_names
+from plants_sm.transformation._utils import tqdm_joblib
 from plants_sm.transformation.transformer import Transformer
+
+from tqdm import tqdm
 
 
 class FeaturesGenerator(Transformer):
-    device: str = None
+
+    device: str = "cpu"
     output_shape_dimension: int = 2
     features_names: List[str] = []
 
@@ -49,15 +52,21 @@ class FeaturesGenerator(Transformer):
         dataset with features: Dataset
             dataset object with features
         """
-
-        parallel_callback = Parallel(n_jobs=self.n_jobs)
         instances = dataset.get_instances(instance_type)
+        if self.n_jobs > 1:
+            parallel_callback = Parallel(n_jobs=self.n_jobs, backend="multiprocessing", prefer="threads")
+            with tqdm_joblib(tqdm(desc=self.__class__.__name__, total=len(instances.items()))):
+                res = parallel_callback(
+                    delayed(self._featurize_and_add_identifier)(instance_representation, instance_id)
+                    for instance_id, instance_representation in instances.items())
+        else:
+            res = []
+            pbar = tqdm(desc=self.__class__.__name__, total=len(instances.items()))
+            for instance_id, instance_representation in dataset.get_instances(instance_type).items():
+                res.append(self._featurize_and_add_identifier(instance_representation, instance_id))
+                pbar.update(1)
 
-        res = parallel_callback(
-            delayed(self._featurize_and_add_identifier)(instance_representation, instance_id)
-            for instance_id, instance_representation in instances.items())
-
-        dataset.features[instance_type] = dict(ChainMap(*res))
+        dataset.features[instance_type] = dict(res)
 
         if instance_type not in dataset.features_fields:
             dataset.features_fields[instance_type] = self.features_names
@@ -65,7 +74,7 @@ class FeaturesGenerator(Transformer):
             dataset.features_fields[instance_type].extend(self.features_names)
         return dataset
 
-    def _featurize_and_add_identifier(self, instance: Any, identifier: str) -> Dict[str, ndarray]:
+    def _featurize_and_add_identifier(self, instance: Any, identifier: str) -> Tuple[str, ndarray]:
         """
         Private method that calls the _featurize method and returns the dataframe with the features, adding the instance
         identifier to the dataframe.
@@ -87,9 +96,10 @@ class FeaturesGenerator(Transformer):
         try:
             features_values = self._featurize(instance)
         # TODO: catch the correct exception
-        except Exception as e:
+        except Exception:
             features_values = np.zeros(len(self.features_names))
-        temp_feature_dictionary = {identifier: features_values}
+
+        temp_feature_dictionary = (identifier, features_values)
 
         return temp_feature_dictionary
 

@@ -15,9 +15,9 @@ PLACEHOLDER_FIELD = 'place_holder'
 class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
     _features: Dict[str, Dict[str, np.ndarray]]
     _features_names: List[str]
-    _dataframe: pd.DataFrame
+    _dataframe: Any
     _labels_names: List[str]
-    _instances: Dict[str, str]
+    _instances: Dict[str, dict]
     _features_fields: Dict[str, Union[str, List[Union[str, int]], slice]]
 
     def __init__(self, dataframe: Any = None, representation_field: str = None,
@@ -75,9 +75,9 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                 self._labels = None
 
             if self._features_fields:
-                self._features = {PLACEHOLDER_FIELD:
-                                      self.dataframe.loc[:,
-                                      self._features_fields[PLACEHOLDER_FIELD]].T.to_dict('list')}
+                self._features = \
+                    {PLACEHOLDER_FIELD:
+                         self.dataframe.loc[:, self._features_fields[PLACEHOLDER_FIELD]].T.to_dict('list')}
             else:
                 self._features = {}
 
@@ -143,7 +143,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         return self._features_fields
 
     @features_fields.setter
-    def features_fields(self, value: Union[str, List[Union[str, int]], slice]):
+    def features_fields(self, value: Dict[str, Union[str, List[Union[str, int]], slice]]):
         """
         Setter for features fields.
         Parameters
@@ -194,7 +194,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         return np.array(list(self.labels.values()))
 
     @property
-    def instances(self) -> Dict[str, str]:
+    def instances(self) -> Dict[str, dict]:
         """
         This property will contain the instances of the dataset.
         Returns
@@ -264,27 +264,29 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             identifiers_series = Series(list(range(self.dataframe.shape[0])), name="identifier")
 
             if self._features_fields:
-                if isinstance(self._features_fields, slice):
-                    if self._features_fields.start is not None:
-                        start = self._features_fields.start
+                if isinstance(self._features_fields[PLACEHOLDER_FIELD], slice):
+                    features_fields_slice = self._features_fields[PLACEHOLDER_FIELD]
+                    if features_fields_slice.start is not None:
+                        start = features_fields_slice.start
                     else:
                         start = 0
 
-                    if self._features_fields.stop is not None:
-                        stop = self._features_fields.stop
+                    if features_fields_slice.stop is not None:
+                        stop = features_fields_slice.stop
                     else:
                         stop = self._dataframe.columns.size
 
-                    if self._features_fields.step is not None:
-                        step = self._features_fields.step
+                    if features_fields_slice.step is not None:
+                        step = features_fields_slice.step
                     else:
                         step = 1
 
                     indexes_list = list(range(start, stop, step))
-                    self._features_fields = [self._dataframe.columns[i] for i in indexes_list]
+                    self._features_fields = {PLACEHOLDER_FIELD: [self._dataframe.columns[i] for i in indexes_list]}
 
                 elif isinstance(self._features_fields[PLACEHOLDER_FIELD][0], int):
-                    self._features_fields = [self._dataframe.columns[i] for i in self._features_fields]
+                    self._features_fields[PLACEHOLDER_FIELD] = [self._dataframe.columns[i] for i in
+                                                                self._features_fields[PLACEHOLDER_FIELD]]
 
             self._dataframe = pd.concat((identifiers_series, self._dataframe), axis=1)
             self._dataframe["identifier"] = self._dataframe["identifier"].astype(str)
