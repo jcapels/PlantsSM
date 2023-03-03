@@ -17,7 +17,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
     _features_names: List[str]
     _dataframe: Any
     _labels_names: List[str]
-    _instances: dict[str, dict]
+    _instances: Dict[str, dict]
     _features_fields: Dict[str, Union[str, List[Union[str, int]], slice]]
 
     def __init__(self, dataframe: Any = None, representation_field: str = None,
