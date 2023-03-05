@@ -1,4 +1,5 @@
 import os
+import uuid
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
@@ -7,6 +8,26 @@ from plants_sm.data_structures.dataset import Dataset
 
 
 class Model(metaclass=ABCMeta):
+
+    _name: str = None
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        """
+        Set the name of the model
+
+        Parameters
+        ----------
+        value: str
+            Name of the model
+        """
+        if value is None:
+            value = str(uuid.uuid4().hex)
+        self._name = value
 
     @abstractmethod
     def _preprocess_data(self, dataset: Dataset, **kwargs) -> Dataset:

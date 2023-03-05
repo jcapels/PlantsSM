@@ -1,5 +1,6 @@
 import logging
 import os
+import uuid
 from logging.handlers import TimedRotatingFileHandler
 from typing import Callable, Union, Tuple, List
 
@@ -15,7 +16,7 @@ from torch.utils.tensorboard import SummaryWriter
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.io.pickle import read_pickle
 from plants_sm.models._utils import _convert_proba_to_unified_form, read_pytorch_model, save_pytorch_model, \
-    write_model_parameters_to_pickle
+    write_model_parameters_to_pickle, array_from_tensor, array_reshape
 from plants_sm.models.constants import REGRESSION, QUANTILE, BINARY
 from plants_sm.models.model import Model
 import torch
@@ -72,6 +73,7 @@ class PyTorchModel(Model):
         else:
             handler = TimedRotatingFileHandler('./pytorch_model.log', when='midnight', backupCount=20)
         handler.setFormatter(formatter)
+
         self.logger = logging.getLogger(__name__)
         self.logger.addHandler(handler)
         self.logger.setLevel(logging.DEBUG)
@@ -214,7 +216,7 @@ class PyTorchModel(Model):
         """
         self.model.eval()
         loss_total = 0
-        predictions, actuals = np.array([]), np.array([])
+        predictions, actuals = np.empty(shape=(0,)), np.empty(shape=(0,))
         len_valid_dataset = len(validation_set)
         with torch.no_grad():
             for i, inputs_targets in enumerate(validation_set):
@@ -225,10 +227,10 @@ class PyTorchModel(Model):
                 targets = targets.to(self.device)
                 output = self.model(inputs)
 
-                yhat = output.cpu().detach().numpy()
-                actual = targets.cpu().numpy()
+                y_hat = array_from_tensor(output)
+                actual = array_from_tensor(targets)
 
-                predictions = np.concatenate((predictions, yhat))
+                predictions = np.concatenate((predictions, y_hat))
                 actuals = np.concatenate((actuals, actual))
 
                 loss = self.loss_function(output, targets)
@@ -276,8 +278,11 @@ class PyTorchModel(Model):
         loss.backward()
         self.optimizer.step()
 
-        actual = targets.cpu().numpy()
-        yhat = output.cpu().detach().numpy()
+        actual = array_from_tensor(targets)
+        actual = array_reshape(actual)
+
+        yhat = array_from_tensor(output)
+        yhat = array_reshape(yhat)
 
         return actual, yhat, loss
 
@@ -334,7 +339,7 @@ class PyTorchModel(Model):
         for epoch in range(1, self.epochs + 1):
             self.model.train()
             loss_total = 0
-            predictions, actuals = np.array([]), np.array([])
+            predictions, actuals = np.empty(shape=(0,)), np.empty(shape=(0,))
             for i, inputs_targets in enumerate(train_dataset):
                 actual, yhat, loss = self._train(inputs_targets)
 
@@ -434,7 +439,7 @@ class PyTorchModel(Model):
             return y_pred
 
         self.model.eval()
-        predictions, actuals = np.array([]), np.array([])
+        predictions, actuals = np.empty(shape=(0,)), np.empty(shape=(0,))
 
         # the "shuffle" argument always has to be False in predicting probabilities in an evaluation context
 
@@ -447,7 +452,11 @@ class PyTorchModel(Model):
                 targets.to(self.device)
                 yhat = self.model(inputs)
 
-                yhat = yhat.cpu().detach().numpy()
+                targets = array_from_tensor(targets)
+                targets = array_reshape(targets)
+
+                yhat = array_from_tensor(yhat)
+                yhat = array_reshape(yhat)
 
                 predictions = np.concatenate((predictions, yhat))
                 actuals = np.concatenate((actuals, targets))

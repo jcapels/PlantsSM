@@ -1,8 +1,10 @@
 import os
 import warnings
+from typing import Tuple
 
 import numpy as np
 import torch
+from tensorflow import Tensor
 from torch import nn
 
 from plants_sm.io.pickle import read_pickle, write_pickle, is_pickable
@@ -103,3 +105,41 @@ def write_model_parameters_to_pickle(model_parameters: dict, path: str) -> None:
             warning_str = f'Could not save {key} to save file. Skipping attribute {key}.'
             warnings.warn(warning_str)
     write_pickle(parameters, os.path.join(path, 'model_parameters.pkl'))
+
+
+def array_from_tensor(tensor: Tensor) -> np.ndarray:
+    """
+    Converts a tensor to a numpy array.
+
+    Parameters
+    ----------
+    tensor: Tensor
+        The tensor to convert.
+
+    Returns
+    -------
+    np.ndarray
+        The converted array.
+    """
+    tensor = tensor.cpu().detach().numpy()
+    return tensor
+
+
+def array_reshape(array: np.ndarray) -> np.ndarray:
+    """
+    Reshapes a numpy array.
+
+    Parameters
+    ----------
+    array: np.ndarray
+        The array to reshape.
+
+    Returns
+    -------
+    np.ndarray
+        The reshaped array.
+    """
+    if array.shape[-1] == 1:
+        array = array.reshape(-1)
+
+    return array

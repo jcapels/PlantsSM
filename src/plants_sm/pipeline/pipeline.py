@@ -15,7 +15,8 @@ class Pipeline:
 
         if isinstance(steps, list):
             self._steps = {PLACEHOLDER_FIELD: steps}
-        self._steps = steps
+        else:
+            self._steps = steps
         self._models = models
         self._metrics = metrics
         self._models_indexes = {}
