@@ -26,4 +26,9 @@ class TestPipeline(TestModels):
                                      logger_path="small_dataset.log"
                                      )
 
-        Pipeline(steps, models=[pytorch_model]).fit(self.train_dataset, self.validation_dataset)
+        pipeline = Pipeline(steps, models=[pytorch_model])
+
+        pipeline.fit(self.train_dataset, self.validation_dataset)
+        print(pipeline.predict_proba(self.validation_dataset))
+
+
