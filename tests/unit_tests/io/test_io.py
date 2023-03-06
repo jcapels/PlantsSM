@@ -1,4 +1,3 @@
-import h5py
 import numpy as np
 import pandas as pd
 
@@ -8,7 +7,7 @@ import os
 from unittest import TestCase
 
 from plants_sm.io.excel import read_excel, write_excel, ExcelReader, ExcelWriter
-from plants_sm.io.h5 import H5Reader, write_h5, read_h5
+from plants_sm.io.h5 import write_h5, read_h5
 from plants_sm.io.json import write_json, read_json
 from plants_sm.io.pickle import write_pickle, read_pickle
 from plants_sm.io.yaml import YAMLReader, YAMLWriter, read_yaml, write_yaml

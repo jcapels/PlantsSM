@@ -138,6 +138,23 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         """
         self._features = value
 
+    def add_features(self, instance_type: str, features: Dict[str, np.ndarray]):
+        """
+        Add features to the dataset.
+        Parameters
+        ----------
+        instance_type : str
+            instance type
+        features : Dict[str, np.ndarray]
+            dictionary of the features
+        Returns
+        -------
+        """
+        if self._features is None:
+            self._features = {}
+        self._features[instance_type] = features
+        self.__dict__.pop('X', None)
+
     @property
     def features_fields(self):
         return self._features_fields
@@ -186,7 +203,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         """
         return np.array(list(self.features[PLACEHOLDER_FIELD].values()))
 
-    @cached_property
+    @property
     def y(self) -> np.ndarray:
         """
         Alias for the labels property.

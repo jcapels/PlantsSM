@@ -1,8 +1,7 @@
 import logging
 import os
-import uuid
 from logging.handlers import TimedRotatingFileHandler
-from typing import Callable, Union, Tuple, List
+from typing import Callable, Union, Tuple, List, Dict
 
 import numpy as np
 import pandas as pd
@@ -152,7 +151,7 @@ class PyTorchModel(Model):
         write_model_parameters_to_pickle(model_parameters, path)
 
     @classmethod
-    def load(cls, path: str) -> 'PyTorchModel':
+    def _load(cls, path: str) -> 'PyTorchModel':
         """
         Load the model from a file
 
@@ -184,8 +183,12 @@ class PyTorchModel(Model):
         """
 
         tensors = []
-        for instance in dataset.X.keys():
-            tensor = torch.tensor(dataset.X[instance], dtype=torch.float)
+        if isinstance(dataset.X, Dict):
+            for instance in dataset.X.keys():
+                tensor = torch.tensor(dataset.X[instance], dtype=torch.float)
+                tensors.append(tensor)
+        else:
+            tensor = torch.tensor(dataset.X, dtype=torch.float)
             tensors.append(tensor)
         if dataset.y is not None:
             tensors.append(torch.tensor(dataset.y, dtype=torch.float))

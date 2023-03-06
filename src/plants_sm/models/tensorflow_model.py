@@ -67,11 +67,18 @@ class TensorflowModel(Model):
         """
         self._preprocess_data(train_dataset)
         self._preprocess_data(validation_dataset)
-        self._history = self.model.fit(train_dataset.X.values(), train_dataset.y,
+        if isinstance(train_dataset.X, dict):
+            train_dataset_x = train_dataset.X.values()
+            validation_dataset_x = validation_dataset.X.values()
+        else:
+            train_dataset_x = train_dataset.X
+            validation_dataset_x = validation_dataset.X
+
+        self._history = self.model.fit(train_dataset_x, train_dataset.y,
                                        epochs=self.epochs,
                                        batch_size=self.batch_size,
                                        callbacks=self.callbacks,
-                                       validation_data=(validation_dataset.X.values(), validation_dataset.y))
+                                       validation_data=(validation_dataset_x, validation_dataset.y))
 
     def _predict_proba(self, dataset: Dataset) -> np.ndarray:
         """
@@ -87,7 +94,12 @@ class TensorflowModel(Model):
         np.ndarray
             Predicted probabilities for each class.
         """
-        return self.model.predict(dataset.X.values())
+        if isinstance(dataset.X, dict):
+            y_pred = self.model.predict(dataset.X.values())
+        else:
+            y_pred = self.model.predict(dataset.X)
+
+        return y_pred
 
     def _predict(self, dataset: Dataset) -> np.ndarray:
         """
@@ -103,12 +115,15 @@ class TensorflowModel(Model):
         np.ndarray
             Predicted class for each sample.
         """
-        if self.problem_type in [REGRESSION, QUANTILE]:
+        if isinstance(dataset.X, dict):
             y_pred = self.model.predict(dataset.X.values())
+        else:
+            y_pred = self.model.predict(dataset.X)
+
+        if self.problem_type in [REGRESSION, QUANTILE]:
             return y_pred
         else:
-            predictions = self.model.predict(dataset.X.values())
-            return _convert_proba_to_unified_form(self.problem_type, np.array(predictions))
+            return _convert_proba_to_unified_form(self.problem_type, np.array(y_pred))
 
     def _save(self, path: str) -> None:
         """
@@ -128,7 +143,7 @@ class TensorflowModel(Model):
         write_model_parameters_to_pickle(parameters, path)
 
     @classmethod
-    def load(cls, path: str) -> 'TensorflowModel':
+    def _load(cls, path: str) -> 'TensorflowModel':
         """
         Load the model from the specified path.
 

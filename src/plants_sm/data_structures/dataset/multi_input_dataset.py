@@ -169,13 +169,33 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
         -------
         """
         self._features = value
+        self.__dict__.pop('X', None)
+
+    def add_features(self, instance_type: str, features: Dict[str, np.ndarray]):
+        """
+        Adds features to the dataset
+        Parameters
+        ----------
+        instance_type: str
+            the instance type
+        features: Dict[str, np.ndarray]
+            the features
+        Returns
+        -------
+        """
+        if instance_type in self._features:
+            self._features[instance_type].update(features)
+        else:
+            self._features[instance_type] = features
+
+        self.__dict__.pop('X', None)
 
     @cached_property
     def X(self):
 
         res = {}
         feature_keys = self.features.keys()
-        for instance_type, instance in self.instances.items(): # probably 2 or a little bit more instances
+        for instance_type, instance in self.instances.items():  # probably 2 or a little bit more instances
             res[instance_type] = []
 
             if instance_type in feature_keys:
