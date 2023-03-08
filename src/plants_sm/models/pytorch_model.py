@@ -16,11 +16,9 @@ from plants_sm.data_structures.dataset import Dataset
 from plants_sm.io.pickle import read_pickle, write_pickle
 from plants_sm.models._utils import _convert_proba_to_unified_form, \
     write_model_parameters_to_pickle, array_from_tensor, array_reshape
-from plants_sm.models.constants import REGRESSION, QUANTILE, BINARY
+from plants_sm.models.constants import REGRESSION, QUANTILE, BINARY, FileConstants
 from plants_sm.models.model import Model
 import torch
-
-from .enumerators import ModelFilesConstants
 
 
 class PyTorchModel(Model):
@@ -135,8 +133,8 @@ class PyTorchModel(Model):
         -------
         torch.nn.Module
         """
-        weights_path = os.path.join(path, ModelFilesConstants.PYTORCH_MODEL_WEIGHTS.value)
-        model = read_pickle(os.path.join(path, ModelFilesConstants.PYTORCH_MODEL_PKL.value))
+        weights_path = os.path.join(path, FileConstants.PYTORCH_MODEL_WEIGHTS.value)
+        model = read_pickle(os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value))
         model.load_state_dict(torch.load(weights_path))
         model.eval()
         return model
@@ -157,9 +155,9 @@ class PyTorchModel(Model):
         -------
 
         """
-        weights_path = os.path.join(path, ModelFilesConstants.PYTORCH_MODEL_WEIGHTS.value)
+        weights_path = os.path.join(path, FileConstants.PYTORCH_MODEL_WEIGHTS.value)
         torch.save(model.state_dict(), weights_path)
-        write_pickle(model, os.path.join(path, ModelFilesConstants.PYTORCH_MODEL_PKL.value))
+        write_pickle(model, os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value))
 
     def _save(self, path: str):
         """
@@ -205,7 +203,7 @@ class PyTorchModel(Model):
 
         """
         model = cls._read_pytorch_model(path)
-        model_parameters = read_pickle(os.path.join(path, ModelFilesConstants.MODEL_PARAMETERS_PKL.value))
+        model_parameters = read_pickle(os.path.join(path, FileConstants.MODEL_PARAMETERS_PKL.value))
         return cls(model, **model_parameters)
 
     def _preprocess_data(self, dataset: Dataset, shuffle: bool = True) -> DataLoader:

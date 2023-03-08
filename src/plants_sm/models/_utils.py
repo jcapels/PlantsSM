@@ -5,8 +5,7 @@ import numpy as np
 from tensorflow import Tensor
 
 from plants_sm.io.pickle import write_pickle, is_pickable
-from plants_sm.models.constants import REGRESSION, BINARY
-from plants_sm.models.enumerators import ModelFilesConstants
+from plants_sm.models.constants import REGRESSION, BINARY, FileConstants
 
 
 def _convert_proba_to_unified_form(problem_type, y_pred_proba: np.ndarray) -> np.ndarray:
@@ -62,7 +61,7 @@ def write_model_parameters_to_pickle(model_parameters: dict, path: str) -> None:
         else:
             warning_str = f'Could not save {key} to save file. Skipping attribute {key}.'
             warnings.warn(warning_str)
-    write_pickle(parameters, os.path.join(path, ModelFilesConstants.MODEL_PARAMETERS_PKL.value))
+    write_pickle(parameters, os.path.join(path, FileConstants.MODEL_PARAMETERS_PKL.value))
 
 
 def array_from_tensor(tensor: Tensor) -> np.ndarray:

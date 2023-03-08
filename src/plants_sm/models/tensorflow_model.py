@@ -7,8 +7,7 @@ from keras.callbacks import History
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.io.pickle import read_pickle
 from plants_sm.models._utils import _convert_proba_to_unified_form,  write_model_parameters_to_pickle
-from plants_sm.models.constants import REGRESSION, QUANTILE
-from plants_sm.models.enumerators import ModelFilesConstants
+from plants_sm.models.constants import REGRESSION, QUANTILE, FileConstants
 from plants_sm.models.model import Model
 
 import tensorflow as tf
@@ -135,7 +134,7 @@ class TensorflowModel(Model):
         path: str
             Path to save the model.
         """
-        self.model.save(os.path.join(path, ModelFilesConstants.TENSORFLOW_MODEL.value))
+        self.model.save(os.path.join(path, FileConstants.TENSORFLOW_MODEL.value))
         # get the class attributes and save them
         parameters = {'epochs': self.epochs,
                       'batch_size': self.batch_size,
@@ -153,8 +152,8 @@ class TensorflowModel(Model):
         path: str
             Path to load the model from.
         """
-        model = tf.keras.models.load_model(os.path.join(path, ModelFilesConstants.TENSORFLOW_MODEL.value))
-        parameters = read_pickle(os.path.join(path, ModelFilesConstants.MODEL_PARAMETERS_PKL.value))
+        model = tf.keras.models.load_model(os.path.join(path, FileConstants.TENSORFLOW_MODEL.value))
+        parameters = read_pickle(os.path.join(path, FileConstants.MODEL_PARAMETERS_PKL.value))
         return cls(model, **parameters)
 
     @property

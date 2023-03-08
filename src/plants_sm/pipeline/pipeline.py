@@ -1,5 +1,4 @@
 import os
-import sys
 from typing import Union, List, Dict
 
 import numpy as np
@@ -7,6 +6,7 @@ import numpy as np
 from plants_sm.data_structures.dataset import Dataset, PLACEHOLDER_FIELD
 from plants_sm.io.json import write_json, read_json
 from plants_sm.io.pickle import write_pickle, read_pickle
+from plants_sm.models.enumerators import ModelFileEnumeratorsUtils
 from plants_sm.models.model import Model
 from plants_sm.transformation.transformer import Transformer
 
@@ -245,8 +245,7 @@ class Pipeline:
                     steps[instance_type].append(read_pickle(os.path.join(path, step)))
 
         for model in config["models"]:
-            model_type = read_json(os.path.join(path, model, 'model_type.json'))["type"]
-            model_type = getattr(sys.modules["plants_sm.models"], model_type)
+            model_type = ModelFileEnumeratorsUtils.get_class_to_load_from_directory(os.path.join(path, model))
             loaded_model = model_type.load(os.path.join(path, model))
             models.append(loaded_model)
 
