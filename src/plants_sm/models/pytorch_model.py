@@ -13,12 +13,14 @@ from torch.utils.data import TensorDataset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from plants_sm.data_structures.dataset import Dataset
-from plants_sm.io.pickle import read_pickle
-from plants_sm.models._utils import _convert_proba_to_unified_form, read_pytorch_model, save_pytorch_model, \
+from plants_sm.io.pickle import read_pickle, write_pickle
+from plants_sm.models._utils import _convert_proba_to_unified_form, \
     write_model_parameters_to_pickle, array_from_tensor, array_reshape
 from plants_sm.models.constants import REGRESSION, QUANTILE, BINARY
 from plants_sm.models.model import Model
 import torch
+
+from .enumerators import ModelFilesConstants
 
 
 class PyTorchModel(Model):
@@ -119,9 +121,50 @@ class PyTorchModel(Model):
         """
         return self._history
 
+    @staticmethod
+    def _read_pytorch_model(path: str) -> nn.Module:
+        """
+        Read the model from the specified path.
+
+        Parameters
+        ----------
+        path: str
+            Path to read the model from
+
+        Returns
+        -------
+        torch.nn.Module
+        """
+        weights_path = os.path.join(path, ModelFilesConstants.PYTORCH_MODEL_WEIGHTS.value)
+        model = read_pickle(os.path.join(path, ModelFilesConstants.PYTORCH_MODEL_PKL.value))
+        model.load_state_dict(torch.load(weights_path))
+        model.eval()
+        return model
+
+    @staticmethod
+    def _save_pytorch_model(model: nn.Module, path: str) -> None:
+        """
+        Save the model to the specified path.
+
+        Parameters
+        ----------
+        model: torch.nn.Module
+            Model to be saved
+        path: str
+            Path to save the model
+
+        Returns
+        -------
+
+        """
+        weights_path = os.path.join(path, ModelFilesConstants.PYTORCH_MODEL_WEIGHTS.value)
+        torch.save(model.state_dict(), weights_path)
+        write_pickle(model, os.path.join(path, ModelFilesConstants.PYTORCH_MODEL_PKL.value))
+
     def _save(self, path: str):
         """
         Save the model to a file
+        This method is called by the save method and needs to have all the parameters one wants to save in the model.
 
         Parameters
         ----------
@@ -131,7 +174,7 @@ class PyTorchModel(Model):
         Returns
         -------
         """
-        save_pytorch_model(self.model, path)
+        self._save_pytorch_model(self.model, path)
 
         model_parameters = {
             'loss_function': self.loss_function,
@@ -161,8 +204,8 @@ class PyTorchModel(Model):
             Path to load the model
 
         """
-        model = read_pytorch_model(path)
-        model_parameters = read_pickle(os.path.join(path, 'model_parameters.pkl'))
+        model = cls._read_pytorch_model(path)
+        model_parameters = read_pickle(os.path.join(path, ModelFilesConstants.MODEL_PARAMETERS_PKL.value))
         return cls(model, **model_parameters)
 
     def _preprocess_data(self, dataset: Dataset, shuffle: bool = True) -> DataLoader:
