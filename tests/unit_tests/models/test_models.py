@@ -16,7 +16,7 @@ from tests import TEST_DIR
 class TestModels(TestCase):
 
     def X(self):
-        return np.array(list(self.train_dataset.features[PLACEHOLDER_FIELD].values()))
+        return np.array(list(self.train_dataset.features[PLACEHOLDER_FIELD]))
 
     def setUp(self) -> None:
         logging.getLogger('tensorflow').setLevel(logging.ERROR)
@@ -60,8 +60,9 @@ class TestModels(TestCase):
                                                          }
         self.train_dataset.dataframe["identifiers"] = self.train_dataset.identifiers
         torch.seed()
-        self.train_dataset.X = {PLACEHOLDER_FIELD:
-                                    np.random.randint(0, 100, size=(len(self.train_dataset.identifiers), 100))}
+        self.train_dataset.features = {PLACEHOLDER_FIELD:
+                                           np.random.randint(0, 100, size=(len(self.train_dataset.identifiers), 100))}
+        self.train_dataset.X = self.X()
 
         self.validation_dataset = MagicMock(spec=SingleInputDataset)
         self.validation_dataset.dataframe = DataFrame(columns=["sequence", "identifiers"])
@@ -102,8 +103,10 @@ class TestModels(TestCase):
                                                               }
         self.validation_dataset.dataframe["identifiers"] = self.train_dataset.identifiers
         torch.seed()
-        self.validation_dataset.X = {PLACEHOLDER_FIELD:
-                                     np.random.randint(0, 100, size=(len(self.train_dataset.identifiers), 100))}
+        self.validation_dataset.features = {PLACEHOLDER_FIELD:
+                                                np.random.randint(0, 100,
+                                                                  size=(len(self.train_dataset.identifiers), 100))}
+        self.validation_dataset.X = self.X()
 
         self.path_to_save = os.path.join(TEST_DIR, "data", "test_save_model")
 

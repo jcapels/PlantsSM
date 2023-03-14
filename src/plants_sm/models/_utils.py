@@ -2,11 +2,10 @@ import os
 import warnings
 
 import numpy as np
-import torch
-from torch import nn
+from tensorflow import Tensor
 
-from plants_sm.io.pickle import read_pickle, write_pickle, is_pickable
-from plants_sm.models.constants import REGRESSION, BINARY
+from plants_sm.io.pickle import write_pickle, is_pickable
+from plants_sm.models.constants import REGRESSION, BINARY, FileConstants
 
 
 def _convert_proba_to_unified_form(problem_type, y_pred_proba: np.ndarray) -> np.ndarray:
@@ -44,46 +43,6 @@ def _convert_proba_to_unified_form(problem_type, y_pred_proba: np.ndarray) -> np
         raise AssertionError(f'Unknown y_pred_proba format for `problem_type="{problem_type}"`.')
 
 
-def read_pytorch_model(path: str) -> nn.Module:
-    """
-    Read the model from the specified path.
-
-    Parameters
-    ----------
-    path: str
-        Path to read the model from
-
-    Returns
-    -------
-    torch.nn.Module
-    """
-    weights_path = os.path.join(path, 'model.pt')
-    model = read_pickle(os.path.join(path, 'model.pkl'))
-    model.load_state_dict(torch.load(weights_path))
-    model.eval()
-    return model
-
-
-def save_pytorch_model(model: nn.Module, path: str) -> None:
-    """
-    Save the model to the specified path.
-
-    Parameters
-    ----------
-    model: torch.nn.Module
-        Model to be saved
-    path: str
-        Path to save the model
-
-    Returns
-    -------
-
-    """
-    weights_path = os.path.join(path, 'model.pt')
-    torch.save(model.state_dict(), weights_path)
-    write_pickle(model, os.path.join(path, 'model.pkl'))
-
-
 def write_model_parameters_to_pickle(model_parameters: dict, path: str) -> None:
     """
     Write the model parameters to a pickle file.
@@ -102,4 +61,42 @@ def write_model_parameters_to_pickle(model_parameters: dict, path: str) -> None:
         else:
             warning_str = f'Could not save {key} to save file. Skipping attribute {key}.'
             warnings.warn(warning_str)
-    write_pickle(parameters, os.path.join(path, 'model_parameters.pkl'))
+    write_pickle(parameters, os.path.join(path, FileConstants.MODEL_PARAMETERS_PKL.value))
+
+
+def array_from_tensor(tensor: Tensor) -> np.ndarray:
+    """
+    Converts a tensor to a numpy array.
+
+    Parameters
+    ----------
+    tensor: Tensor
+        The tensor to convert.
+
+    Returns
+    -------
+    np.ndarray
+        The converted array.
+    """
+    tensor = tensor.cpu().detach().numpy()
+    return tensor
+
+
+def array_reshape(array: np.ndarray) -> np.ndarray:
+    """
+    Reshapes a numpy array.
+
+    Parameters
+    ----------
+    array: np.ndarray
+        The array to reshape.
+
+    Returns
+    -------
+    np.ndarray
+        The reshaped array.
+    """
+    if array.shape[-1] == 1:
+        array = array.reshape(-1)
+
+    return array

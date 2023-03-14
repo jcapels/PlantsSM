@@ -28,10 +28,30 @@ def tqdm_joblib(tqdm_object):
         tqdm_object.close()
 
 
-def transform_instances(n_jobs: int, dataset: Dataset, func: Callable, instance_type: str) -> Dataset:
+def transform_instances(n_jobs: int, dataset: Dataset, func: Callable, instance_type: str, name: str) -> Dataset:
+    """
+    Transform instances in a dataset
+
+    Parameters
+    ----------
+    n_jobs: int
+       number of jobs to run in parallel
+    dataset: Dataset
+        dataset to be transformed where instances are the representation or object to be processed.
+    func: Callable
+        function to be applied to each instance
+    instance_type: str
+        type of instance to be transformed
+    name: str
+        name of the transformation
+
+    Returns
+    -------
+    dataset with transformed instances: Dataset
+    """
     parallel_callback = Parallel(n_jobs=n_jobs, prefer="threads")
     instances = dataset.get_instances(instance_type)
-    with tqdm_joblib(tqdm(desc="Featurizing", total=len(instances.items()))):
+    with tqdm_joblib(tqdm(desc=name, total=len(instances.items()))):
         res = parallel_callback(
             delayed(func)(instance_representation, instance_id)
             for instance_id, instance_representation in instances.items())

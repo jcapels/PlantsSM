@@ -2,6 +2,7 @@ from abc import abstractmethod
 from typing import Any, Dict
 
 import numpy as np
+from cached_property import cached_property
 
 from plants_sm.mixins.mixins import PickleMixin
 
@@ -11,6 +12,12 @@ class Dataset(PickleMixin):
 
     def __init__(self):
         pass
+
+    def _clear_cached_properties(self):
+        for name in dir(type(self)):
+            if isinstance(getattr(type(self), name), cached_property):
+                print(f"Clearing self.{name}")
+                vars(self).pop(name, None)
 
     @property
     @abstractmethod
@@ -52,6 +59,19 @@ class Dataset(PickleMixin):
             The features of the dataset. With the instance type as key and a dictionary of features as value.
             The keys of the features dictionary are the instance identifiers and the values are the features.
             For single-instance datasets, the instance type is a placeholder.
+        """
+
+    @abstractmethod
+    def add_features(self, instance_type: str, features: Dict[str, np.ndarray]):
+        """
+        Adds features to the dataset.
+
+        Parameters
+        ----------
+        instance_type: str
+            The instance type.
+        features: Dict[str, np.ndarray]
+            The features to add. With the instance identifiers as keys and the features as value.
         """
 
     @property

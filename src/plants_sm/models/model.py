@@ -1,12 +1,37 @@
 import os
+import uuid
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
 
 from plants_sm.data_structures.dataset import Dataset
+from plants_sm.io.json import write_json, read_json
 
 
 class Model(metaclass=ABCMeta):
+
+    _name: str = None
+
+    @property
+    def name(self) -> str:
+        if self._name is None:
+            value = str(uuid.uuid4().hex)
+            self._name = value
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        """
+        Set the name of the model
+
+        Parameters
+        ----------
+        value: str
+            Name of the model
+        """
+        if value is None:
+            value = str(uuid.uuid4().hex)
+        self._name = value
 
     @abstractmethod
     def _preprocess_data(self, dataset: Dataset, **kwargs) -> Dataset:
@@ -82,8 +107,20 @@ class Model(metaclass=ABCMeta):
             The path to save the model to.
         """
     @classmethod
-    @abstractmethod
     def load(cls, path: str):
+        """
+        Loads the model from a file.
+
+        Parameters
+        ----------
+        path: str
+            The path to load the model from.
+        """
+        return cls._load(path)
+
+    @classmethod
+    @abstractmethod
+    def _load(cls, path: str):
         """
         Loads the model from a file.
 
@@ -185,4 +222,6 @@ class Model(metaclass=ABCMeta):
         else:
             os.makedirs(path)
             self._save(path)
+
+        write_json({"type": self.__class__.__name__}, os.path.join(path, 'model_type.json'))
 

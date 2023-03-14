@@ -18,7 +18,7 @@ class SequencePadder(Transformer):
         type of padding to be applied
     """
     pad_width: int = None
-    padding: str = "right"
+    padding: str = "left"
 
     def _fit(self, dataset: Dataset, instance_type: str) -> 'SequencePadder':
         """
@@ -59,7 +59,8 @@ class SequencePadder(Transformer):
         dataset with features: Dataset
             dataset object with features
         """
-        return transform_instances(self.n_jobs, dataset, self._pad_sequence, instance_type)
+        return transform_instances(self.n_jobs, dataset, self._pad_sequence, instance_type,
+                                   self.__class__.__name__)
 
     def _pad_sequence(self, instance: str, identifier: str) -> Tuple[str, str]:
         """

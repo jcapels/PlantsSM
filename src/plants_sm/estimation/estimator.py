@@ -6,9 +6,10 @@ from pydantic.validators import dict_validator
 from plants_sm.data_structures.dataset import Dataset, SingleInputDataset
 from plants_sm.data_structures.dataset.single_input_dataset import PLACEHOLDER_FIELD
 from plants_sm.estimation._utils import fit_status
+from plants_sm.mixins.mixins import PickleMixin
 
 
-class Estimator(BaseModel):
+class Estimator(BaseModel, PickleMixin):
 
     _fitted: bool = False
 

@@ -69,7 +69,8 @@ class ProteinStandardizer(Transformer):
         dataset : Dataset
             Transformed dataset.
         """
-        return transform_instances(self.n_jobs, dataset, self._protein_preprocessing, instance_type)
+        return transform_instances(self.n_jobs, dataset, self._protein_preprocessing, instance_type,
+                                   self.__class__.__name__)
 
     def _protein_preprocessing(self, sequence: str, identifier: str) -> Tuple[str, str]:
         """

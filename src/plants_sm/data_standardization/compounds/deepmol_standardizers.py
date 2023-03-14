@@ -48,7 +48,7 @@ class DeepMolStandardizer(Transformer):
             transformed dataset
 
         """
-        return transform_instances(self.n_jobs, dataset, self._compound_preprocessing, instance_type)
+        return transform_instances(self.n_jobs, dataset, self._compound_preprocessing, instance_type, self.preset)
 
     def _compound_preprocessing(self, compound: str, identifier: str) -> Tuple[str, str]:
         """

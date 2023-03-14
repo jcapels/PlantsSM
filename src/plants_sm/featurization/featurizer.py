@@ -35,7 +35,6 @@ class FeaturesGenerator(Transformer):
         dataset: Dataset
             dataset to fit the transformer where instances are the representation or object to be processed.
         """
-        raise NotImplementedError
 
     @call_set_features_names
     def _transform(self, dataset: Dataset, instance_type: str) -> Dataset:
@@ -66,7 +65,7 @@ class FeaturesGenerator(Transformer):
                 res.append(self._featurize_and_add_identifier(instance_representation, instance_id))
                 pbar.update(1)
 
-        dataset.features[instance_type] = dict(res)
+        dataset.add_features(instance_type, dict(res))
 
         if instance_type not in dataset.features_fields:
             dataset.features_fields[instance_type] = self.features_names

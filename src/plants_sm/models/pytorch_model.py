@@ -1,7 +1,7 @@
 import logging
 import os
 from logging.handlers import TimedRotatingFileHandler
-from typing import Callable, Union, Tuple, List
+from typing import Callable, Union, Tuple, List, Dict
 
 import numpy as np
 import pandas as pd
@@ -13,10 +13,10 @@ from torch.utils.data import TensorDataset, DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from plants_sm.data_structures.dataset import Dataset
-from plants_sm.io.pickle import read_pickle
-from plants_sm.models._utils import _convert_proba_to_unified_form, read_pytorch_model, save_pytorch_model, \
-    write_model_parameters_to_pickle
-from plants_sm.models.constants import REGRESSION, QUANTILE, BINARY
+from plants_sm.io.pickle import read_pickle, write_pickle
+from plants_sm.models._utils import _convert_proba_to_unified_form, \
+    write_model_parameters_to_pickle, array_from_tensor, array_reshape
+from plants_sm.models.constants import REGRESSION, QUANTILE, BINARY, FileConstants
 from plants_sm.models.model import Model
 import torch
 
@@ -72,6 +72,7 @@ class PyTorchModel(Model):
         else:
             handler = TimedRotatingFileHandler('./pytorch_model.log', when='midnight', backupCount=20)
         handler.setFormatter(formatter)
+
         self.logger = logging.getLogger(__name__)
         self.logger.addHandler(handler)
         self.logger.setLevel(logging.DEBUG)
@@ -118,9 +119,50 @@ class PyTorchModel(Model):
         """
         return self._history
 
+    @staticmethod
+    def _read_pytorch_model(path: str) -> nn.Module:
+        """
+        Read the model from the specified path.
+
+        Parameters
+        ----------
+        path: str
+            Path to read the model from
+
+        Returns
+        -------
+        torch.nn.Module
+        """
+        weights_path = os.path.join(path, FileConstants.PYTORCH_MODEL_WEIGHTS.value)
+        model = read_pickle(os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value))
+        model.load_state_dict(torch.load(weights_path))
+        model.eval()
+        return model
+
+    @staticmethod
+    def _save_pytorch_model(model: nn.Module, path: str) -> None:
+        """
+        Save the model to the specified path.
+
+        Parameters
+        ----------
+        model: torch.nn.Module
+            Model to be saved
+        path: str
+            Path to save the model
+
+        Returns
+        -------
+
+        """
+        weights_path = os.path.join(path, FileConstants.PYTORCH_MODEL_WEIGHTS.value)
+        torch.save(model.state_dict(), weights_path)
+        write_pickle(model, os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value))
+
     def _save(self, path: str):
         """
         Save the model to a file
+        This method is called by the save method and needs to have all the parameters one wants to save in the model.
 
         Parameters
         ----------
@@ -130,7 +172,7 @@ class PyTorchModel(Model):
         Returns
         -------
         """
-        save_pytorch_model(self.model, path)
+        self._save_pytorch_model(self.model, path)
 
         model_parameters = {
             'loss_function': self.loss_function,
@@ -150,7 +192,7 @@ class PyTorchModel(Model):
         write_model_parameters_to_pickle(model_parameters, path)
 
     @classmethod
-    def load(cls, path: str) -> 'PyTorchModel':
+    def _load(cls, path: str) -> 'PyTorchModel':
         """
         Load the model from a file
 
@@ -160,8 +202,8 @@ class PyTorchModel(Model):
             Path to load the model
 
         """
-        model = read_pytorch_model(path)
-        model_parameters = read_pickle(os.path.join(path, 'model_parameters.pkl'))
+        model = cls._read_pytorch_model(path)
+        model_parameters = read_pickle(os.path.join(path, FileConstants.MODEL_PARAMETERS_PKL.value))
         return cls(model, **model_parameters)
 
     def _preprocess_data(self, dataset: Dataset, shuffle: bool = True) -> DataLoader:
@@ -182,8 +224,12 @@ class PyTorchModel(Model):
         """
 
         tensors = []
-        for instance in dataset.X.keys():
-            tensor = torch.tensor(dataset.X[instance], dtype=torch.float)
+        if isinstance(dataset.X, Dict):
+            for instance in dataset.X.keys():
+                tensor = torch.tensor(dataset.X[instance], dtype=torch.float)
+                tensors.append(tensor)
+        else:
+            tensor = torch.tensor(dataset.X, dtype=torch.float)
             tensors.append(tensor)
         if dataset.y is not None:
             tensors.append(torch.tensor(dataset.y, dtype=torch.float))
@@ -214,7 +260,7 @@ class PyTorchModel(Model):
         """
         self.model.eval()
         loss_total = 0
-        predictions, actuals = np.array([]), np.array([])
+        predictions, actuals = np.empty(shape=(0,)), np.empty(shape=(0,))
         len_valid_dataset = len(validation_set)
         with torch.no_grad():
             for i, inputs_targets in enumerate(validation_set):
@@ -225,10 +271,10 @@ class PyTorchModel(Model):
                 targets = targets.to(self.device)
                 output = self.model(inputs)
 
-                yhat = output.cpu().detach().numpy()
-                actual = targets.cpu().numpy()
+                y_hat = array_from_tensor(output)
+                actual = array_from_tensor(targets)
 
-                predictions = np.concatenate((predictions, yhat))
+                predictions = np.concatenate((predictions, y_hat))
                 actuals = np.concatenate((actuals, actual))
 
                 loss = self.loss_function(output, targets)
@@ -276,8 +322,11 @@ class PyTorchModel(Model):
         loss.backward()
         self.optimizer.step()
 
-        actual = targets.cpu().numpy()
-        yhat = output.cpu().detach().numpy()
+        actual = array_from_tensor(targets)
+        actual = array_reshape(actual)
+
+        yhat = array_from_tensor(output)
+        yhat = array_reshape(yhat)
 
         return actual, yhat, loss
 
@@ -334,7 +383,7 @@ class PyTorchModel(Model):
         for epoch in range(1, self.epochs + 1):
             self.model.train()
             loss_total = 0
-            predictions, actuals = np.array([]), np.array([])
+            predictions, actuals = np.empty(shape=(0,)), np.empty(shape=(0,))
             for i, inputs_targets in enumerate(train_dataset):
                 actual, yhat, loss = self._train(inputs_targets)
 
@@ -434,7 +483,7 @@ class PyTorchModel(Model):
             return y_pred
 
         self.model.eval()
-        predictions, actuals = np.array([]), np.array([])
+        predictions, actuals = np.empty(shape=(0,)), np.empty(shape=(0,))
 
         # the "shuffle" argument always has to be False in predicting probabilities in an evaluation context
 
@@ -447,7 +496,11 @@ class PyTorchModel(Model):
                 targets.to(self.device)
                 yhat = self.model(inputs)
 
-                yhat = yhat.cpu().detach().numpy()
+                targets = array_from_tensor(targets)
+                targets = array_reshape(targets)
+
+                yhat = array_from_tensor(yhat)
+                yhat = array_reshape(yhat)
 
                 predictions = np.concatenate((predictions, yhat))
                 actuals = np.concatenate((actuals, targets))

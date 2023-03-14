@@ -9,6 +9,7 @@ import pandas as pd
 from plants_sm.io import read_csv, write_csv
 from plants_sm.io.commons import FilePathOrBuffer
 from plants_sm.io.excel import write_excel, read_excel
+from plants_sm.io.pickle import write_pickle, read_pickle
 
 
 class DictMixin:
@@ -41,14 +42,36 @@ class DictMixin:
 
 
 class PickleMixin:
-    def to_pickle(self, file_path: FilePathOrBuffer):
-        file_pi = open(file_path, 'wb')
-        pickle.dump(self, file_pi)
+    def to_pickle(self, file_path: FilePathOrBuffer) -> bool:
+        """
+        Method to export the object to pickle.
+
+        Parameters
+        ----------
+        file_path: FilePathOrBuffer
+            path to the file where the object will be exported.
+
+        Returns
+        -------
+        bool: True if the operation was successful, False otherwise.
+        """
+        return write_pickle(self, file_path)
 
     @classmethod
-    def from_pickle(cls, file_path: FilePathOrBuffer):
-        file_pi = open(file_path, 'wb')
-        return pickle.load(file_pi)
+    def from_pickle(cls, file_path: FilePathOrBuffer) -> 'PickleMixin':
+        """
+        Method to import the object from pickle.
+
+        Parameters
+        ----------
+        file_path: FilePathOrBuffer
+            path to the file where the object will be imported.
+
+        Returns
+        -------
+        PickleMixin: object imported from pickle.
+        """
+        return read_pickle(file_path)
 
 
 class CSVMixin:
