@@ -11,6 +11,9 @@ class TestCompoundFeaturizers(TestCase):
     def X(self):
         return np.array(list(self.dataset.features[PLACEHOLDER_FIELD].values()), dtype=np.int32)
 
+    def add_features(self, instance_type, features):
+        self.dataset.features[instance_type] = features
+
     def setUp(self) -> None:
         self.dataset = MagicMock(spec=SingleInputDataset)
         self.dataset.dataframe = DataFrame(columns=["SMILES", "identifiers"])
@@ -32,3 +35,4 @@ class TestCompoundFeaturizers(TestCase):
         self.dataset.dataframe["SMILES"] = self.dataset.instances[PLACEHOLDER_FIELD].values()
         self.dataset.dataframe["identifiers"] = self.dataset.identifiers
         self.dataset.X = self.X
+        self.dataset.add_features = self.add_features

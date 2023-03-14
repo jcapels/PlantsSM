@@ -13,6 +13,9 @@ class TestProteinFeaturizers(TestCase):
     def X(self):
         return np.array(list(self.dataset.features[PLACEHOLDER_FIELD].values()))
 
+    def add_features(self, instance_type, features):
+        self.dataset.features[instance_type] = features
+
     def setUp(self) -> None:
         self.dataset = MagicMock(spec=SingleInputDataset)
         self.dataset.dataframe = DataFrame(columns=["sequence", "identifiers"])
@@ -40,3 +43,4 @@ class TestProteinFeaturizers(TestCase):
         self.dataset.dataframe["identifiers"] = self.dataset.identifiers
         torch.seed()
         self.dataset.X = self.X
+        self.dataset.add_features = self.add_features
