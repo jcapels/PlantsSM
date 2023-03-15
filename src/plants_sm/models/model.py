@@ -5,7 +5,7 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 
 from plants_sm.data_structures.dataset import Dataset
-from plants_sm.io.json import write_json, read_json
+from plants_sm.io.json import write_json
 
 
 class Model(metaclass=ABCMeta):

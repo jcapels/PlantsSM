@@ -1,3 +1,4 @@
+import importlib
 import os
 
 from tests import TEST_DIR
@@ -31,6 +32,11 @@ class TestPytorchModel(TestModels):
 
         predictions_proba = pytorch_model.predict_proba(self.validation_dataset)
         self.assertEqual(predictions_proba.shape, self.validation_dataset.y.shape)
+
+    def test_reinitialize_model(self):
+        model = TestPytorchBaselineModel(100, 50)
+        model.__init__(200, 50)
+        self.assertEqual(model.input_dim, 200)
 
     def test_save_load_model(self):
         model = TestPytorchBaselineModel(100, 50)
