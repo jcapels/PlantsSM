@@ -1,4 +1,4 @@
-from typing import Any, List, Union, Dict
+from typing import Any, List, Union, Dict, Iterable
 
 import numpy as np
 import pandas as pd
@@ -23,7 +23,8 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
     def __init__(self, dataframe: Any = None, representation_field: str = None,
                  features_fields: Union[str, List[Union[str, int]], slice] = None,
                  labels_field: Union[str, List[Union[str, int]]] = None,
-                 instances_ids_field: str = None):
+                 instances_ids_field: str = None,
+                 batch_size: int = None):
         """
         Constructor
         Parameters
@@ -38,12 +39,15 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             labels column field
         instances_ids_field: str | List[str | int] (optional)
             instances column field
+        batch_size: int (optional)
+            batch size
         """
 
         # the features fields is a list of fields that are used to extract the features
         # however, they can be both strings or integers, so we need to check the type of the field
         # and convert it to a list of strings
         super().__init__()
+        self.batch_size = batch_size
         if dataframe is not None:
             if not isinstance(features_fields, List) and not isinstance(features_fields, slice) and \
                     features_fields is not None:
@@ -87,24 +91,82 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
     def from_csv(cls, file_path: FilePathOrBuffer, representation_field: str = None,
                  features_fields: Union[str, List[Union[str, int]], slice] = None,
                  labels_field: Union[str, List[Union[str, int]]] = None,
-                 instances_ids_field: str = None, **kwargs) -> 'SingleInputDataset':
+                 instances_ids_field: str = None, batch_size: Union[None, int] = None,
+                 **kwargs) -> 'SingleInputDataset':
+        """
+        Method to create a dataset from a csv file.
+
+        Parameters
+        ----------
+        file_path: FilePathOrBuffer
+            path to the csv file
+        representation_field: str | List[str | int] (optional)
+            representation column field (to be processed)
+        features_fields: str | List[str | int] | slice (optional)
+            features column field
+        labels_field: str | List[str | int] (optional)
+            labels column field
+        instances_ids_field:
+            instances column field
+        batch_size: int (optional)
+            batch size to be used for the dataset
+        kwargs:
+            additional arguments for the pandas read_csv method
+
+        Returns
+        -------
+        dataset: SingleInputDataset
+            dataset created from the csv file
+        """
 
         instance = cls()
-        dataframe = instance._from_csv(file_path, **kwargs)
+        dataframe = instance._from_csv(file_path, batch_size, **kwargs)
         dataset = SingleInputDataset(dataframe, representation_field,
-                                     features_fields, labels_field, instances_ids_field)
+                                     features_fields, labels_field,
+                                     instances_ids_field,
+                                     batch_size=batch_size)
+        dataset.batch_size = batch_size
         return dataset
 
     @classmethod
     def from_excel(cls, file_path: FilePathOrBuffer, representation_field: str = None,
                    features_fields: Union[str, List[Union[str, int]], slice] = None,
                    labels_field: Union[str, List[Union[str, int]]] = None,
-                   instances_ids_field: str = None, **kwargs) -> 'SingleInputDataset':
+                   instances_ids_field: str = None, batch_size: Union[None, int] = None, **kwargs) \
+            -> 'SingleInputDataset':
+        """
+        Method to create a dataset from an excel file.
+
+        Parameters
+        ----------
+        Parameters
+        ----------
+        file_path: FilePathOrBuffer
+            path to the csv file
+        representation_field: str | List[str | int] (optional)
+            representation column field (to be processed)
+        features_fields: str | List[str | int] | slice (optional)
+            features column field
+        labels_field: str | List[str | int] (optional)
+            labels column field
+        instances_ids_field:
+            instances column field
+        batch_size: int (optional)
+            batch size to be used for the dataset
+        kwargs:
+            additional arguments for the pandas read_excel method
+
+        Returns
+        -------
+        dataset: SingleInputDataset
+            dataset created from the excel file
+        """
 
         instance = cls()
-        dataframe = instance._from_excel(file_path, **kwargs)
+        dataframe = instance._from_excel(file_path, batch_size=batch_size, **kwargs)
         dataset = SingleInputDataset(dataframe, representation_field,
                                      features_fields, labels_field, instances_ids_field)
+        dataset.batch_size = batch_size
         return dataset
 
     @cached_property
@@ -247,16 +309,21 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         -------
         """
         if value is not None:
-            self._set_dataframe(value)
-            if self.instances_ids_field is None:
-                self._set_instances_ids_field()
+            if isinstance(value, Iterable) and not isinstance(value, pd.DataFrame):
+                # accounting on generators for batch reading
+                self._dataframe_generator = value
+                next(self)
             else:
-                self._dataframe.set_index(self.instances_ids_field, inplace=True)
+                self._set_dataframe(value)
+                if self.instances_ids_field is None:
+                    self._set_instances_ids_field()
+                else:
+                    # self._dataframe.set_index(self.instances_ids_field, inplace=True)
 
-                identifiers = self.dataframe.index.values
-                instances = self.dataframe.loc[:, self.representation_field].values
-                self._instances = {PLACEHOLDER_FIELD: dict(zip(identifiers, instances))}
-                self.dataframe.drop(self.representation_field, axis=1, inplace=True)
+                    identifiers = self._dataframe.loc[:, self.instances_ids_field].values
+                    instances = self.dataframe.loc[:, self.representation_field].values
+                    self._instances = {PLACEHOLDER_FIELD: dict(zip(identifiers, instances))}
+                    self.dataframe.drop(self.representation_field, axis=1, inplace=True)
 
     @dataframe.setter
     def dataframe(self, value: Any):
@@ -307,11 +374,22 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
 
             self._dataframe = pd.concat((identifiers_series, self._dataframe), axis=1)
             self._dataframe["identifier"] = self._dataframe["identifier"].astype(str)
-            self._dataframe.set_index("identifier", inplace=True)
+            # self._dataframe.set_index("identifier", inplace=True)
 
             instances = self.dataframe.loc[:, self.representation_field].values
             self._instances = {PLACEHOLDER_FIELD: dict(zip(identifiers_series.values, instances))}
             self.dataframe.drop(self.representation_field, axis=1, inplace=True)
+
+    def __next__(self):
+        """
+        Method to iterate over the dataset.
+        """
+        if self.batch_size is not None and self._dataframe_generator is not None:
+            df = next(self._dataframe_generator)
+
+            # create new directory for the batch
+
+            self.dataframe = df
 
     def _set_dataframe(self, value: Any):
         """

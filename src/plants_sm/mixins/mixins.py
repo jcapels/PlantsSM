@@ -2,7 +2,7 @@ import os.path
 import pickle
 import re
 from abc import abstractmethod
-from typing import Any
+from typing import Any, Union
 
 import pandas as pd
 
@@ -130,7 +130,7 @@ class CSVMixin:
             raise NotImplementedError("This method is not implemented for this type of object")
 
     @staticmethod
-    def _from_csv(file_path: FilePathOrBuffer, **kwargs) -> Any:
+    def _from_csv(file_path: FilePathOrBuffer, batch_size: Union[None, int] = None, **kwargs) -> Any:
         """
         Method to import the dataframe from csv.
 
@@ -138,15 +138,20 @@ class CSVMixin:
         ----------
         file_path: FilePathOrBuffer
             path to the file where the dataframe will be imported.
-
+        batch_size: Union[None, int]
+            size of the batch to be read from the csv file.
         """
 
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File {file_path} does not exist.")
 
-        df = read_csv(file_path, **kwargs)
+        if not batch_size:
+            df = read_csv(file_path, **kwargs)
+            return df
 
-        return df
+        else:
+            for batch in read_csv(file_path, chunksize=batch_size, iterator=True, **kwargs):
+                yield batch
 
     @classmethod
     def from_csv(cls, file_path: FilePathOrBuffer, **kwargs) -> 'CSVMixin':
@@ -214,7 +219,7 @@ class ExcelMixin:
             raise NotImplementedError("This method is not implemented for this type of object")
 
     @staticmethod
-    def _from_excel(file_path: FilePathOrBuffer, **kwargs) -> Any:
+    def _from_excel(file_path: FilePathOrBuffer, batch_size=Union[None, int], **kwargs) -> Any:
         """
         Method to import the dataframe from excel.
         Parameters
@@ -226,9 +231,14 @@ class ExcelMixin:
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File {file_path} does not exist.")
 
-        df = read_excel(file_path, **kwargs)
+        if not batch_size:
 
-        return df
+            df = read_excel(file_path, **kwargs)
+            return df
+
+        else:
+            for batch in read_excel(file_path, chunksize=batch_size):
+                yield batch
 
     @classmethod
     def from_excel(cls, file_path: FilePathOrBuffer, **kwargs) -> 'ExcelMixin':

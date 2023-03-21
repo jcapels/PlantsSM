@@ -1,5 +1,6 @@
+import tempfile
 from abc import abstractmethod
-from typing import Any, Dict
+from typing import Any, Dict, Union, Iterable
 
 import numpy as np
 from cached_property import cached_property
@@ -9,15 +10,26 @@ from plants_sm.mixins.mixins import PickleMixin
 
 class Dataset(PickleMixin):
     representation_fields: Dict[str, Any]
+    batch_size: Union[int, None] = None
+    temp_folder = tempfile.TemporaryDirectory()
+    _dataframe_generator: Iterable = None
 
     def __init__(self):
         pass
 
     def _clear_cached_properties(self):
+        """
+        Clears the cached properties of the class.
+        """
         for name in dir(type(self)):
             if isinstance(getattr(type(self), name), cached_property):
-                print(f"Clearing self.{name}")
                 vars(self).pop(name, None)
+
+    @abstractmethod
+    def __next__(self):
+        """
+        Returns the next batch of the dataset.
+        """
 
     @property
     @abstractmethod
