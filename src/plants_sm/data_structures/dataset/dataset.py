@@ -5,17 +5,30 @@ from typing import Any, Dict, Union, Iterable
 import numpy as np
 from cached_property import cached_property
 
+from plants_sm.data_structures.dataset.batch_manager.batch_manager import BatchManager
+from plants_sm.design_patterns.observer import ConcreteSubject
 from plants_sm.mixins.mixins import PickleMixin
 
 
-class Dataset(PickleMixin):
+class Dataset(ConcreteSubject, PickleMixin):
     representation_fields: Dict[str, Any]
     batch_size: Union[int, None] = None
-    temp_folder = tempfile.TemporaryDirectory()
     _dataframe_generator: Iterable = None
+    variables_to_save = [
+        ("dataframe", "csv"),
+        ("instances", "json"),
+        ("identifiers", "json"),
+        ("features", "json"),
+        ("labels", "csv")
+    ]
 
-    def __init__(self):
-        pass
+    def __init__(self, batch_size: Union[int, None] = None):
+        if batch_size is not None and batch_size <= 0:
+            raise ValueError("Batch size must be a positive integer.")
+        else:
+            self.batch_size = batch_size
+            manager = BatchManager(batch_size=batch_size).register_class(self, self.variables_to_save)
+            self.attach(manager)
 
     def _clear_cached_properties(self):
         """

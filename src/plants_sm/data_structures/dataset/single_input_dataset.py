@@ -46,8 +46,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         # the features fields is a list of fields that are used to extract the features
         # however, they can be both strings or integers, so we need to check the type of the field
         # and convert it to a list of strings
-        super().__init__()
-        self.batch_size = batch_size
+        super().__init__(batch_size=batch_size)
         if dataframe is not None:
             if not isinstance(features_fields, List) and not isinstance(features_fields, slice) and \
                     features_fields is not None:
@@ -125,7 +124,6 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                                      features_fields, labels_field,
                                      instances_ids_field,
                                      batch_size=batch_size)
-        dataset.batch_size = batch_size
         return dataset
 
     @classmethod
@@ -165,8 +163,9 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         instance = cls()
         dataframe = instance._from_excel(file_path, batch_size=batch_size, **kwargs)
         dataset = SingleInputDataset(dataframe, representation_field,
-                                     features_fields, labels_field, instances_ids_field)
-        dataset.batch_size = batch_size
+                                     features_fields, labels_field,
+                                     instances_ids_field,
+                                     batch_size=batch_size)
         return dataset
 
     @cached_property
@@ -318,8 +317,6 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                 if self.instances_ids_field is None:
                     self._set_instances_ids_field()
                 else:
-                    # self._dataframe.set_index(self.instances_ids_field, inplace=True)
-
                     identifiers = self._dataframe.loc[:, self.instances_ids_field].values
                     instances = self.dataframe.loc[:, self.representation_field].values
                     self._instances = {PLACEHOLDER_FIELD: dict(zip(identifiers, instances))}
@@ -387,7 +384,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         if self.batch_size is not None and self._dataframe_generator is not None:
             df = next(self._dataframe_generator)
 
-            # create new directory for the batch
+            self.notify()
 
             self.dataframe = df
 
