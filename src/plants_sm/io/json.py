@@ -22,8 +22,8 @@ class JSONReader(Reader):
         """
         super().__init__(filepath_or_buffer, mode="r", **kwargs)
 
-    @property
-    def file_types(self) -> List[str]:
+    @staticmethod
+    def file_types() -> List[str]:
         """
         File types that the reader can read
 
@@ -64,8 +64,8 @@ class JSONWriter(Writer):
 
         super().__init__(filepath_or_buffer, **kwargs)
 
-    @property
-    def file_types(self) -> List[str]:
+    @staticmethod
+    def file_types() -> List[str]:
         """
         File types that the reader can read
 
@@ -115,7 +115,7 @@ def read_json(file_path: FilePathOrBuffer, **kwargs) -> Union[dict, List[dict]]:
     return data
 
 
-def write_json(object_to_be_written: Union[dict, List[dict]], output_path: FilePathOrBuffer, **kwargs) -> bool:
+def write_json(output_path: FilePathOrBuffer, object_to_be_written: Union[dict, List[dict]], **kwargs) -> bool:
     """
     Function to write a JSON file calling the JSONWriter method.
 

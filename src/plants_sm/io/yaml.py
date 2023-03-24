@@ -11,8 +11,8 @@ from plants_sm.io.writer import Writer
 
 class YAMLReader(Reader):
 
-    @property
-    def file_types(self) -> List[str]:
+    @staticmethod
+    def file_types() -> List[str]:
         """
         Returns the file types that the reader can read.
 
@@ -55,8 +55,8 @@ class YAMLReader(Reader):
 
 class YAMLWriter(Writer):
 
-    @property
-    def file_types(self) -> List[str]:
+    @staticmethod
+    def file_types() -> List[str]:
         """
         Returns the file types that the writer can write.
 

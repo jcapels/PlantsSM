@@ -22,8 +22,8 @@ class H5Reader(Reader):
         """
         super().__init__(filepath_or_buffer, mode="r", **kwargs)
 
-    @property
-    def file_types(self) -> List[str]:
+    @staticmethod
+    def file_types() -> List[str]:
         """
         Returns the file types that the HDF5 reader can read.
 
@@ -69,8 +69,8 @@ class H5Writer(Writer):
         """
         super().__init__(filepath_or_buffer, mode="w", **kwargs)
 
-    @property
-    def file_types(self) -> List[str]:
+    @staticmethod
+    def file_types() -> List[str]:
         """
         Returns the file types that the HDF5 writer can read.
 

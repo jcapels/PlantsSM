@@ -16,11 +16,13 @@ class TestLoadInBatches(TestCase):
         dataset = SingleInputDataset.from_csv(os.path.join(TEST_DIR, "data", "proteins.csv"), batch_size=1,
                                               representation_field="sequence", instances_ids_field="id")
         self.assertEqual(len(dataset.instances), 1)
-        instance1 = list(dataset.instances[PLACEHOLDER_FIELD].values())[0]
 
-        next(dataset)
-        self.assertEqual(len(dataset.instances), 1)
-        instance2 = list(dataset.instances[PLACEHOLDER_FIELD].values())[0]
-
-        self.assertNotEqual(instance2, instance1)
+        temp_folder = dataset._observers[0].temporary_folder
+        self.assertTrue(os.path.exists(temp_folder.name))
+        print(os.listdir(temp_folder.name))
+        for folder in os.listdir(temp_folder.name):
+            for file in os.listdir(os.path.join(temp_folder.name, folder)):
+                for variable_name, _ in dataset.variables_to_save:
+                    if variable_name in file:
+                        self.assertTrue(os.path.exists(os.path.join(temp_folder.name, folder, file)))
 

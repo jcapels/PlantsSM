@@ -26,8 +26,8 @@ class ExcelReader(Reader):
         """
         super().__init__(filepath_or_buffer, mode="rb", **kwargs)
 
-    @property
-    def file_types(self) -> List[str]:
+    @staticmethod
+    def file_types() -> List[str]:
         """
         File types that the reader can read
 
@@ -70,8 +70,8 @@ class ExcelWriter(Writer):
 
         super().__init__(filepath_or_buffer, **kwargs)
 
-    @property
-    def file_types(self) -> List[str]:
+    @staticmethod
+    def file_types() -> List[str]:
         """
         File types that the reader can read
 

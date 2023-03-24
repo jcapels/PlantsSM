@@ -13,21 +13,18 @@ class Subject(ABC):
         """
         Attach an observer to the subject.
         """
-        pass
 
     @abstractmethod
     def detach(self, observer: Observer) -> None:
         """
         Detach an observer from the subject.
         """
-        pass
 
     @abstractmethod
     def notify(self) -> None:
         """
         Notify all observers about an event.
         """
-        pass
 
 
 class ConcreteSubject(Subject):
@@ -49,7 +46,6 @@ class ConcreteSubject(Subject):
     """
 
     def attach(self, observer: Observer) -> None:
-        print("Subject: Attached an observer.")
         self._observers.append(observer)
 
     def detach(self, observer: Observer) -> None:
@@ -59,14 +55,13 @@ class ConcreteSubject(Subject):
     The subscription management methods.
     """
 
-    def notify(self) -> None:
+    def notify(self, **kwargs) -> None:
         """
         Trigger an update in each subscriber.
         """
 
-        print("Subject: Notifying observers...")
         for observer in self._observers:
-            observer.update(self)
+            observer.update(self, **kwargs)
 
 
 class Observer(ABC):
@@ -75,7 +70,7 @@ class Observer(ABC):
     """
 
     @abstractmethod
-    def update(self, subject: Subject) -> None:
+    def update(self, subject: Subject, **kwargs) -> None:
         """
         Receive update from subject.
         """

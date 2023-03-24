@@ -20,8 +20,8 @@ class PickleReader(Reader):
         """
         super().__init__(filepath_or_buffer, mode="rb", **kwargs)
 
-    @property
-    def file_types(self) -> List[str]:
+    @staticmethod
+    def file_types() -> List[str]:
         """
         Returns the file types that the pickle reader can read.
 
@@ -57,8 +57,8 @@ class PickleWriter(Writer):
         """
         super().__init__(filepath_or_buffer, mode="wb", **kwargs)
 
-    @property
-    def file_types(self) -> List[str]:
+    @staticmethod
+    def file_types() -> List[str]:
         """
         Returns the file types that the pickle writer can read.
 

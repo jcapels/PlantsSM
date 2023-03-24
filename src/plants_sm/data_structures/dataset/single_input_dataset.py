@@ -84,6 +84,10 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             else:
                 self._features = {}
 
+            if self.batch_size is not None:
+                while next(self):
+                    pass
+
         # in the case that the dataframe is None and the features field is not None, the features names will be set
 
     @classmethod
@@ -308,19 +312,20 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         -------
         """
         if value is not None:
-            if isinstance(value, Iterable) and not isinstance(value, pd.DataFrame):
+            go = isinstance(value, Iterable) and not isinstance(value, pd.DataFrame) and self.batch_size is not None
+            if go:
                 # accounting on generators for batch reading
                 self._dataframe_generator = value
-                next(self)
+                value = next(self._dataframe_generator)
+
+            self._set_dataframe(value)
+            if self.instances_ids_field is None:
+                self._set_instances_ids_field()
             else:
-                self._set_dataframe(value)
-                if self.instances_ids_field is None:
-                    self._set_instances_ids_field()
-                else:
-                    identifiers = self._dataframe.loc[:, self.instances_ids_field].values
-                    instances = self.dataframe.loc[:, self.representation_field].values
-                    self._instances = {PLACEHOLDER_FIELD: dict(zip(identifiers, instances))}
-                    self.dataframe.drop(self.representation_field, axis=1, inplace=True)
+                identifiers = self._dataframe.loc[:, self.instances_ids_field].values
+                instances = self.dataframe.loc[:, self.representation_field].values
+                self._instances = {PLACEHOLDER_FIELD: dict(zip(identifiers, instances))}
+                self.dataframe.drop(self.representation_field, axis=1, inplace=True)
 
     @dataframe.setter
     def dataframe(self, value: Any):
@@ -376,17 +381,6 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             instances = self.dataframe.loc[:, self.representation_field].values
             self._instances = {PLACEHOLDER_FIELD: dict(zip(identifiers_series.values, instances))}
             self.dataframe.drop(self.representation_field, axis=1, inplace=True)
-
-    def __next__(self):
-        """
-        Method to iterate over the dataset.
-        """
-        if self.batch_size is not None and self._dataframe_generator is not None:
-            df = next(self._dataframe_generator)
-
-            self.notify()
-
-            self.dataframe = df
 
     def _set_dataframe(self, value: Any):
         """

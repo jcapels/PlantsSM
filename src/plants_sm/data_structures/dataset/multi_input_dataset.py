@@ -66,6 +66,10 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
     def dataframe(self) -> Any:
         return self._dataframe
 
+    @dataframe.setter
+    def dataframe(self, value):
+        self._dataframe = value
+
     @classmethod
     def from_csv(cls, file_path: FilePathOrBuffer, representation_fields: Dict[str, Union[str, int]] = None,
                  labels_field: Union[str, List[Union[str, int]]] = None,

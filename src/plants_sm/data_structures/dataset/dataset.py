@@ -1,4 +1,3 @@
-import tempfile
 from abc import abstractmethod
 from typing import Any, Dict, Union, Iterable
 
@@ -23,12 +22,22 @@ class Dataset(ConcreteSubject, PickleMixin):
     ]
 
     def __init__(self, batch_size: Union[int, None] = None):
-        if batch_size is not None and batch_size <= 0:
-            raise ValueError("Batch size must be a positive integer.")
-        else:
-            self.batch_size = batch_size
-            manager = BatchManager(batch_size=batch_size).register_class(self, self.variables_to_save)
-            self.attach(manager)
+        """
+        Class that represents a dataset.
+
+        Parameters
+        ----------
+        batch_size: int
+            the size of the batches
+        """
+        self.batch_size = batch_size
+        if self.batch_size is not None:
+            if self.batch_size <= 0:
+                raise ValueError("Batch size must be a positive integer.")
+            else:
+                manager = BatchManager(batch_size=self.batch_size)
+                manager.register_class(self, self.variables_to_save)
+                self.attach(manager)
 
     def _clear_cached_properties(self):
         """
@@ -38,17 +47,53 @@ class Dataset(ConcreteSubject, PickleMixin):
             if isinstance(getattr(type(self), name), cached_property):
                 vars(self).pop(name, None)
 
-    @abstractmethod
     def __next__(self):
         """
-        Returns the next batch of the dataset.
+        Method to iterate over the dataset.
         """
+        if self.batch_size is not None and self._dataframe_generator is not None:
+            self.notify(function="__next__")
+
+            try:
+                df = next(self._dataframe_generator)
+            except ValueError as e:
+                if e.args[0] == "I/O operation on closed file.":
+                    return False
+                else:
+                    raise e
+
+            self.dataframe = df
+
+            return True
+
+        raise ValueError("The dataset is not iterable.")
+
+    def __iter__(self):
+        """
+        Method to iterate over the dataset.
+        """
+        if self.batch_size is not None:
+            self.notify(function="__iter__")
+
+        raise ValueError("The dataset is not iterable.")
 
     @property
     @abstractmethod
     def dataframe(self):
         """
         Returns the dataset as a pandas dataframe.
+        """
+
+    @dataframe.setter
+    @abstractmethod
+    def dataframe(self, value):
+        """
+        Sets the dataset as a pandas dataframe.
+
+        Parameters
+        ----------
+        value: pd.DataFrame
+            The dataset as a pandas dataframe.
         """
 
     @property

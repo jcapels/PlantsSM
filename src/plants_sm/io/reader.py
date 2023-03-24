@@ -32,9 +32,9 @@ class Reader(metaclass=ABCMeta):
         """
         self.buffer.close()
 
-    @property
+    @staticmethod
     @abstractmethod
-    def file_types(self) -> List[str]:
+    def file_types() -> List[str]:
         """
         Abstract method and property that returns the file types that the reader can read.
 

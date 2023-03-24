@@ -31,8 +31,8 @@ class CSVReader(Reader):
         """
         super().__init__(filepath_or_buffer, sep=sep, **kwargs)
 
-    @property
-    def file_types(self) -> List[str]:
+    @staticmethod
+    def file_types() -> List[str]:
         """
         Returns the file types that the reader can read.
 
@@ -83,8 +83,8 @@ class CSVWriter(Writer):
 
         super().__init__(filepath_or_buffer, sep=sep, **kwargs)
 
-    @property
-    def file_types(self) -> List[str]:
+    @staticmethod
+    def file_types() -> List[str]:
         """
         Returns the file types that the writer can write.
 
