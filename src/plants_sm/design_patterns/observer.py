@@ -63,6 +63,10 @@ class ConcreteSubject(Subject):
         for observer in self._observers:
             observer.update(self, **kwargs)
 
+    def end(self):
+        for observer in self._observers:
+            observer.end()
+
 
 class Observer(ABC):
     """
@@ -73,4 +77,10 @@ class Observer(ABC):
     def update(self, subject: Subject, **kwargs) -> None:
         """
         Receive update from subject.
+        """
+
+    @abstractmethod
+    def end(self):
+        """
+        End the observer.
         """

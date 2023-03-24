@@ -13,9 +13,10 @@ class Dataset(ConcreteSubject, PickleMixin):
     representation_fields: Dict[str, Any]
     batch_size: Union[int, None] = None
     _dataframe_generator: Iterable = None
+    _batch_state: bool = True
     variables_to_save = [
-        ("dataframe", "csv"),
-        ("instances", "json"),
+        ("_dataframe", "csv"),
+        ("_instances", "json"),
         ("identifiers", "json"),
         ("features", "json"),
         ("labels", "csv")
@@ -58,6 +59,7 @@ class Dataset(ConcreteSubject, PickleMixin):
                 df = next(self._dataframe_generator)
             except ValueError as e:
                 if e.args[0] == "I/O operation on closed file.":
+                    self.end()
                     return False
                 else:
                     raise e
@@ -68,14 +70,19 @@ class Dataset(ConcreteSubject, PickleMixin):
 
         raise ValueError("The dataset is not iterable.")
 
-    def __iter__(self):
+    def next_batch(self):
         """
         Method to iterate over the dataset.
         """
         if self.batch_size is not None:
-            self.notify(function="__iter__")
-
-        raise ValueError("The dataset is not iterable.")
+            self.notify(function="next_batch")
+            if self._batch_state:
+                return self
+            else:
+                self.end()
+                return None
+        else:
+            raise ValueError("The dataset is not iterable.")
 
     @property
     @abstractmethod

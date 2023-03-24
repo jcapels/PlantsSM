@@ -32,6 +32,12 @@ class BatchManager(Observer):
         """
         self.temporary_folder.cleanup()
 
+    def end(self):
+        """
+        Resets the counter.
+        """
+        self.counter = self.batch_size
+
     def update(self, subject: Subject, **kwargs) -> None:
         """
         Updates the batch manager.
@@ -42,10 +48,12 @@ class BatchManager(Observer):
             the subject that is being observed
         """
         if kwargs["function"] == "__next__":
-            self.create_intermediate_files()
+            self.write_intermediate_files()
             self.counter += self.batch_size
-        else:
-            self.read_intermediate_files(subject)
+
+        elif kwargs["function"] == "next_batch":
+            subject._batch_state = self.read_intermediate_files(subject)
+            self.counter += self.batch_size
 
     def register_class(self, cls, variables_to_save: List[Tuple[str, str]] = None):
         """
@@ -61,7 +69,7 @@ class BatchManager(Observer):
         self._cls = cls
         self._variables_to_save = variables_to_save
 
-    def create_intermediate_files(self):
+    def write_intermediate_files(self):
         """
         Creates the intermediate files to be used in the batches.
         """
@@ -84,12 +92,26 @@ class BatchManager(Observer):
                 if variable is not None:
                     write_csv(file_path, variable)
 
-    def read_intermediate_files(self, subject: Subject):
+    def read_intermediate_files(self, subject: Subject) -> bool:
         """
         Reads the intermediate files to be used in the batches.
+
+        Parameters
+        ----------
+        subject: Subject
+            the subject that is being observed
+
+        Returns
+        -------
+        bool
+            True if the files were read, False otherwise
         """
+
+        if not os.path.exists(os.path.join(self.temporary_folder.name, str(self.counter))):
+            return False
+
         for variable_name, variable_format in self._variables_to_save:
-            if variable_format in CSVReader.file_types():
+            if variable_format in JSONWriter.file_types():
                 file_path = os.path.join(self.temporary_folder.name, str(self.counter),
                                          f"{variable_name}.json")
 
@@ -105,3 +127,5 @@ class BatchManager(Observer):
                 if variable is not None:
                     _variable = read_csv(file_path)
                     setattr(subject, variable_name, _variable)
+
+        return True
