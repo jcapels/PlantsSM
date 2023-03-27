@@ -44,6 +44,22 @@ class NLFEncoder(FeaturesGenerator):
         """
         return self
 
+    def _fit_batch(self, dataset: Dataset, instance_type: str) -> 'NLFEncoder':
+        """
+        Fit the transformer to the data.
+
+        Parameters
+        ----------
+        dataset: Dataset
+            The input data.
+
+        Returns
+        -------
+        NLFEncoder: The fitted transformer.
+
+        """
+        return self
+
     def _featurize(self, sequence: str) -> np.ndarray:
         """
         Encode a single sequence.

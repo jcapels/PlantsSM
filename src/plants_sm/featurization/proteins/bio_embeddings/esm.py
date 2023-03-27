@@ -58,6 +58,10 @@ class ESMEncoder(Transformer):
         else:
             raise ValueError(f"Invalid esm_function. Available functions are: {list(ESM_DIMENSIONS.keys())}")
 
+    def _fit_batch(self, dataset: Dataset, instance_type: str) -> 'ESMEncoder':
+
+        return self._fit(dataset, instance_type)
+
     @call_set_features_names
     def _transform(self, dataset: Dataset, instance_type: str) -> Dataset:
         """

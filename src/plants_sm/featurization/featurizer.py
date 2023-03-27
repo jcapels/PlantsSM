@@ -36,6 +36,16 @@ class FeaturesGenerator(Transformer):
             dataset to fit the transformer where instances are the representation or object to be processed.
         """
 
+    def _fit_batch(self, dataset: Dataset, instance_type: str) -> 'FeaturesGenerator':
+        """
+        Abstract method that has to be implemented by all feature generators
+
+        Parameters
+        ----------
+        dataset: Dataset
+            dataset to fit the transformer where instances are the representation or object to be processed.
+        """
+
     @call_set_features_names
     def _transform(self, dataset: Dataset, instance_type: str) -> Dataset:
         """

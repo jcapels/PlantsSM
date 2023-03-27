@@ -55,6 +55,24 @@ class Word2Vec(FeaturesGenerator):
 
         return self
 
+    def _fit_batch(self, dataset: Dataset, instance_type: str) -> 'Word2Vec':
+        """
+        Fit the feature generator to the dataset
+
+        Parameters
+        ----------
+        dataset: Dataset
+            dataset to fit the transformer where instances are the representation or object to be processed.
+        instance_type: str
+            type of the instances to be featurized
+
+        Returns
+        -------
+        self: Estimator
+            the fitted FeaturesGenerator
+        """
+        return self._fit(dataset, instance_type)
+
     def _featurize(self, sequence: str) -> np.ndarray:
         """
         The method _featurize will generate the desired features for a given protein sequence

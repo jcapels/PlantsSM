@@ -24,9 +24,40 @@ class Encoder(FeaturesGenerator):
         maximum length of the sequences
 
     """
-    alphabet: Union[Set[str], str] = []
+    alphabet: Union[Set[str], str] = set()
     tokenizer: Tokenizer = None
     max_length: int = None
+    tokens: dict = {}
+    _max_length_set: bool = False
+    _alphabet_set: bool = False
+
+    def __init__(self, alphabet: Union[Set[str], str] = None, tokenizer: Tokenizer = None, max_length: int = None):
+        """
+        Abstract method that has to be implemented by all encoders to set the tokens.
+
+        Parameters
+        ----------
+
+        alphabet: Set[str]
+            alphabet of the dataset
+        tokenizer: Tokenizer
+            tokenizer used to tokenize the sequences
+        max_length: int
+            maximum length of the sequences
+        """
+        super().__init__()
+        if alphabet is None:
+            alphabet = set()
+        else:
+            self._alphabet_set = True
+
+        self.alphabet = alphabet
+        self.tokenizer = tokenizer
+
+        if max_length is not None:
+            self._max_length_set = True
+
+        self.max_length = max_length
 
     def set_features_names(self):
         """
@@ -35,7 +66,7 @@ class Encoder(FeaturesGenerator):
         for i, token in enumerate(set(self.alphabet)):
             self.features_names.append(token)
 
-    def _fit(self, dataset: Dataset, instance_type: str) -> 'Encoder':
+    def _fit_batch(self, dataset: Dataset, instance_type: str) -> 'Encoder':
         """
         Fit the Encoder with the alphabet of the dataset.
 
@@ -52,8 +83,60 @@ class Encoder(FeaturesGenerator):
 
         self.tokens = {}
         lengths = []
-        if not self.alphabet:
-            self.alphabet = set()
+        if len(self.alphabet) == 0:
+            sequences = list(dataset.get_instances(instance_type).values())
+            for sequence in sequences:
+                if self.tokenizer:
+                    tokenized_sequence = self.tokenizer.tokenize(sequence)
+                else:
+                    tokenized_sequence = copy(sequence)
+                lengths.append(len(tokenized_sequence))
+                for char in tokenized_sequence:
+                    self.alphabet.add(char)
+        else:
+            if not self.max_length:
+                sequences = list(dataset.get_instances(instance_type).values())
+                self.max_length = max([len(sequence) for sequence in sequences])
+            elif not self._max_length_set:
+                sequences = list(dataset.get_instances(instance_type).values())
+                max_length = max([len(sequence) for sequence in sequences])
+                if max_length > self.max_length:
+                    self.max_length = max_length
+
+            if self._alphabet_set:
+                if isinstance(self.alphabet, str):
+                    self.alphabet = set(list(self.alphabet))
+            else:
+                letters = list(self.alphabet)
+                for letter in letters:
+                    self.alphabet.add(letter)
+
+        if not self.max_length:
+            self.max_length = max(lengths)
+
+        for i, token in enumerate(self.alphabet):
+            self._set_tokens(i, token)
+
+        return self
+
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'Encoder':
+        """
+        Fit the Encoder with the alphabet of the dataset.
+
+        Parameters
+        ----------
+        dataset: Dataset
+            dataset to fit the transformer where instances are the representation or object to be processed.
+        instance_type: str
+            type of the instances to be transformed
+
+        Returns
+        -------
+        self: OneHotEncoder
+            fitted OneHotEncoder
+        """
+        lengths = []
+        if len(self.alphabet) == 0:
             sequences = list(dataset.get_instances(instance_type).values())
             for sequence in sequences:
                 if self.tokenizer:

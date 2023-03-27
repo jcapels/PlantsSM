@@ -10,7 +10,6 @@ from plants_sm.mixins.mixins import PickleMixin
 
 
 class Estimator(BaseModel, PickleMixin):
-
     _fitted: bool = False
 
     class Config:
@@ -50,14 +49,50 @@ class Estimator(BaseModel, PickleMixin):
     def _fit(self, dataset: Dataset, instance_type: str) -> 'Estimator':
         raise NotImplementedError
 
+    @abstractmethod
+    def _fit_batch(self, dataset: Dataset, instance_type: str) -> 'Estimator':
+        raise NotImplementedError
+
     @fit_status
     def fit(self, dataset: Dataset, instance_type: str = None) -> 'Estimator':
 
-        if instance_type is None and isinstance(dataset, SingleInputDataset):
-            self._fit(dataset, PLACEHOLDER_FIELD)
-        elif isinstance(dataset, SingleInputDataset):
-            self._fit(dataset, PLACEHOLDER_FIELD)
+        if dataset.batch_size is not None:
+            batch = dataset.next_batch()
+            while batch is not None:
+                self._fit_dataset(batch, instance_type, batch=True)
+                batch = dataset.next_batch()
         else:
-            self._fit(dataset, instance_type)
+            self._fit_dataset(dataset, instance_type)
+
+        return self
+
+    def _fit_dataset(self, dataset: Dataset, instance_type: str = None, batch=False) -> 'Estimator':
+        """
+        Fit the estimator on the dataset
+
+        Parameters
+        ----------
+        dataset: Dataset
+            dataset to fit the estimator on
+        instance_type: str
+            type of the instances to fit. If None, it will only fit instances
+
+        Returns
+        -------
+        fitted_estimator: Estimator
+            fitted estimator
+        """
+
+        if batch:
+            function = self._fit_batch
+        else:
+            function = self._fit
+
+        if instance_type is None and isinstance(dataset, SingleInputDataset):
+            function(dataset, PLACEHOLDER_FIELD)
+        elif isinstance(dataset, SingleInputDataset):
+            function(dataset, PLACEHOLDER_FIELD)
+        else:
+            function(dataset, instance_type)
 
         return self

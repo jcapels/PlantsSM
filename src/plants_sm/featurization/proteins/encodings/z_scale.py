@@ -28,6 +28,9 @@ class ZScaleEncoder(FeaturesGenerator):
     def _fit(self, dataset: Dataset, instance_type: str) -> 'ZScaleEncoder':
         return self
 
+    def _fit_batch(self, dataset: Dataset, instance_type: str) -> 'ZScaleEncoder':
+        return self
+
     def _featurize(self, sequence: str) -> np.ndarray:
         """
         It encodes a protein sequence with the ZScale encoding.

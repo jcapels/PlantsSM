@@ -7,6 +7,7 @@ from pandas import read_csv
 from plants_sm.design_patterns.observer import Observer, Subject
 from plants_sm.io import CSVWriter, write_csv, CSVReader
 from plants_sm.io.json import JSONWriter, write_json, read_json
+from plants_sm.io.pickle import PickleReader, PickleWriter, write_pickle, read_pickle
 
 
 class BatchManager(Observer):
@@ -36,7 +37,7 @@ class BatchManager(Observer):
         """
         Resets the counter.
         """
-        self.counter = self.batch_size
+        self.counter = 0
 
     def update(self, subject: Subject, **kwargs) -> None:
         """
@@ -52,8 +53,13 @@ class BatchManager(Observer):
             self.counter += self.batch_size
 
         elif kwargs["function"] == "next_batch":
-            subject._batch_state = self.read_intermediate_files(subject)
-            self.counter += self.batch_size
+            if self.counter == 0:
+                self.counter += self.batch_size
+                subject._batch_state = self.read_intermediate_files(subject)
+            else:
+                self.write_intermediate_files()
+                self.counter += self.batch_size
+                subject._batch_state = self.read_intermediate_files(subject)
 
     def register_class(self, cls, variables_to_save: List[Tuple[str, str]] = None):
         """
@@ -91,6 +97,13 @@ class BatchManager(Observer):
                 variable = getattr(self._cls, variable_name)
                 if variable is not None:
                     write_csv(file_path, variable)
+            elif variable_format in PickleWriter.file_types():
+                file_path = os.path.join(self.temporary_folder.name, str(self.counter),
+                                         f"{variable_name}.pkl")
+
+                variable = getattr(self._cls, variable_name)
+                if variable is not None:
+                    write_pickle(file_path, variable)
 
     def read_intermediate_files(self, subject: Subject) -> bool:
         """
@@ -126,6 +139,14 @@ class BatchManager(Observer):
                 variable = getattr(self._cls, variable_name)
                 if variable is not None:
                     _variable = read_csv(file_path)
+                    setattr(subject, variable_name, _variable)
+            elif variable_format in PickleReader.file_types():
+                file_path = os.path.join(self.temporary_folder.name, str(self.counter),
+                                         f"{variable_name}.pkl")
+
+                variable = getattr(self._cls, variable_name)
+                if variable is not None:
+                    _variable = read_pickle(file_path)
                     setattr(subject, variable_name, _variable)
 
         return True

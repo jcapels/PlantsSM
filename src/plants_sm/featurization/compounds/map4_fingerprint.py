@@ -18,6 +18,9 @@ class MAP4Fingerprint(FeaturesGenerator):
         self.fingerprint = MAP4Calculator(self.dimensions, self.radius, self.is_counted, True)
         return self
 
+    def _fit_batch(self, dataset: Dataset, instance_type: str) -> 'FeaturesGenerator':
+        return self._fit(dataset, instance_type)
+
     def _featurize(self, molecule: str) -> np.ndarray:
         mol = MolFromSmiles(molecule)
         map4_fingerprint = self.fingerprint.calculate(mol)

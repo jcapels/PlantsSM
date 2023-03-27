@@ -104,16 +104,16 @@ def read_pickle(path: str) -> Any:
     return PickleReader(path).read()
 
 
-def write_pickle(object_to_be_written: Any, path: str) -> bool:
+def write_pickle(path: str, object_to_be_written: Any) -> bool:
     """
     Writes an object into a pickle file.
 
     Parameters
     ----------
-    object_to_be_written: Any
-        The object to be written.
     path: str
         The path to the pickle file.
+    object_to_be_written: Any
+        The object to be written.
 
     Returns
     -------
