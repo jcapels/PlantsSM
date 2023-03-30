@@ -150,7 +150,9 @@ class CSVMixin:
             return df
 
         else:
-            for batch in read_csv(file_path, chunksize=batch_size, iterator=True, **kwargs):
+            for batch in read_csv(file_path, chunksize=batch_size, iterator=True,
+                                  get_buffer=False,
+                                  **kwargs):
                 yield batch
 
     @classmethod

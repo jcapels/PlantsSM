@@ -381,18 +381,3 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             instances = self.dataframe.loc[:, self.representation_field].values
             self._instances = {PLACEHOLDER_FIELD: dict(zip(identifiers_series.values, instances))}
             self.dataframe.drop(self.representation_field, axis=1, inplace=True)
-
-    def _set_dataframe(self, value: Any):
-        """
-        Private method to set the dataframe.
-        Parameters
-        ----------
-        value: Any
-            dataframe to be set, it can be in pd.DataFrame format, but can also be a List or Dictionary
-            (it can be specific for each data type)
-        """
-        if isinstance(value, pd.DataFrame) or value is None:
-            self._dataframe = value
-        else:
-            raise TypeError("It seems that the type of your input is not a pandas DataFrame."
-                            "The type of the dataframe should be a pandas DataFrame")

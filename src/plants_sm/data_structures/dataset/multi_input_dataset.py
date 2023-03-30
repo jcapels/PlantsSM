@@ -1,5 +1,5 @@
 from cached_property import cached_property
-from typing import List, Any, Union, Dict
+from typing import List, Any, Union, Dict, Iterable
 
 import numpy as np
 import pandas as pd
@@ -21,7 +21,8 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
 
     def __init__(self, dataframe: Any = None, representation_fields: Dict[str, Union[str, int]] = None,
                  labels_field: Union[str, List[Union[str, int]]] = None,
-                 instances_ids_field: Dict[str, Union[str, int]] = None):
+                 instances_ids_field: Dict[str, Union[str, int]] = None,
+                 batch_size: int = None):
         """
         Constructor
         Parameters
@@ -34,19 +35,21 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
             labels column field
         instances_ids_field: str | List[str | int] (optional)
             instances column field
+        batch_size: int (optional)
+            the size of the batches
         """
 
         # the features fields is a list of fields that are used to extract the features
         # however, they can be both strings or integers, so we need to check the type of the field
         # and convert it to a list of strings
-        super().__init__()
+        super().__init__(batch_size=batch_size)
         if dataframe is not None:
             self._features = {}
             self.instances_ids_field = instances_ids_field
 
             # the dataframe setter will derive the instance ids field if it is None
             # and also will try to set the features names
-            self._dataframe = dataframe
+            self.dataframe = dataframe
 
             self.representation_field = representation_fields
 
@@ -60,7 +63,9 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
             else:
                 self._labels = None
 
-            self.set_instances_and_ids()
+            if self.batch_size is not None:
+                while next(self):
+                    pass
 
     @property
     def dataframe(self) -> Any:
@@ -73,24 +78,28 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
     @classmethod
     def from_csv(cls, file_path: FilePathOrBuffer, representation_fields: Dict[str, Union[str, int]] = None,
                  labels_field: Union[str, List[Union[str, int]]] = None,
-                 instances_ids_field: Dict[str, Union[str, int]] = None, **kwargs) -> 'MultiInputDataset':
+                 instances_ids_field: Dict[str, Union[str, int]] = None,
+                 batch_size: Union[None, int] = None,
+                 **kwargs) -> 'MultiInputDataset':
 
-        instance = cls()
-        dataframe = instance._from_csv(file_path, **kwargs)
+        dataframe = cls._from_csv(file_path, batch_size, **kwargs)
         dataset = MultiInputDataset(dataframe, representation_fields,
-                                    labels_field, instances_ids_field)
+                                    labels_field, instances_ids_field,
+                                    batch_size=batch_size)
         return dataset
 
     @classmethod
     def from_excel(cls, file_path: FilePathOrBuffer,
                    representation_fields: Dict[str, Union[str, int]] = None,
                    labels_field: Union[str, List[Union[str, int]]] = None,
-                   instances_ids_field: Dict[str, Union[str, int]] = None, **kwargs) -> 'MultiInputDataset':
+                   instances_ids_field: Dict[str, Union[str, int]] = None,
+                   batch_size: Union[None, int] = None, **kwargs) -> 'MultiInputDataset':
 
         instance = cls()
         dataframe = instance._from_excel(file_path, **kwargs)
         dataset = MultiInputDataset(dataframe, representation_fields,
-                                    labels_field, instances_ids_field)
+                                    labels_field, instances_ids_field,
+                                    batch_size=batch_size)
         return dataset
 
     @property
@@ -115,6 +124,42 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
     def get_instances(self, instance_type: str = None):
         return self._instances[instance_type]
 
+    @dataframe.setter
+    def dataframe(self, value: Any):
+        """
+        Setter of the property. It verified the type of the value inputted.
+        Parameters
+        ----------
+        value: Any
+            dataframe to be set, it can be in pd.DataFrame format, but can also be a List or Dictionary
+            (it can be specific for each data type)
+        Returns
+        -------
+        """
+        self.set_dataframe(value)
+
+    def set_dataframe(self, value: Any):
+        """
+        Just a private method to verify the true type of the dataframe according to the type of dataset.
+
+        Parameters
+        ----------
+        value: Any
+            dataframe to be set, it can be in pd.DataFrame format, but can also be a List or Dictionary
+            (it can be specific for each data type)
+        Returns
+        -------
+        """
+        if value is not None:
+            go = isinstance(value, Iterable) and not isinstance(value, pd.DataFrame) and self.batch_size is not None
+            if go:
+                # accounting on generators for batch reading
+                self._dataframe_generator = value
+                value = next(self._dataframe_generator)
+
+            self._set_dataframe(value)
+            self.set_instances_and_ids()
+
     def set_instances_and_ids(self):
         self._instances = {}
         instance_types = []
@@ -128,9 +173,9 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
             self._instances[instance_type] = dict(zip(identifiers, instances))
             instance_types.append(instance_type)
 
-        for id_type, _ in self.instances_ids_field.items():
-            if id_type not in instance_types:
-                self.dataframe.set_index(self.instances_ids_field[id_type], inplace=True)
+        # for id_type, _ in self.instances_ids_field.items():
+        #     if id_type not in instance_types:
+        #         self.dataframe.set_index(self.instances_ids_field[id_type], inplace=True)
 
         self.dataframe.drop(list(self.representation_field.values()), axis=1, inplace=True)
 

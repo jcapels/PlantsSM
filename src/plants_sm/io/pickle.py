@@ -5,6 +5,8 @@ from plants_sm.io.commons import FilePathOrBuffer
 from plants_sm.io.reader import Reader
 from plants_sm.io.writer import Writer
 
+import tracemalloc
+
 
 class PickleReader(Reader):
 
@@ -40,7 +42,9 @@ class PickleReader(Reader):
         -------
 
         """
-        return pickle.load(self.buffer)
+        pickled_object = pickle.load(self.buffer)
+        self.close_buffer()
+        return pickled_object
 
 
 class PickleWriter(Writer):
@@ -84,6 +88,7 @@ class PickleWriter(Writer):
             True if the file was written successfully, False otherwise.
         """
         pickle.dump(object_to_be_written, self.buffer)
+        self.close_buffer()
         return True
 
 
@@ -101,7 +106,9 @@ def read_pickle(path: str) -> Any:
     Any
         The object that was saved in the pickle file.
     """
-    return PickleReader(path).read()
+    reader = PickleReader(path)
+    pickled_object = reader.read()
+    return pickled_object
 
 
 def write_pickle(path: str, object_to_be_written: Any) -> bool:
@@ -120,6 +127,7 @@ def write_pickle(path: str, object_to_be_written: Any) -> bool:
     bool
         True if the file was written successfully, False otherwise.
     """
+    tracemalloc.start()
     return PickleWriter(path).write(object_to_be_written)
 
 

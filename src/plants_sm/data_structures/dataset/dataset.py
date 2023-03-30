@@ -2,6 +2,7 @@ from abc import abstractmethod
 from typing import Any, Dict, Union, Iterable
 
 import numpy as np
+import pandas as pd
 from cached_property import cached_property
 
 from plants_sm.data_structures.dataset.batch_manager.batch_manager import BatchManager
@@ -57,12 +58,9 @@ class Dataset(ConcreteSubject, PickleMixin):
 
             try:
                 df = next(self._dataframe_generator)
-            except ValueError as e:
-                if e.args[0] == "I/O operation on closed file.":
-                    self.end()
-                    return False
-                else:
-                    raise e
+            except StopIteration:
+                self.end()
+                return False
 
             self.dataframe = df
 
@@ -206,3 +204,18 @@ class Dataset(ConcreteSubject, PickleMixin):
         """
         Returns the instances of the dataset.
         """
+
+    def _set_dataframe(self, value: Any):
+        """
+        Private method to set the dataframe.
+        Parameters
+        ----------
+        value: Any
+            dataframe to be set, it can be in pd.DataFrame format, but can also be a List or Dictionary
+            (it can be specific for each data type)
+        """
+        if isinstance(value, pd.DataFrame) or value is None:
+            self._dataframe = value
+        else:
+            raise TypeError("It seems that the type of your input is not a pandas DataFrame."
+                            "The type of the dataframe should be a pandas DataFrame")
