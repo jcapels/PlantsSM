@@ -17,10 +17,9 @@ class Dataset(ConcreteSubject, PickleMixin):
     _batch_state: bool = True
     variables_to_save = [
         ("_dataframe", "csv"),
-        ("_instances", "json"),
-        ("identifiers", "json"),
-        ("features", "pkl"),
-        ("labels", "csv")
+        ("_instances", "pkl"),
+        ("identifiers", "pkl"),
+        ("_features", "pkl"),
     ]
 
     def __init__(self, batch_size: Union[int, None] = None):

@@ -1,8 +1,7 @@
 import os.path
-import pickle
 import re
 from abc import abstractmethod
-from typing import Any, Union
+from typing import Any, Union, Iterable
 
 import pandas as pd
 
@@ -130,6 +129,28 @@ class CSVMixin:
             raise NotImplementedError("This method is not implemented for this type of object")
 
     @staticmethod
+    def retrieve_a_generator(file_path, batch_size, **kwargs) -> Iterable:
+        """
+        Method to retrieve a generator from a csv file.
+
+        Parameters
+        ----------
+        file_path: FilePathOrBuffer
+            path to the file where the dataframe will be imported.
+        batch_size: Union[None, int]
+            size of the batch to be read from the csv file.
+        kwargs: dict
+            arguments to be passed to the read_csv method.
+
+        Returns
+        -------
+        Iterable: generator that will return the batches of the dataframe.
+        """
+        gen = read_csv(file_path, chunksize=batch_size, iterator=True, get_buffer=False, **kwargs)
+        for batch in gen:
+            yield batch
+
+    @staticmethod
     def _from_csv(file_path: FilePathOrBuffer, batch_size: Union[None, int] = None, **kwargs) -> Any:
         """
         Method to import the dataframe from csv.
@@ -141,7 +162,6 @@ class CSVMixin:
         batch_size: Union[None, int]
             size of the batch to be read from the csv file.
         """
-
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File {file_path} does not exist.")
 
@@ -150,10 +170,7 @@ class CSVMixin:
             return df
 
         else:
-            for batch in read_csv(file_path, chunksize=batch_size, iterator=True,
-                                  get_buffer=False,
-                                  **kwargs):
-                yield batch
+            return CSVMixin.retrieve_a_generator(file_path, batch_size, **kwargs)
 
     @classmethod
     def from_csv(cls, file_path: FilePathOrBuffer, **kwargs) -> 'CSVMixin':
@@ -241,6 +258,7 @@ class ExcelMixin:
         else:
             for batch in read_excel(file_path, chunksize=batch_size):
                 yield batch
+                return
 
     @classmethod
     def from_excel(cls, file_path: FilePathOrBuffer, **kwargs) -> 'ExcelMixin':

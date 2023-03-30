@@ -16,7 +16,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
     _features: Dict[str, Dict[str, np.ndarray]]
     _features_names: List[str]
     _dataframe: Any
-    _labels_names: List[str]
+    _labels_names: List[str] = None
     _instances: Dict[str, dict]
     _features_fields: Dict[str, Union[str, List[Union[str, int]], slice]]
 
@@ -69,13 +69,9 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
 
             if labels_field is not None:
                 if not isinstance(labels_field, List):
-                    self.labels_names = [labels_field]
+                    self._labels_names = [labels_field]
                 else:
-                    self.labels_names = labels_field
-
-                self._labels = self.dataframe.loc[:, self.labels_names].T.to_dict('list')
-            else:
-                self._labels = None
+                    self._labels_names = labels_field
 
             if self._features_fields:
                 self._features = \
@@ -245,21 +241,8 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         -------
         Labels for training and prediction. ALIASES: y vector with labels for classification and regression.
         """
-        return self._labels
-
-    @labels.setter
-    def labels(self, value: Dict[str, Any]):
-        """
-        Setter for the labels.
-        Parameters
-        ----------
-        value: Dict[str, Any]
-            dictionary of labels
-        """
-        if isinstance(value, Dict):
-            self._labels = value
-        else:
-            raise TypeError("Labels should be a dictionary.")
+        if self._labels_names is not None:
+            return self.dataframe.loc[:, self._labels_names].T.to_dict('list')
 
     @cached_property
     def X(self) -> np.ndarray:
@@ -273,6 +256,8 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         """
         Alias for the labels property.
         """
+        if not self._labels_names:
+            raise ValueError('Labels are not defined')
         return np.array(list(self.labels.values()))
 
     @property

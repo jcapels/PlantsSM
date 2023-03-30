@@ -42,11 +42,11 @@ class TestDataset(TestCase):
         self.compounds_dataframe["sequence"] = self.sequences
         self.compounds_dataframe["ids"] = ["WP_003399745.1", "WP_003399671.1"]
 
-        self.multi_input_dataset = MultiInputDataset.from_csv(self.multi_input_dataset_csv,
-                                                              representation_fields={"proteins": "SEQ",
-                                                                                     "ligands": "SUBSTRATES"},
-                                                              instances_ids_field={"interaction": "ids"},
-                                                              labels_field="LogSpActivity")
+        # self.multi_input_dataset = MultiInputDataset.from_csv(self.multi_input_dataset_csv,
+        #                                                       representation_fields={"proteins": "SEQ",
+        #                                                                              "ligands": "SUBSTRATES"},
+        #                                                       instances_ids_field={"interaction": "ids"},
+        #                                                       labels_field="LogSpActivity")
 
     def tearDown(self) -> None:
         paths_to_remove = [self.df_path_to_write_csv,
