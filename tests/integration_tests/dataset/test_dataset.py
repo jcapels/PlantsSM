@@ -5,6 +5,8 @@ import pandas as pd
 
 from plants_sm.data_structures.dataset import SingleInputDataset
 from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputDataset
+from plants_sm.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
+from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
 from tests import TEST_DIR
 
 
@@ -59,6 +61,49 @@ class TestDataset(TestCase):
                                                                     representation_field="sequence",
                                                                     instances_ids_field="id",
                                                                     labels_field="y")
+
+    def test_read_single_input_and_write_to_csv(self):
+        """
+        Test the read and write to csv methods.
+        """
+
+        Word2Vec().fit_transform(self.multi_input_dataset, "proteins")
+        DeepMolDescriptors().fit_transform(self.multi_input_dataset, "ligands")
+
+        self.multi_input_dataset.to_csv("test.csv", index=False)
+
+        written_dataset = pd.read_csv("test.csv")
+
+        actual_dataset = pd.read_csv(self.multi_input_dataset_csv)
+
+        self.assertTrue(written_dataset.SEQ.equals(actual_dataset.SEQ))
+        self.assertTrue("word2vec_511" in list(written_dataset.columns))
+
+        # remove the file
+        os.remove("test.csv")
+
+    def test_read_multi_input_and_write_to_csv(self):
+        """
+        Test the read and write to csv methods.
+        """
+
+        dataset = SingleInputDataset.from_csv(self.multi_input_dataset_csv, representation_field="sequence",
+                                              instances_ids_field="id",
+                                              labels_field="y")
+
+        Word2Vec().fit_transform(dataset)
+
+        dataset.to_csv("test.csv", index=False)
+
+        written_dataset = pd.read_csv("test.csv")
+
+        actual_dataset = pd.read_csv(self.single_input_dataset_csv)
+
+        self.assertTrue(written_dataset.sequence.equals(actual_dataset.sequence))
+        self.assertTrue("word2vec_511" in list(written_dataset.columns))
+
+        # remove the file
+        os.remove("test.csv")
 
     def tearDown(self) -> None:
         paths_to_remove = [self.df_path_to_write_csv,

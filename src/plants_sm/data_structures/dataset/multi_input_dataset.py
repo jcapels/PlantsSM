@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from plants_sm.data_structures.dataset import Dataset
+from plants_sm.io import write_csv
 from plants_sm.io.commons import FilePathOrBuffer
 from plants_sm.mixins.mixins import CSVMixin, ExcelMixin
 
@@ -256,7 +257,7 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
 
         self.__dict__.pop('X', None)
 
-    def to_csv(self, file_path: FilePathOrBuffer, **kwargs) -> bool:
+    def to_csv(self, file_path: FilePathOrBuffer, **kwargs):
         """
         Saves the dataset to a csv file
         Parameters
@@ -272,8 +273,9 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
         """
         new_dataframe = self.dataframe.copy()
         for instance_type in self.instances.keys():
-            new_dataframe.loc[:, instance_type] = new_dataframe.loc[:, instance_type].map(dict(zip(self.identifiers,
-                                                                                                   self.identifiers)))
+            for instance_id, instance in self.instances[instance_type].items():
+                index = new_dataframe[new_dataframe[self.instances_ids_field[instance_type]] == instance_id].index
+                new_dataframe.loc[index, self.representation_field[instance_type]] = instance
         try:
             instances = self.X.keys()
         except ValueError:
@@ -284,10 +286,7 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
                 instance_features = self.X[instance]
                 new_dataframe.loc[:, self._features_fields[instance]] = instance_features
 
-        if self._labels_names is not None:
-            new_dataframe.loc[:, self._labels_names] = self.y
-
-        new_dataframe.to_csv(file_path, **kwargs)
+        write_csv(file_path, new_dataframe, **kwargs)
 
     @cached_property
     def X(self):

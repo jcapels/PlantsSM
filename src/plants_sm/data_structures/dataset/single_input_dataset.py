@@ -6,6 +6,7 @@ from cached_property import cached_property
 from pandas import Series
 
 from plants_sm.data_structures.dataset.dataset import Dataset
+from plants_sm.io import write_csv
 from plants_sm.io.commons import FilePathOrBuffer
 from plants_sm.mixins.mixins import CSVMixin, ExcelMixin
 
@@ -61,7 +62,6 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             # setter
             self.instances_ids_field = instances_ids_field
 
-            self.representation_fields = {PLACEHOLDER_FIELD: representation_field}
             self.representation_field = representation_field
 
             # the dataframe setter will derive the instance ids field if it is None
@@ -126,6 +126,36 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                                      instances_ids_field,
                                      batch_size=batch_size)
         return dataset
+
+    def to_csv(self, file_path: FilePathOrBuffer, **kwargs):
+        """
+        Method to write the dataset to a csv file.
+
+        Parameters
+        ----------
+        file_path: FilePathOrBuffer
+            path to the csv file
+        kwargs:
+            additional arguments for the pandas to_csv method
+
+        Returns
+        -------
+        success: bool
+            True if the file was written successfully, False otherwise
+        """
+
+        new_dataframe = self.dataframe.copy()
+        # merge per ids the features and the labels
+        for instance_id, instance in self.instances[PLACEHOLDER_FIELD].items():
+            index = new_dataframe[new_dataframe[self.instances_ids_field] == instance_id].index
+            new_dataframe.loc[index, self.representation_field] = instance
+
+        if self.features:
+            for instance_id, features in self.features[PLACEHOLDER_FIELD].items():
+                index = new_dataframe[new_dataframe[self.instances_ids_field] == instance_id].index
+                new_dataframe.loc[index, self.features_fields[PLACEHOLDER_FIELD]] = features
+
+        write_csv(file_path, new_dataframe, **kwargs)
 
     @classmethod
     def from_excel(cls, file_path: FilePathOrBuffer, representation_field: str = None,
