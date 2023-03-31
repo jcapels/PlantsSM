@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union, IO, AnyStr, TextIO
+from typing import Any, Dict, List, Union, IO, TextIO
 
 import dask
 from yaml import CLoader as Loader, safe_load

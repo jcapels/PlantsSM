@@ -21,8 +21,8 @@ class SequencePadder(Transformer):
     padding: str = "left"
     _pad_width_set: bool = False
 
-    def __init__(self, pad_width: int = None, padding: str = "left"):
-        super().__init__()
+    def __init__(self, pad_width: int = None, padding: str = "left", **kwargs):
+        super().__init__(**kwargs)
         if pad_width is not None:
             self._pad_width_set = True
         self.pad_width = pad_width

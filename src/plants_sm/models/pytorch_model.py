@@ -157,7 +157,7 @@ class PyTorchModel(Model):
         """
         weights_path = os.path.join(path, FileConstants.PYTORCH_MODEL_WEIGHTS.value)
         torch.save(model.state_dict(), weights_path)
-        write_pickle(model, os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value))
+        write_pickle(os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value), model)
 
     def _save(self, path: str):
         """
@@ -260,7 +260,7 @@ class PyTorchModel(Model):
         """
         self.model.eval()
         loss_total = 0
-        predictions, actuals = np.empty(shape=(0,)), np.empty(shape=(0,))
+        predictions, actuals = np.empty(shape=(0, 1)), np.empty(shape=(0, 1))
         len_valid_dataset = len(validation_set)
         with torch.no_grad():
             for i, inputs_targets in enumerate(validation_set):
@@ -374,16 +374,17 @@ class PyTorchModel(Model):
 
         self.logger.info("starting to fit the data...")
 
-        train_dataset = self._preprocess_data(train_dataset)
-        if validation_dataset:
-            validation_dataset = self._preprocess_data(validation_dataset)
+        if train_dataset.batch_size is None:
+            train_dataset = self._preprocess_data(train_dataset)
+            if validation_dataset:
+                validation_dataset = self._preprocess_data(validation_dataset)
 
         len_train_dataset = len(train_dataset)
 
         for epoch in range(1, self.epochs + 1):
             self.model.train()
             loss_total = 0
-            predictions, actuals = np.empty(shape=(0,)), np.empty(shape=(0,))
+            predictions, actuals = np.empty(shape=(0, 1)), np.empty(shape=(0, 1))
             for i, inputs_targets in enumerate(train_dataset):
                 actual, yhat, loss = self._train(inputs_targets)
 
@@ -459,6 +460,7 @@ class PyTorchModel(Model):
                 y_pred = np.argmax(y_pred_proba, axis=1)
                 return y_pred
 
+        y_pred = array_reshape(y_pred)
         return y_pred
 
     def _predict_proba(self, dataset: Dataset) -> np.ndarray:
@@ -483,7 +485,7 @@ class PyTorchModel(Model):
             return y_pred
 
         self.model.eval()
-        predictions, actuals = np.empty(shape=(0,)), np.empty(shape=(0,))
+        predictions, actuals = np.empty(shape=(0, 1)), np.empty(shape=(0, 1))
 
         # the "shuffle" argument always has to be False in predicting probabilities in an evaluation context
 

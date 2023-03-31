@@ -18,6 +18,7 @@ class TestSequencePadding(TestCase):
         self.dataset.identifiers = ["0", "1"]
         self.dataset.instances_ids_field = "identifiers"
         self.dataset.features_fields = None
+        self.dataset.batch_size=None
         self.dataset.instances = {PLACEHOLDER_FIELD: {"0":
                                                           "MASXMLSLGSTSLLPREINKDKLKLGTSASNPFLKAKSFSRVTMTVAVKPSRFEGITMAPPDPILGVSEAFKADT"
                                                           "NGMKLNLGVGAYRTEELQPYVLNVVKKAENLMLERGDNKEYLPIEGLAAFNKATAELLFGAGHPVIKEQRVATIQG"

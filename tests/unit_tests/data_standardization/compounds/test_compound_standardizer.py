@@ -22,6 +22,7 @@ class TestStandardizer(TestCase):
                                                       "1":
                                                           "C1=CC=C(C=C1)C=O"
                                                       }}
+        self.dataset.batch_size = None
         self.dataset.dataframe["sequence"] = self.dataset.instances
 
     def test_standardizer(self):

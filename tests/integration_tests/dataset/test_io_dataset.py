@@ -14,7 +14,7 @@ class TestIODataset(TestDataset):
         self.assertEqual(list(dataset.get_instances().values())[0], 'Nc1nc(NC2CC2)c2ncn(C3C=CC(CO)C3)c2n1')
         self.assertIn(286.154209, dataset.y)
         self.assertEqual(dataset.representation_fields, {'place_holder': 'SMILES'})
-        self.assertEqual(dataset.labels_names, ["TargetedMZ"])
+        self.assertEqual(dataset._labels_names, ["TargetedMZ"])
 
     @skip("Not implemented yet")
     def test_write_excel_from_dataset(self):
@@ -28,7 +28,7 @@ class TestIODataset(TestDataset):
         self.assertEqual(list(dataset.get_instances().values())[0], 'Nc1nc(NC2CC2)c2ncn(C3C=CC(CO)C3)c2n1')
         self.assertIn(286.154209, dataset.y)
         self.assertEqual(dataset.representation_fields, "SMILES")
-        self.assertEqual(dataset.labels_names, ["TargetedMZ"])
+        self.assertEqual(dataset._labels_names, ["TargetedMZ"])
         with self.assertRaises(AttributeError):
             print(dataset.features)
 

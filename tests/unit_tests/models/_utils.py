@@ -19,7 +19,6 @@ class TestPytorchBaselineModel(nn.Module):
         x = self.fc1(x)
         x = self.fc2(x)
         y = torch.sigmoid(self.final_layer(x))
-        y = y.view(2, )
         return y
 
 

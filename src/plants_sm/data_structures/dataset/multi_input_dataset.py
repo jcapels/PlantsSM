@@ -45,6 +45,7 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
         super().__init__(batch_size=batch_size)
         if dataframe is not None:
             self._features = {}
+            self._labels = None
             self.instances_ids_field = instances_ids_field
             self.representation_field = representation_fields
 
@@ -107,6 +108,15 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
 
     @identifiers.setter
     def identifiers(self, value: List[Union[str, int]]):
+        """
+        Setter of the property. It verified the type of the value inputted.
+
+        Parameters
+        ----------
+        value: List[Union[str, int]]
+            identifiers to be set
+
+        """
         self._identifiers = value
 
     @property
@@ -159,6 +169,9 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
             self.set_instances_and_ids()
 
     def set_instances_and_ids(self):
+        """
+        Set the instances and the identifiers of the instances
+        """
         self._instances = {}
         instance_types = []
         for instance_type, instance_field in self.representation_field.items():
@@ -173,12 +186,13 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
             self._instances[instance_type] = dict(zip(identifiers, instances))
             instance_types.append(instance_type)
 
-        if not self.identifiers:
-            self.identifiers = []
-            for id_type, _ in self.instances_ids_field.items():
+        if self._identifiers is None:
+            _identifiers_ids = []
+            for id_type, ids_field in self.instances_ids_field.items():
                 if id_type not in instance_types:
-                    self.identifiers.append(id_type)
+                    _identifiers_ids.append(ids_field)
 
+            self._identifiers = self.dataframe.loc[:, _identifiers_ids].values
         self.dataframe.drop(list(self.representation_field.values()), axis=1, inplace=True)
 
     def generate_ids(self, instance_type):
@@ -242,12 +256,53 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
 
         self.__dict__.pop('X', None)
 
+    def to_csv(self, file_path: FilePathOrBuffer, **kwargs) -> bool:
+        """
+        Saves the dataset to a csv file
+        Parameters
+        ----------
+        file_path: FilePathOrBuffer
+            the path of the file
+        kwargs: dict
+            the arguments for the pandas.to_csv method
+        Returns
+        -------
+        bool
+            True if the operation is successful
+        """
+        new_dataframe = self.dataframe.copy()
+        for instance_type in self.instances.keys():
+            new_dataframe.loc[:, instance_type] = new_dataframe.loc[:, instance_type].map(dict(zip(self.identifiers,
+                                                                                                   self.identifiers)))
+        try:
+            instances = self.X.keys()
+        except ValueError:
+            instances = None
+
+        if self._features_fields is not None and instances is not None:
+            for instance in instances:
+                instance_features = self.X[instance]
+                new_dataframe.loc[:, self._features_fields[instance]] = instance_features
+
+        if self._labels_names is not None:
+            new_dataframe.loc[:, self._labels_names] = self.y
+
+        new_dataframe.to_csv(file_path, **kwargs)
+
     @cached_property
     def X(self):
+        """
+        Property for X. It should return the features of the dataset.
+
+        Returns
+        -------
+        Dict[str, np.ndarray]
+            the features, the key is the instance type and the value is the features
+        """
 
         res = {}
         feature_keys = self.features.keys()
-        for instance_type, instance in self.instances.items():  # probably 2 or a little bit more instances
+        for instance_type, instance in self.instances.items():  # probably 2 or a little more instances
             res[instance_type] = []
 
             if instance_type in feature_keys:
@@ -263,4 +318,4 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
     @property
     def y(self):
         if self.labels_names is not None:
-            return self.dataframe.loc[:, self.labels_names].values
+            return np.array(self.dataframe.loc[:, self.labels_names].values)

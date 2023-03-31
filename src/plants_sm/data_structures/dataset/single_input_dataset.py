@@ -19,6 +19,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
     _labels_names: List[str] = None
     _instances: Dict[str, dict]
     _features_fields: Dict[str, Union[str, List[Union[str, int]], slice]]
+    _identifiers: List[Union[str, int]] = None
 
     def __init__(self, dataframe: Any = None, representation_field: str = None,
                  features_fields: Union[str, List[Union[str, int]], slice] = None,
@@ -168,14 +169,14 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                                      batch_size=batch_size)
         return dataset
 
-    @cached_property
+    @property
     def identifiers(self) -> List[Union[str, int]]:
         """
         Property for identifiers. It should return the identifiers of the dataset.
         -------
         list of the identifiers: List[Union[str, int]]
         """
-        return self.dataframe.index.values.tolist()
+        return self._identifiers
 
     @property
     def features(self) -> Dict[str, Dict[str, np.ndarray]]:
@@ -361,8 +362,10 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
 
             self._dataframe = pd.concat((identifiers_series, self._dataframe), axis=1)
             self._dataframe["identifier"] = self._dataframe["identifier"].astype(str)
-            # self._dataframe.set_index("identifier", inplace=True)
+            self._identifiers = self._dataframe["identifier"].values
 
             instances = self.dataframe.loc[:, self.representation_field].values
             self._instances = {PLACEHOLDER_FIELD: dict(zip(identifiers_series.values, instances))}
             self.dataframe.drop(self.representation_field, axis=1, inplace=True)
+        else:
+            self._identifiers = self._dataframe[self.instances_ids_field].values

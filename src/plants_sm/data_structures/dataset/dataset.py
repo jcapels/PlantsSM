@@ -1,3 +1,4 @@
+
 from abc import abstractmethod
 from typing import Any, Dict, Union, Iterable
 
@@ -18,7 +19,7 @@ class Dataset(ConcreteSubject, PickleMixin):
     variables_to_save = [
         ("_dataframe", "csv"),
         ("_instances", "pkl"),
-        ("identifiers", "pkl"),
+        ("_identifiers", "pkl"),
         ("_features", "pkl"),
     ]
 

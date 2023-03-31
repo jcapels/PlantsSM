@@ -39,17 +39,17 @@ class ConcreteSubject(Subject):
     subscribers, is stored in this variable.
     """
 
-    _observers: List[Observer] = []
+    _observer: Observer = None
     """
     List of subscribers. In real life, the list of subscribers can be stored
     more comprehensively (categorized by event type, etc.).
     """
 
     def attach(self, observer: Observer) -> None:
-        self._observers.append(observer)
+        self._observer = observer
 
     def detach(self, observer: Observer) -> None:
-        self._observers.remove(observer)
+        self._observer = None
 
     """
     The subscription management methods.
@@ -60,12 +60,10 @@ class ConcreteSubject(Subject):
         Trigger an update in each subscriber.
         """
 
-        for observer in self._observers:
-            observer.update(self, **kwargs)
+        self._observer.update(self, **kwargs)
 
     def end(self):
-        for observer in self._observers:
-            observer.end()
+        self._observer.end()
 
 
 class Observer(ABC):

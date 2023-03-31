@@ -61,7 +61,7 @@ def write_model_parameters_to_pickle(model_parameters: dict, path: str) -> None:
         else:
             warning_str = f'Could not save {key} to save file. Skipping attribute {key}.'
             warnings.warn(warning_str)
-    write_pickle(parameters, os.path.join(path, FileConstants.MODEL_PARAMETERS_PKL.value))
+    write_pickle(os.path.join(path, FileConstants.MODEL_PARAMETERS_PKL.value), parameters)
 
 
 def array_from_tensor(tensor: Tensor) -> np.ndarray:
@@ -96,7 +96,7 @@ def array_reshape(array: np.ndarray) -> np.ndarray:
     np.ndarray
         The reshaped array.
     """
-    if array.shape[-1] == 1:
-        array = array.reshape(-1)
-
+    # Reshape array if necessary if it is a 1D array or if it is a 2D array with only 1 column
+    if len(array.shape) == 1 or (len(array.shape) == 2 and array.shape[1] == 1):
+        array = array.reshape(-1, 1)
     return array

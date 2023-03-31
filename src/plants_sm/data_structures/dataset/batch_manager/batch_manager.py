@@ -1,6 +1,8 @@
 import os
+import time
 from tempfile import TemporaryDirectory
 from typing import Union, List, Tuple
+import uuid
 
 from pandas import read_csv
 
@@ -24,7 +26,9 @@ class BatchManager(Observer):
         self._variables_to_save = None
         self._cls = None
         self.batch_size = batch_size
-        self.temporary_folder = TemporaryDirectory()
+        filename = str(uuid.uuid4().clock_seq)
+        folder = TemporaryDirectory(prefix=filename)
+        self.temporary_folder = folder
         self.counter = batch_size
 
     def __del__(self):

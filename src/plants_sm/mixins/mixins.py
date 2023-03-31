@@ -54,7 +54,7 @@ class PickleMixin:
         -------
         bool: True if the operation was successful, False otherwise.
         """
-        return write_pickle(self, file_path)
+        return write_pickle(file_path, self)
 
     @classmethod
     def from_pickle(cls, file_path: FilePathOrBuffer) -> 'PickleMixin':
@@ -129,7 +129,7 @@ class CSVMixin:
             raise NotImplementedError("This method is not implemented for this type of object")
 
     @staticmethod
-    def retrieve_a_generator(file_path, batch_size, **kwargs) -> Iterable:
+    def retrieve_a_generator(file_path: str, batch_size: Union[None, int], **kwargs) -> Iterable:
         """
         Method to retrieve a generator from a csv file.
 
@@ -238,6 +238,28 @@ class ExcelMixin:
             raise NotImplementedError("This method is not implemented for this type of object")
 
     @staticmethod
+    def retrieve_a_generator(file_path, batch_size, **kwargs) -> Iterable:
+        """
+        Method to retrieve a generator from a csv file.
+
+        Parameters
+        ----------
+        file_path: FilePathOrBuffer
+            path to the file where the dataframe will be imported.
+        batch_size: Union[None, int]
+            size of the batch to be read from the csv file.
+        kwargs: dict
+            arguments to be passed to the read_csv method.
+
+        Returns
+        -------
+        Iterable: generator that will return the batches of the dataframe.
+        """
+        gen = read_excel(file_path, chunksize=batch_size, iterator=True, get_buffer=False, **kwargs)
+        for batch in gen:
+            yield batch
+
+    @staticmethod
     def _from_excel(file_path: FilePathOrBuffer, batch_size=Union[None, int], **kwargs) -> Any:
         """
         Method to import the dataframe from excel.
@@ -256,9 +278,7 @@ class ExcelMixin:
             return df
 
         else:
-            for batch in read_excel(file_path, chunksize=batch_size):
-                yield batch
-                return
+            return ExcelMixin.retrieve_a_generator(file_path, batch_size, **kwargs)
 
     @classmethod
     def from_excel(cls, file_path: FilePathOrBuffer, **kwargs) -> 'ExcelMixin':

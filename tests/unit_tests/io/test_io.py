@@ -78,12 +78,11 @@ class TestIO(TestCase):
     def test_csv_reader(self):
         reader = CSVReader(self.test_read_csv)
         ddf = reader.read()
-        df = ddf.compute()
         reader.close_buffer()
 
-        self.assertEqual(df.shape, (100, 1026))
-        self.assertEqual(df.iloc[0, 0], 0.0)
-        self.assertEqual(reader.file_types, ['txt', 'csv', 'tsv'])
+        self.assertEqual(ddf.shape, (100, 1026))
+        self.assertEqual(ddf.iloc[0, 0], 0.0)
+        self.assertEqual(reader.file_types(), ['txt', 'csv', 'tsv'])
 
     def test_csv_writer(self):
         df = read_csv(self.test_read_csv)
@@ -106,7 +105,7 @@ class TestIO(TestCase):
 
         self.assertEqual(df.shape, (271, 117))
         self.assertEqual(df.iloc[0, 0], 'ABACAVIR SULFATE')
-        self.assertEqual(reader.file_types, ["xlsx"])
+        self.assertEqual(reader.file_types(), ["xlsx"])
 
     def test_excel_writer(self):
         df1 = read_excel(self.test_read_excel, sheet_name="DrugInfo")
@@ -166,7 +165,7 @@ class TestIO(TestCase):
         self.assertEqual(dataframe.shape, (0, 0))
 
     def test_pickle_writer(self):
-        write_pickle(pd.DataFrame(), self.test_write_pickle)
+        write_pickle(self.test_write_pickle, pd.DataFrame())
 
         dataframe = read_pickle(self.test_write_pickle)
         self.assertTrue(isinstance(dataframe, pd.DataFrame))
@@ -178,7 +177,7 @@ class TestIO(TestCase):
         self.assertEqual(config["test"], "test")
 
     def test_json_writer(self):
-        write_json({"test": "test"}, self.test_json_reader)
+        write_json(self.test_json_reader, {"test": "test"})
 
         config = read_json(self.test_json_reader)
         self.assertTrue(isinstance(config, dict))

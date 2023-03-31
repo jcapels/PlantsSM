@@ -26,10 +26,11 @@ class TestModels(TestCase):
         self.train_dataset.features_dataframe = DataFrame()
         self.train_dataset.representation_field = "sequence"
         self.train_dataset.identifiers = ["0", "1", "2", "3"]
-        self.train_dataset.y = np.array([0, 1, 0, 1])
+        self.train_dataset.y = np.array([0, 1, 0, 1]).reshape(-1, 1)
         self.train_dataset.instances_ids_field = "identifiers"
         self.train_dataset.features_fields = {}
         self.train_dataset.features = {}
+        self.train_dataset.batch_size = None
         self.train_dataset.get_instances.return_value = {"0":
                                                              "MASLMLSLGSTSLLPREINKDKLKLGTSASNPFLKAKSFSRVTMTVAVKPSRFEGITMAPPDPILGVSEAFKADT"
                                                              "NGMKLNLGVGAYRTEELQPYVLNVVKKAENLMLERGDNKEYLPIEGLAAFNKATAELLFGAGHPVIKEQRVATIQG"
@@ -67,9 +68,10 @@ class TestModels(TestCase):
         self.validation_dataset = MagicMock(spec=SingleInputDataset)
         self.validation_dataset.dataframe = DataFrame(columns=["sequence", "identifiers"])
         self.validation_dataset.features_dataframe = DataFrame()
+        self.validation_dataset.batch_size = None
         self.validation_dataset.representation_field = "sequence"
         self.validation_dataset.identifiers = ["0", "1", "2", "3"]
-        self.validation_dataset.y = np.array([0, 1, 0, 1])
+        self.validation_dataset.y = np.array([0, 1, 0, 1]).reshape(4, 1)
         self.validation_dataset.instances_ids_field = "identifiers"
         self.validation_dataset.features_fields = {}
         self.validation_dataset.features = {}

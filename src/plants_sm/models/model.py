@@ -223,5 +223,5 @@ class Model(metaclass=ABCMeta):
             os.makedirs(path)
             self._save(path)
 
-        write_json({"type": self.__class__.__name__}, os.path.join(path, 'model_type.json'))
+        write_json(os.path.join(path, 'model_type.json'), {"type": self.__class__.__name__})
 

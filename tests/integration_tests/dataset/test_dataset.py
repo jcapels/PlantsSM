@@ -3,6 +3,7 @@ from unittest import TestCase
 
 import pandas as pd
 
+from plants_sm.data_structures.dataset import SingleInputDataset
 from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputDataset
 from tests import TEST_DIR
 
@@ -13,6 +14,7 @@ class TestDataset(TestCase):
         self.excel_to_read = os.path.join(TEST_DIR, "data", "drug_list.xlsx")
         self.csv_to_read = os.path.join(TEST_DIR, "data", "proteins.csv")
         self.multi_input_dataset_csv = os.path.join(TEST_DIR, "data", "multi_input_dataset.csv")
+        self.single_input_dataset_csv = os.path.join(TEST_DIR, "data", "proteins.csv")
 
         self.df_path_to_write_csv = os.path.join(TEST_DIR, "data", "test.csv")
         self.df_path_to_write_xlsx = os.path.join(TEST_DIR, "data", "test.xlsx")
@@ -42,11 +44,16 @@ class TestDataset(TestCase):
         self.compounds_dataframe["sequence"] = self.sequences
         self.compounds_dataframe["ids"] = ["WP_003399745.1", "WP_003399671.1"]
 
-        # self.multi_input_dataset = MultiInputDataset.from_csv(self.multi_input_dataset_csv,
-        #                                                       representation_fields={"proteins": "SEQ",
-        #                                                                              "ligands": "SUBSTRATES"},
-        #                                                       instances_ids_field={"interaction": "ids"},
-        #                                                       labels_field="LogSpActivity")
+        self.multi_input_dataset = MultiInputDataset.from_csv(self.multi_input_dataset_csv,
+                                                              representation_fields={"proteins": "SEQ",
+                                                                                     "ligands": "SUBSTRATES"},
+                                                              instances_ids_field={"interaction": "ids"},
+                                                              labels_field="LogSpActivity")
+
+        self.single_input_dataset = SingleInputDataset.from_csv(self.single_input_dataset_csv,
+                                                                representation_field="sequence",
+                                                                instances_ids_field="id",
+                                                                labels_field="y")
 
     def tearDown(self) -> None:
         paths_to_remove = [self.df_path_to_write_csv,

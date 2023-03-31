@@ -1,5 +1,4 @@
 import os
-from unittest import TestCase
 
 import pandas as pd
 
@@ -24,7 +23,7 @@ class TestLoadInBatches(TestDataset):
 
         self.assertEqual(len(dataset.instances), 1)
 
-        temp_folder = dataset._observers[0].temporary_folder
+        temp_folder = dataset._observer.temporary_folder
         self.assertTrue(os.path.exists(temp_folder.name))
         print(os.listdir(temp_folder.name))
         for folder in os.listdir(temp_folder.name):
@@ -35,6 +34,22 @@ class TestLoadInBatches(TestDataset):
 
         while dataset.next_batch():
             print(dataset.instances[PLACEHOLDER_FIELD])
+
+    def test_creation_of_temporary_files(self):
+        dataset = SingleInputDataset.from_csv(os.path.join(TEST_DIR, "data", "proteins.csv"),
+                                              batch_size=2,
+                                              representation_field="sequence",
+                                              instances_ids_field="id")
+
+        dataset2 = MultiInputDataset.from_csv(self.multi_input_dataset_csv,
+                                              representation_fields={"proteins": "SEQ",
+                                                                     "ligands": "SUBSTRATES"},
+                                              instances_ids_field={"interaction": "ids"},
+                                              labels_field="LogSpActivity",
+                                              batch_size=2)
+        temp_folder2 = dataset2._observer.temporary_folder
+        temp_folder = dataset._observer.temporary_folder
+        self.assertNotEqual(temp_folder.name, temp_folder2.name)
 
     def test_load_in_batches_multi_dataset(self):
         batch_size = 2
@@ -47,17 +62,21 @@ class TestLoadInBatches(TestDataset):
 
         self.assertEqual(len(dataset.instances), 2)
 
-        temp_folder = dataset._observers[0].temporary_folder
+        temp_folder = dataset._observer.temporary_folder
         self.assertTrue(os.path.exists(temp_folder.name))
-        print(os.listdir(temp_folder.name))
         for folder in os.listdir(temp_folder.name):
             for file in os.listdir(os.path.join(temp_folder.name, folder)):
                 for variable_name, _ in dataset.variables_to_save:
                     if variable_name in file:
                         self.assertTrue(os.path.exists(os.path.join(temp_folder.name, folder, file)))
 
+        multi_input_dataset = pd.read_csv(self.multi_input_dataset_csv)
+        y = []
         while dataset.next_batch():
-            print(dataset.y)
+            y.extend(dataset.y)
+
+        for i, label in enumerate(y):
+            self.assertEqual(label, multi_input_dataset["LogSpActivity"][i])
 
     def test_load_in_batches_multi_dataset_with_padder(self):
         batch_size = 3

@@ -1,6 +1,5 @@
 from unittest import TestCase
 
-import numpy as np
 import pandas as pd
 
 from plants_sm.data_structures.dataset.single_input_dataset import SingleInputDataset, PLACEHOLDER_FIELD
@@ -21,7 +20,7 @@ class TestDataset(TestCase):
         dataset = SingleInputDataset(dataframe, representation_field='a', labels_field='c', features_fields='b')
         self.assertTrue(dataset.representation_fields[PLACEHOLDER_FIELD] == 'a')
         self.assertTrue(dataset._features_fields[PLACEHOLDER_FIELD] == ['b'])
-        self.assertTrue(dataset.labels_names == ['c'])
+        self.assertTrue(dataset._labels_names == ['c'])
         representation_fields = dataset.instances[PLACEHOLDER_FIELD].values()
         self.assertTrue(all(representation in representation_fields for representation in
                             ['representation2',
