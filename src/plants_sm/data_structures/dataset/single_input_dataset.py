@@ -1,3 +1,4 @@
+import warnings
 from typing import Any, List, Union, Dict, Iterable
 
 import numpy as np
@@ -8,6 +9,7 @@ from pandas import Series
 from plants_sm.data_structures.dataset.dataset import Dataset
 from plants_sm.io import write_csv
 from plants_sm.io.commons import FilePathOrBuffer
+from plants_sm.io.pickle import write_pickle
 from plants_sm.mixins.mixins import CSVMixin, ExcelMixin
 
 PLACEHOLDER_FIELD = 'place_holder'
@@ -151,9 +153,17 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             new_dataframe.loc[index, self.representation_field] = instance
 
         if self.features:
+            write_pkl = False
             for instance_id, features in self.features[PLACEHOLDER_FIELD].items():
+                if features.ndim > 1:
+                    warnings.warn(f"The features are not 2D, writing to pickle file")
+                    write_pkl = True
+                    break
                 index = new_dataframe[new_dataframe[self.instances_ids_field] == instance_id].index
                 new_dataframe.loc[index, self.features_fields[PLACEHOLDER_FIELD]] = features
+
+            if write_pkl:
+                write_pickle(file_path.replace("csv", "pkl"), self.features)
 
         write_csv(file_path, new_dataframe, **kwargs)
 

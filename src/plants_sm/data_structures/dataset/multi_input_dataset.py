@@ -1,3 +1,5 @@
+import warnings
+
 from cached_property import cached_property
 from typing import List, Any, Union, Dict, Iterable
 
@@ -7,6 +9,7 @@ import pandas as pd
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.io import write_csv
 from plants_sm.io.commons import FilePathOrBuffer
+from plants_sm.io.pickle import write_pickle
 from plants_sm.mixins.mixins import CSVMixin, ExcelMixin
 
 
@@ -282,9 +285,17 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
             instances = None
 
         if self._features_fields is not None and instances is not None:
+            write_pkl = False
             for instance in instances:
                 instance_features = self.X[instance]
+                if instance_features.ndim > 2:
+                    warnings.warn(f"The features of the instance {instance} are not 2D, writing to pickle file")
+                    write_pkl = True
+                    break
                 new_dataframe.loc[:, self._features_fields[instance]] = instance_features
+
+            if write_pkl:
+                write_pickle(file_path.replace("csv", "pkl"), self.features)
 
         write_csv(file_path, new_dataframe, **kwargs)
 

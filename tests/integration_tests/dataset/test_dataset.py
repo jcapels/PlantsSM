@@ -3,6 +3,7 @@ from unittest import TestCase
 
 import pandas as pd
 
+from plants_sm.data_standardization.proteins.padding import SequencePadder
 from plants_sm.data_structures.dataset import SingleInputDataset
 from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputDataset
 from plants_sm.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
@@ -62,7 +63,7 @@ class TestDataset(TestCase):
                                                                     instances_ids_field="id",
                                                                     labels_field="y")
 
-    def test_read_single_input_and_write_to_csv(self):
+    def test_read_multi_input_and_write_to_csv(self):
         """
         Test the read and write to csv methods.
         """
@@ -77,17 +78,59 @@ class TestDataset(TestCase):
         actual_dataset = pd.read_csv(self.multi_input_dataset_csv)
 
         self.assertTrue(written_dataset.SEQ.equals(actual_dataset.SEQ))
-        self.assertTrue("word2vec_511" in list(written_dataset.columns))
-
         # remove the file
         os.remove("test.csv")
 
-    def test_read_multi_input_and_write_to_csv(self):
+    def test_read_multi_input_and_write_to_csv_3d_features(self):
         """
         Test the read and write to csv methods.
         """
 
-        dataset = SingleInputDataset.from_csv(self.multi_input_dataset_csv, representation_field="sequence",
+        SequencePadder().fit_transform(self.multi_input_dataset, instance_type="proteins")
+        Word2Vec(output_shape_dimension=3).fit_transform(self.multi_input_dataset, "proteins")
+        DeepMolDescriptors().fit_transform(self.multi_input_dataset, "ligands")
+
+        self.multi_input_dataset.to_csv("test.csv", index=False)
+        self.assertTrue(os.path.exists("test.pkl"))
+
+        written_dataset = pd.read_csv("test.csv")
+
+        actual_dataset = pd.read_csv(self.multi_input_dataset_csv)
+
+        self.assertNotEqual(list(written_dataset.SEQ), list(actual_dataset.SEQ))
+
+        # remove the file
+        os.remove("test.csv")
+        os.remove("test.pkl")
+
+    def test_read_single_input_and_write_to_csv_3d_features(self):
+        """
+        Test the read and write to csv methods.
+        """
+
+        SequencePadder().fit_transform(self.single_input_dataset)
+        Word2Vec(output_shape_dimension=3).fit_transform(self.single_input_dataset)
+
+        self.single_input_dataset.to_csv("test.csv", index=False)
+        self.assertTrue(os.path.exists("test.pkl"))
+
+        written_dataset = pd.read_csv("test.csv")
+
+        actual_dataset = pd.read_csv(self.single_input_dataset_csv)
+
+        self.assertNotEqual(list(written_dataset.sequence), list(actual_dataset.sequence))
+
+        # remove the file
+        os.remove("test.csv")
+        os.remove("test.pkl")
+
+    def test_read_single_input_and_write_to_csv(self):
+        """
+        Test the read and write to csv methods.
+        """
+
+        dataset = SingleInputDataset.from_csv(self.single_input_dataset_csv,
+                                              representation_field="sequence",
                                               instances_ids_field="id",
                                               labels_field="y")
 
