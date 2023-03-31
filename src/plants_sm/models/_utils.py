@@ -1,9 +1,11 @@
 import os
 import warnings
+from typing import Iterable
 
 import numpy as np
 from tensorflow import Tensor
 
+from plants_sm.data_structures.dataset import Dataset
 from plants_sm.io.pickle import write_pickle, is_pickable
 from plants_sm.models.constants import REGRESSION, BINARY, FileConstants
 
@@ -100,3 +102,24 @@ def array_reshape(array: np.ndarray) -> np.ndarray:
     if len(array.shape) == 1 or (len(array.shape) == 2 and array.shape[1] == 1):
         array = array.reshape(-1, 1)
     return array
+
+
+def _batch_generator(dataset: Dataset) -> Iterable:
+    """
+    Generate batches of data.
+
+    Parameters
+    ----------
+    dataset: Dataset
+        Dataset to be used for training.
+
+    Returns
+    -------
+    Union[list, dict]
+        Batches of data.
+    """
+    while dataset.next_batch():
+        if dataset.y is None:
+            yield dataset.X
+        else:
+            yield dataset.X, dataset.y

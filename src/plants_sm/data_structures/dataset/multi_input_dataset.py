@@ -72,7 +72,7 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
                  labels_field: Union[str, List[Union[str, int]]] = None,
                  instances_ids_field: Dict[str, Union[str, int]] = None,
                  batch_size: Union[None, int] = None,
-                 **kwargs) -> 'MultiInputDataset':
+                 **kwargs: object) -> 'MultiInputDataset':
 
         instance = cls()
         dataframe = instance._from_csv(file_path, batch_size, **kwargs)

@@ -250,6 +250,8 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         """
         Property for X. It should return the features of the dataset.
         """
+        if self.features == {}:
+            raise ValueError('Features are not defined')
         return np.array(list(self.features[PLACEHOLDER_FIELD].values()))
 
     @property

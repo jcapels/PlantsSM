@@ -5,6 +5,7 @@ from typing import Callable, Union, Tuple, List, Dict
 
 import numpy as np
 import pandas as pd
+from numpy import ndarray
 from torch import nn, Tensor
 from torch.nn.modules.loss import _Loss
 from torch.optim import Adam, Optimizer
@@ -244,7 +245,33 @@ class PyTorchModel(Model):
         )
         return data_loader
 
-    def _validate(self, validation_set: DataLoader) -> Tuple[float, float]:
+    def _validate_batches(self, validation_set: DataLoader, loss_total: float, predictions: ndarray,
+                          actuals: ndarray) -> Tuple[float, ndarray, ndarray]:
+
+        len_valid_dataset = len(validation_set)
+        for i, inputs_targets in enumerate(validation_set):
+            inputs, targets = inputs_targets[:-1], inputs_targets[-1]
+            for j, inputs_elem in enumerate(inputs):
+                inputs[j] = inputs_elem.to(self.device)
+
+            targets = targets.to(self.device)
+            output = self.model(inputs)
+
+            y_hat = array_from_tensor(output)
+            actual = array_from_tensor(targets)
+
+            predictions = np.concatenate((predictions, y_hat))
+            actuals = np.concatenate((actuals, actual))
+
+            loss = self.loss_function(output, targets)
+            loss_total += loss.item()
+
+            if i % self.progress == 0:
+                self.logger.info(f'Validation set: [{i}/{len_valid_dataset}] loss: {loss.item():.8}')
+
+        return loss_total, predictions, actuals
+
+    def _validate(self, validation_set: Dataset) -> Tuple[float, float]:
         """
         Validate the model
 
@@ -261,27 +288,21 @@ class PyTorchModel(Model):
         self.model.eval()
         loss_total = 0
         predictions, actuals = np.empty(shape=(0, 1)), np.empty(shape=(0, 1))
-        len_valid_dataset = len(validation_set)
         with torch.no_grad():
-            for i, inputs_targets in enumerate(validation_set):
-                inputs, targets = inputs_targets[:-1], inputs_targets[-1]
-                for j, inputs_elem in enumerate(inputs):
-                    inputs[j] = inputs_elem.to(self.device)
 
-                targets = targets.to(self.device)
-                output = self.model(inputs)
+            if validation_set.batch_size is None:
+                validation_set_preprocessed = self._preprocess_data(validation_set, shuffle=False)
+                len_valid_dataset = len(validation_set_preprocessed)
+                loss_total, predictions, actuals = \
+                    self._validate_batches(validation_set_preprocessed, loss_total, predictions, actuals)
 
-                y_hat = array_from_tensor(output)
-                actual = array_from_tensor(targets)
-
-                predictions = np.concatenate((predictions, y_hat))
-                actuals = np.concatenate((actuals, actual))
-
-                loss = self.loss_function(output, targets)
-                loss_total += loss.item()
-
-                if i % self.progress == 0:
-                    self.logger.info(f'Validation set: [{i}/{len_valid_dataset}] loss: {loss.item():.8}')
+            else:
+                len_valid_dataset = 0
+                while validation_set.next_batch():
+                    validation_set_preprocessed = self._preprocess_data(validation_set, shuffle=False)
+                    len_valid_dataset += len(validation_set_preprocessed)
+                    loss_total, predictions, actuals = \
+                        self._validate_batches(validation_set_preprocessed, loss_total, predictions, actuals)
 
         validation_metric_result = None
         if self.validation_metric:
@@ -352,7 +373,7 @@ class PyTorchModel(Model):
         self.writer.add_scalar(f"Metric/{dataset_type}", metric_result, epoch)
         self._history["metric_results"].at[epoch - 1, f"{dataset_type}_metric_result"] = metric_result
 
-    def _early_stopping(self, validation_dataset: DataLoader, epoch: int) -> Union[nn.Module, None]:
+    def _early_stopping(self, validation_dataset: Dataset, epoch: int) -> Union[nn.Module, None]:
         """
         Early stopping
 
@@ -386,20 +407,18 @@ class PyTorchModel(Model):
 
         self.last_loss = current_loss
 
-    def _train_epoch(self, train_dataset: DataLoader, epoch: int, len_train_dataset: int,
-                     validation_dataset: DataLoader = None) -> Union[nn.Module, None]:
+    def _train_epoch(self, train_dataset: Dataset, epoch: int,
+                     validation_dataset: Dataset = None) -> Union[nn.Module, None]:
         """
         Train the model for one epoch
 
         Parameters
         ----------
-        train_dataset: DataLoader
+        train_dataset: Dataset
             Training dataset
         epoch: int
             Epoch
-        len_train_dataset: int
-            Length of the training dataset
-        validation_dataset: DataLoader
+        validation_dataset: Dataset
             Validation dataset
 
         Returns
@@ -409,8 +428,12 @@ class PyTorchModel(Model):
         """
         self.model.train()
         loss_total = 0
-        predictions, actuals = np.empty(shape=(0,)), np.empty(shape=(0,))
-        for i, inputs_targets in enumerate(train_dataset):
+        predictions, actuals = np.empty(shape=(0, 1)), np.empty(shape=(0, 1))
+        train_dataset_preprocessed = self._preprocess_data(train_dataset, shuffle=True)
+
+        len_train_dataset = len(train_dataset_preprocessed)
+
+        for i, inputs_targets in enumerate(train_dataset_preprocessed):
             actual, yhat, loss = self._train(inputs_targets)
 
             predictions = np.concatenate((predictions, yhat))
@@ -435,6 +458,7 @@ class PyTorchModel(Model):
         self._register_history(loss, epoch, validation_metric_result)
 
         if validation_dataset:
+            assert validation_dataset != train_dataset, "Validation dataset should not be the same as training dataset"
             return self._early_stopping(validation_dataset, epoch)
         else:
             return None
@@ -461,18 +485,25 @@ class PyTorchModel(Model):
 
         self.logger.info("starting to fit the data...")
 
-        train_dataset = self._preprocess_data(train_dataset)
-        if validation_dataset:
-            validation_dataset = self._preprocess_data(validation_dataset)
+        if train_dataset.batch_size is None:
 
-        len_train_dataset = len(train_dataset)
+            for epoch in range(1, self.epochs + 1):
+                self._train_epoch(train_dataset, epoch, validation_dataset)
 
-        for epoch in range(1, self.epochs + 1):
-            self._train_epoch(train_dataset, epoch, len_train_dataset, validation_dataset)
+                self._write_model_check_points(epoch)
 
-            self._write_model_check_points(epoch)
+                self.scheduler.step(self.last_loss)
+        else:
 
-            self.scheduler.step(self.last_loss)
+            for epoch in range(1, self.epochs + 1):
+
+                while train_dataset.next_batch():
+
+                    self._train_epoch(train_dataset, epoch, validation_dataset)
+
+                    self._write_model_check_points(epoch)
+
+                    self.scheduler.step(self.last_loss)
 
         self.writer.flush()
         return self.model
@@ -520,6 +551,35 @@ class PyTorchModel(Model):
         y_pred = array_reshape(y_pred)
         return y_pred
 
+    def _predict_proba_batch(self, dataset: Dataset, predictions: np.ndarray) -> np.ndarray:
+        """
+        Predicts the probability of each class for each sample in the dataset.
+
+        Parameters
+        ----------
+        dataset: DataLoader
+            Dataset to predict on
+        predictions: np.ndarray
+            Array of predictions
+
+        Returns
+        -------
+
+        """
+        dataset_preprocessed = self._preprocess_data(dataset, shuffle=False)
+        for i, inputs_targets in enumerate(dataset_preprocessed):
+            for j, inputs_elem in enumerate(inputs_targets):
+                inputs_targets[j] = inputs_elem.to(self.device)
+
+            yhat = self.model(inputs_targets)
+
+            yhat = array_from_tensor(yhat)
+            yhat = array_reshape(yhat)
+
+            predictions = np.concatenate((predictions, yhat))
+
+        return predictions
+
     def _predict_proba(self, dataset: Dataset) -> np.ndarray:
         """
         Predicts the probability of each class for each sample in the dataset.
@@ -535,34 +595,22 @@ class PyTorchModel(Model):
             Array of prediction probabilities
         """
 
-        dataset = self._preprocess_data(dataset, shuffle=False)
-
         if self.problem_type in [REGRESSION, QUANTILE]:
             y_pred = self.model.predict(dataset)
             return y_pred
 
         self.model.eval()
-        predictions, actuals = np.empty(shape=(0, 1)), np.empty(shape=(0, 1))
+        predictions = np.empty(shape=(0, 1))
 
         # the "shuffle" argument always has to be False in predicting probabilities in an evaluation context
 
         with torch.no_grad():
-            for i, inputs_targets in enumerate(dataset):
-                inputs, targets = inputs_targets[:-1], inputs_targets[-1]
-                for j, inputs_elem in enumerate(inputs):
-                    inputs[j] = inputs_elem.to(self.device)
 
-                targets.to(self.device)
-                yhat = self.model(inputs)
-
-                targets = array_from_tensor(targets)
-                targets = array_reshape(targets)
-
-                yhat = array_from_tensor(yhat)
-                yhat = array_reshape(yhat)
-
-                predictions = np.concatenate((predictions, yhat))
-                actuals = np.concatenate((actuals, targets))
+            if dataset.batch_size is None:
+                predictions = self._predict_proba_batch(dataset, predictions)
+            else:
+                while dataset.next_batch():
+                    predictions = self._predict_proba_batch(dataset, predictions)
 
         return _convert_proba_to_unified_form(self.problem_type, np.array(predictions))
 

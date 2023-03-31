@@ -55,6 +55,11 @@ class TestDataset(TestCase):
                                                                 instances_ids_field="id",
                                                                 labels_field="y")
 
+        self.single_input_dataset_val = SingleInputDataset.from_csv(self.single_input_dataset_csv,
+                                                                    representation_field="sequence",
+                                                                    instances_ids_field="id",
+                                                                    labels_field="y")
+
     def tearDown(self) -> None:
         paths_to_remove = [self.df_path_to_write_csv,
                            self.df_path_to_write_xlsx]

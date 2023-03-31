@@ -42,7 +42,7 @@ class TestPipeline(TestModels):
         probs = pipeline.predict(self.validation_dataset)
 
         self.assertIsInstance(probs, np.ndarray)
-        self.assertEqual(probs.shape[0], self.train_dataset.y.shape[0])
+        self.assertEqual(probs.shape[0], self.validation_dataset.y.shape[0])
 
     def test_load_save(self):
 
