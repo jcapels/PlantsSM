@@ -10,6 +10,7 @@ class TestPytorchBaselineModel(nn.Module):
 
     def __init__(self, input_dim, output_dim):
         super(TestPytorchBaselineModel, self).__init__()
+        self.input_dim = input_dim
         self.fc1 = nn.Linear(input_dim, 128)
         self.fc2 = nn.Linear(128, output_dim)
         self.final_layer = nn.Linear(output_dim, 1)

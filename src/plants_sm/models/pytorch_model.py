@@ -352,6 +352,93 @@ class PyTorchModel(Model):
         self.writer.add_scalar(f"Metric/{dataset_type}", metric_result, epoch)
         self._history["metric_results"].at[epoch - 1, f"{dataset_type}_metric_result"] = metric_result
 
+    def _early_stopping(self, validation_dataset: DataLoader, epoch: int) -> Union[nn.Module, None]:
+        """
+        Early stopping
+
+        Parameters
+        ----------
+        validation_dataset: DataLoader
+            Validation dataset
+        epoch: int
+            Epoch
+
+        Returns
+        -------
+        Union[nn.Module, None]
+            Model or None
+        """
+
+        # Early stopping
+        current_loss, validation_metric_result = self._validate(validation_dataset)
+        self.logger.info(
+            f'Validation loss: {current_loss:.8}; Validation metric: {validation_metric_result:.8}')
+        if current_loss >= self.last_loss:
+            self.trigger_times += 1
+
+            if self.trigger_times >= self.patience:
+                return self.model
+
+        else:
+            self.trigger_times = 0
+
+        self._register_history(current_loss, epoch, validation_metric_result, train=False)
+
+        self.last_loss = current_loss
+
+    def _train_epoch(self, train_dataset: DataLoader, epoch: int, len_train_dataset: int,
+                     validation_dataset: DataLoader = None) -> Union[nn.Module, None]:
+        """
+        Train the model for one epoch
+
+        Parameters
+        ----------
+        train_dataset: DataLoader
+            Training dataset
+        epoch: int
+            Epoch
+        len_train_dataset: int
+            Length of the training dataset
+        validation_dataset: DataLoader
+            Validation dataset
+
+        Returns
+        -------
+        Union[nn.Module, None]
+            Model
+        """
+        self.model.train()
+        loss_total = 0
+        predictions, actuals = np.empty(shape=(0,)), np.empty(shape=(0,))
+        for i, inputs_targets in enumerate(train_dataset):
+            actual, yhat, loss = self._train(inputs_targets)
+
+            predictions = np.concatenate((predictions, yhat))
+            actuals = np.concatenate((actuals, actual))
+            loss_total += loss.item()
+            # Show progress
+            if i % self.progress == 0 or i == len_train_dataset - 1:
+                self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] loss: {loss.item():.8}')
+
+                predictions = self.get_pred_from_proba(predictions)
+                validation_metric_result = self.validation_metric(actuals, predictions)
+
+                self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] '
+                                 f'metric result: {validation_metric_result:.8}')
+
+        loss = loss_total / len_train_dataset
+
+        predictions = self.get_pred_from_proba(predictions)
+        validation_metric_result = self.validation_metric(actuals, predictions)
+        self.logger.info(
+            f'Training loss: {loss:.8};  Metric result: {validation_metric_result:.8}')
+        self._register_history(loss, epoch, validation_metric_result)
+
+        if validation_dataset:
+            return self._early_stopping(validation_dataset, epoch)
+        else:
+            return None
+
     def _fit_data(self, train_dataset: Dataset, validation_dataset: Dataset = None) -> nn.Module:
         """
         Fit the model to the data
@@ -369,71 +456,41 @@ class PyTorchModel(Model):
             Trained model
         """
 
-        last_loss = 100
-        trigger_times = 0
+        self.last_loss = 100
+        self.trigger_times = 0
 
         self.logger.info("starting to fit the data...")
 
-        if train_dataset.batch_size is None:
-            train_dataset = self._preprocess_data(train_dataset)
-            if validation_dataset:
-                validation_dataset = self._preprocess_data(validation_dataset)
+        train_dataset = self._preprocess_data(train_dataset)
+        if validation_dataset:
+            validation_dataset = self._preprocess_data(validation_dataset)
 
         len_train_dataset = len(train_dataset)
 
         for epoch in range(1, self.epochs + 1):
-            self.model.train()
-            loss_total = 0
-            predictions, actuals = np.empty(shape=(0, 1)), np.empty(shape=(0, 1))
-            for i, inputs_targets in enumerate(train_dataset):
-                actual, yhat, loss = self._train(inputs_targets)
+            self._train_epoch(train_dataset, epoch, len_train_dataset, validation_dataset)
 
-                predictions = np.concatenate((predictions, yhat))
-                actuals = np.concatenate((actuals, actual))
-                loss_total += loss.item()
-                # Show progress
-                if i % self.progress == 0 or i == len_train_dataset - 1:
-                    self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] loss: {loss.item():.8}')
-                    predictions = self.get_pred_from_proba(predictions)
-                    validation_metric_result = self.validation_metric(actuals, predictions)
-                    self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] '
-                                     f'metric result: {validation_metric_result:.8}')
+            self._write_model_check_points(epoch)
 
-            loss = loss_total / len_train_dataset
-
-            predictions = self.get_pred_from_proba(predictions)
-            validation_metric_result = self.validation_metric(actuals, predictions)
-            self.logger.info(
-                f'Training loss: {loss:.8};  Metric result: {validation_metric_result:.8}')
-            self._register_history(loss, epoch, validation_metric_result)
-
-            # Early stopping
-            if validation_dataset:
-                current_loss, validation_metric_result = self._validate(validation_dataset)
-                self.logger.info(
-                    f'Validation loss: {current_loss:.8}; Validation metric: {validation_metric_result:.8}')
-                if current_loss >= last_loss:
-                    trigger_times += 1
-
-                    if trigger_times >= self.patience:
-                        return self.model
-
-                else:
-                    trigger_times = 0
-
-                self._register_history(current_loss, epoch, validation_metric_result, train=False)
-
-                last_loss = current_loss
-
-            os.makedirs("./.model_checkpoints", exist_ok=True)
-            os.makedirs(f"./.model_checkpoints/{self.model.__class__.__name__}/epoch_{epoch}", exist_ok=True)
-            torch.save(self.model.state_dict(), f"./.model_checkpoints/{self.model.__class__.__name__}/epoch_{epoch}"
-                                                f"/model.pt")
-
-            self.scheduler.step(last_loss)
+            self.scheduler.step(self.last_loss)
 
         self.writer.flush()
         return self.model
+
+    def _write_model_check_points(self, epoch: int) -> None:
+        """
+        Write the model checkpoints for tensorboard.
+
+        Parameters
+        ----------
+        epoch: int
+            Epoch
+        """
+
+        os.makedirs("./.model_checkpoints", exist_ok=True)
+        os.makedirs(f"./.model_checkpoints/{self.model.__class__.__name__}/epoch_{epoch}", exist_ok=True)
+        torch.save(self.model.state_dict(), f"./.model_checkpoints/{self.model.__class__.__name__}/epoch_{epoch}"
+                                            f"/model.pt")
 
     def get_pred_from_proba(self, y_pred_proba: np.ndarray) -> np.ndarray:
         """
