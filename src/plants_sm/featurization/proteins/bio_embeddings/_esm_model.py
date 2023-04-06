@@ -60,7 +60,6 @@ class ESMModel(ESM2):
             gpus = [f"cuda:{i}" for i in range(len(gpus))]
         
         i = 0
-        i += 1
         for layer_idx, layer in enumerate(self.layers):
             if self.is_ddp:
                 gpu = gpus[i % len(gpus)]
