@@ -1,25 +1,26 @@
-import torch
-
 import esm
 
 from typing import Union
 import torch
 from esm.model.esm2 import ESM2
 
+
 class ESMModel(ESM2):
 
-    def __init__(self,  num_layers: int = 33,
-        embed_dim: int = 1280,
-        attention_heads: int = 20,
-        alphabet: Union[esm.data.Alphabet, str] = "ESM-1b",
-        token_dropout: bool = True, is_ddp = False,
-        num_gpus=1) -> None:
+    def __init__(self, num_layers: int = 33,
+                 embed_dim: int = 1280,
+                 attention_heads: int = 20,
+                 alphabet: Union[esm.data.Alphabet, str] = "ESM-1b",
+                 token_dropout: bool = True, is_ddp=False,
+                 num_gpus=1) -> None:
         self.is_ddp = is_ddp
         self.num_gpus = num_gpus
         super().__init__(num_layers, embed_dim, attention_heads, alphabet, token_dropout)
 
-    def forward(self, tokens, repr_layers=[], need_head_weights=False, return_contacts=False):
-        
+    def forward(self, tokens, repr_layers=None, need_head_weights=False, return_contacts=False):
+
+        if repr_layers is None:
+            repr_layers = []
         if return_contacts:
             need_head_weights = True
 
@@ -58,7 +59,7 @@ class ESMModel(ESM2):
             if len(gpus) >= self.num_gpus:
                 gpus = gpus[:self.num_gpus]
             gpus = [f"cuda:{i}" for i in range(len(gpus))]
-        
+
         i = 0
         for layer_idx, layer in enumerate(self.layers):
             if self.is_ddp:
@@ -90,7 +91,7 @@ class ESMModel(ESM2):
             x = x.to("cpu")
             self.emb_layer_norm_after = self.emb_layer_norm_after.to("cpu")
 
-        i+=1
+        i += 1
         x = self.emb_layer_norm_after(x)
         x = x.transpose(0, 1)  # (T, B, E) => (B, T, E)
 
@@ -105,7 +106,7 @@ class ESMModel(ESM2):
         else:
             x = x.to("cpu")
             self.lm_head = self.lm_head.to("cpu")
-        i+=1
+        i += 1
         x = self.lm_head(x)
 
         result = {"logits": x, "representations": hidden_representations}

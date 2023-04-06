@@ -1,26 +1,34 @@
 import os
 import pickle
-import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
 from datetime import timedelta
-import torch
-from fairscale.nn.data_parallel import FullyShardedDataParallel as FSDP
-from fairscale.nn.wrap import enable_wrap, wrap
-
-import esm
 
 import torch
-from plants_sm.featurization.proteins.bio_embeddings._esm_model import ESMModel
 
 import tempfile
 
-
 DEFAULT_TIMEOUT = timedelta(seconds=10)
+
 
 class TorchSpawner:
 
-    def __init__(self, backend="NCCL", num_machines=1, machine_rank=0, dist_url="tcp://127.0.0.1:1234") -> None:
+    def __init__(self, backend: str = "NCCL", num_machines: int = 1, machine_rank: int = 0,
+                 dist_url: str = "tcp://127.0.0.1:1234") -> None:
+        """
+        TorchSpawner is a class that allows to spawn a torch process in a distributed way.
+
+        Parameters
+        ----------
+        backend: str
+            The backend to be used in the distributed process.
+        num_machines: int
+            The number of machines to be used in the distributed process.
+        machine_rank: int
+            The rank of the machine to be used in the distributed process.
+        dist_url: str
+            The url to be used in the distributed process.
+        """
         self.backend = backend
         # self.num_gpus = num_gpus
         self.num_machines = num_machines
@@ -28,6 +36,16 @@ class TorchSpawner:
         self.dist_url = dist_url
 
     def run(self, main_func, **kwargs):
+        """
+        Run the distributed process.
+
+        Parameters
+        ----------
+        main_func: callable
+            The function to be run in the distributed process.
+        kwargs: dict
+            The arguments to be passed to the main function.
+        """
         torch.set_num_threads(1)
         os.environ["OMP_NUM_THREADS"] = "1"
         os.environ["NCCL_DEBUG"] = "ERROR"
@@ -56,19 +74,21 @@ class TorchSpawner:
         results_file.close()
         return results
 
-
     @staticmethod
     def distributed_worker(
-        local_rank,
-        main_func,
-        backend,
-        world_size,
-        num_gpus_per_machine,
-        machine_rank,
-        dist_url,
-        results_file,
-        kwargs
+            local_rank,
+            main_func,
+            backend,
+            world_size,
+            num_gpus_per_machine,
+            machine_rank,
+            dist_url,
+            results_file,
+            kwargs
     ):
+        """
+        Run the distributed process.
+        """
         LOCAL_PROCESS_GROUP = None
 
         if not torch.cuda.is_available():
@@ -95,7 +115,6 @@ class TorchSpawner:
         # Setup the local process group (which contains ranks within the same machine)
         if LOCAL_PROCESS_GROUP is not None:
             raise RuntimeError
-
 
         num_machines = world_size // num_gpus_per_machine
 
