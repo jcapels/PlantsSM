@@ -12,7 +12,7 @@ class TestIODataset(TestDataset):
                                                 representation_field="SMILES",
                                                 labels_field="TargetedMZ")
         self.assertEqual(list(dataset.get_instances().values())[0], 'Nc1nc(NC2CC2)c2ncn(C3C=CC(CO)C3)c2n1')
-        self.assertIn(286.154209, dataset.y)
+        self.assertEqual(286.154209, dataset.y[0])
         self.assertEqual(dataset.representation_fields, {'place_holder': 'SMILES'})
         self.assertEqual(dataset.labels_names, ["TargetedMZ"])
 

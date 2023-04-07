@@ -68,22 +68,21 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             if labels_field is not None:
 
                 if isinstance(labels_field, slice):
-                    
+
                     indexes_list = process_slices(self._dataframe.columns, labels_field)
 
                     self.labels_names = [self._dataframe.columns[i] for i in indexes_list]
 
                 elif isinstance(labels_field, Iterable):
-                    
+
                     if isinstance(labels_field[0], int):
                         self.labels_names = [self._dataframe.columns[i] for i in
-                                                                labels_field]
-                        
+                                             labels_field]
+
                     else:
-                        self.labels_names = labels_field
+                        self.labels_names = [labels_field]
                 else:
                     self.labels_names = [labels_field]
-                
 
                 self._labels = self.dataframe.loc[:, self.labels_names].T.to_dict('list')
             else:
@@ -298,7 +297,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             if self._features_fields:
                 if isinstance(self._features_fields[PLACEHOLDER_FIELD], slice):
                     features_fields_slice = self._features_fields[PLACEHOLDER_FIELD]
-                    
+
                     indexes_list = process_slices(self._dataframe.columns, features_fields_slice)
 
                     self._features_fields = {PLACEHOLDER_FIELD: [self._dataframe.columns[i] for i in indexes_list]}
@@ -306,7 +305,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                 elif isinstance(self._features_fields[PLACEHOLDER_FIELD][0], int):
                     self._features_fields[PLACEHOLDER_FIELD] = [self._dataframe.columns[i] for i in
                                                                 self._features_fields[PLACEHOLDER_FIELD]]
-                    
+
             self._dataframe = pd.concat((identifiers_series, self._dataframe), axis=1)
             self._dataframe["identifier"] = self._dataframe["identifier"].astype(str)
             self._dataframe.set_index("identifier", inplace=True)
