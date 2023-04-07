@@ -76,11 +76,8 @@ class FeaturesGenerator(Transformer):
                 pbar.update(1)
 
         dataset.add_features(instance_type, dict(res))
+        dataset.features_fields[instance_type] = self.features_names
 
-        if instance_type not in dataset.features_fields:
-            dataset.features_fields[instance_type] = self.features_names
-        else:
-            dataset.features_fields[instance_type].extend(self.features_names)
         return dataset
 
     def _featurize_and_add_identifier(self, instance: Any, identifier: str) -> Tuple[str, ndarray]:

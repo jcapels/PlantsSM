@@ -42,7 +42,7 @@ class TestLoadInBatches(TestDataset):
                                               instances_ids_field="id")
 
         dataset2 = MultiInputDataset.from_csv(self.multi_input_dataset_csv,
-                                              representation_fields={"proteins": "SEQ",
+                                              representation_field={"proteins": "SEQ",
                                                                      "ligands": "SUBSTRATES"},
                                               instances_ids_field={"interaction": "ids"},
                                               labels_field="LogSpActivity",
@@ -54,7 +54,7 @@ class TestLoadInBatches(TestDataset):
     def test_load_in_batches_multi_dataset(self):
         batch_size = 2
         dataset = MultiInputDataset.from_csv(self.multi_input_dataset_csv,
-                                             representation_fields={"proteins": "SEQ",
+                                             representation_field={"proteins": "SEQ",
                                                                     "ligands": "SUBSTRATES"},
                                              instances_ids_field={"interaction": "ids"},
                                              labels_field="LogSpActivity",
@@ -81,7 +81,7 @@ class TestLoadInBatches(TestDataset):
     def test_load_in_batches_multi_dataset_with_padder(self):
         batch_size = 3
         dataset = MultiInputDataset.from_csv(self.multi_input_dataset_csv,
-                                             representation_fields={"proteins": "SEQ",
+                                             representation_field={"proteins": "SEQ",
                                                                     "ligands": "SUBSTRATES"},
                                              instances_ids_field={"interaction": "ids"},
                                              labels_field="LogSpActivity",

@@ -24,7 +24,7 @@ class TestDataset(TestCase):
         dataframe.loc[2] = ["representation", 8, 9]
 
         dataset = SingleInputDataset(dataframe, representation_field='a', labels_field='c', features_fields='b')
-        self.assertTrue(dataset.representation_fields[PLACEHOLDER_FIELD] == 'a')
+        self.assertTrue(dataset.representation_field == 'a')
         self.assertTrue(dataset._features_fields[PLACEHOLDER_FIELD] == ['b'])
         self.assertTrue(dataset._labels_names == ['c'])
         representation_fields = dataset.instances[PLACEHOLDER_FIELD].values()
