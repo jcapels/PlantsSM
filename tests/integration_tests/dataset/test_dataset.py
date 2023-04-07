@@ -1,4 +1,5 @@
 import os
+import shutil
 from unittest import TestCase
 
 import pandas as pd
@@ -7,6 +8,7 @@ from plants_sm.data_standardization.proteins.padding import SequencePadder
 from plants_sm.data_structures.dataset import SingleInputDataset
 from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputDataset
 from plants_sm.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
+from plants_sm.featurization.encoding.one_hot_encoder import OneHotEncoder
 from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
 from tests import TEST_DIR
 
@@ -48,7 +50,7 @@ class TestDataset(TestCase):
         self.compounds_dataframe["ids"] = ["WP_003399745.1", "WP_003399671.1"]
 
         self.multi_input_dataset = MultiInputDataset.from_csv(self.multi_input_dataset_csv,
-                                                              representation_fields={"proteins": "SEQ",
+                                                              representation_field={"proteins": "SEQ",
                                                                                      "ligands": "SUBSTRATES"},
                                                               instances_ids_field={"interaction": "ids"},
                                                               labels_field="LogSpActivity")
@@ -147,6 +149,108 @@ class TestDataset(TestCase):
 
         # remove the file
         os.remove("test.csv")
+
+    def test_read_and_load_single_input_dataset(self):
+        dataset = SingleInputDataset.from_csv(self.single_input_dataset_csv,
+                                              representation_field="sequence",
+                                              instances_ids_field="id",
+                                              labels_field="y")
+
+        Word2Vec().fit_transform(dataset)
+        dataset.save("test")
+
+        loaded_dataset = SingleInputDataset.load("test.pkl")
+        self.assertTrue(loaded_dataset.representation_field == "sequence")
+        self.assertTrue(loaded_dataset.instances_ids_field == "id")
+        self.assertTrue(loaded_dataset.dataframe.equals(dataset.dataframe))
+
+        os.remove("test.pkl")
+
+        dataset = SingleInputDataset.from_csv(self.single_input_dataset_csv,
+                                              representation_field="sequence",
+                                              instances_ids_field="id",
+                                              labels_field="y",
+                                              batch_size=2)
+
+        Word2Vec().fit_transform(dataset)
+        dataset.save("test")
+
+        loaded_dataset = SingleInputDataset.load("test")
+        self.assertTrue(loaded_dataset.representation_field == "sequence")
+        self.assertTrue(loaded_dataset.instances_ids_field == "id")
+        self.assertTrue(loaded_dataset.dataframe.equals(dataset.dataframe))
+
+        shutil.rmtree("test")
+
+        loaded_dataset.save_features("test")
+
+        dataset = SingleInputDataset.from_csv(self.single_input_dataset_csv,
+                                              representation_field="sequence",
+                                              instances_ids_field="id",
+                                              labels_field="y",
+                                              batch_size=2)
+
+        dataset.load_features("test")
+        dataset.next_batch()
+        self.assertTrue(dataset.X.shape == (2, 512))
+        dataset.next_batch()
+        self.assertTrue(dataset.X.shape == (1, 512))
+
+    def test_read_and_load_multi_input_dataset(self):
+        dataset = MultiInputDataset.from_csv(self.multi_input_dataset_csv,
+                                             representation_field={"proteins": "SEQ",
+                                                                   "ligands": "SUBSTRATES"},
+                                             instances_ids_field={"interaction": "ids"},
+                                             labels_field="LogSpActivity")
+
+        Word2Vec().fit_transform(dataset, "proteins")
+        dataset.save("test")
+
+        loaded_dataset = MultiInputDataset.load("test.pkl")
+        self.assertTrue(loaded_dataset.representation_field == {"proteins": "SEQ",
+                                                                   "ligands": "SUBSTRATES"})
+        self.assertTrue(loaded_dataset.dataframe.equals(dataset.dataframe))
+
+        os.remove("test.pkl")
+
+        dataset = MultiInputDataset.from_csv(self.multi_input_dataset_csv,
+                                             representation_field={"proteins": "SEQ",
+                                                                   "ligands": "SUBSTRATES"},
+                                             instances_ids_field={"interaction": "ids"},
+                                             labels_field="LogSpActivity",
+                                             batch_size=2)
+
+        Word2Vec().fit_transform(dataset, "proteins")
+        dataset.save("test")
+
+        loaded_dataset = MultiInputDataset.load("test")
+        self.assertTrue(loaded_dataset.representation_field == {"proteins": "SEQ",
+                                                                "ligands": "SUBSTRATES"})
+        self.assertTrue(loaded_dataset.dataframe.equals(dataset.dataframe))
+
+        shutil.rmtree("test")
+
+        OneHotEncoder().fit_transform(dataset, "ligands")
+
+        loaded_dataset.save_features("test")
+
+        dataset = MultiInputDataset.from_csv(self.multi_input_dataset_csv,
+                                             representation_field={"proteins": "SEQ",
+                                                                   "ligands": "SUBSTRATES"},
+                                             instances_ids_field={"interaction": "ids"},
+                                             labels_field="LogSpActivity",
+                                             batch_size=2)
+
+        dataset.load_features("test")
+
+        dataset.next_batch()
+        self.assertTrue(dataset.X["proteins"].shape == (2, 512))
+        dataset.next_batch()
+        self.assertTrue(dataset.X["proteins"].shape == (2, 512))
+        dataset.next_batch()
+        self.assertTrue(dataset.X["ligands"].shape == (2, 27, 10))
+
+        shutil.rmtree("test")
 
     def tearDown(self) -> None:
         paths_to_remove = [self.df_path_to_write_csv,

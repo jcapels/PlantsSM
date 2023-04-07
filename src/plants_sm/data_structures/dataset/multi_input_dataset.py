@@ -23,7 +23,7 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
     _instances: Dict[str, Dict[str, Any]]
     _identifiers: List[Union[str, int]] = None
 
-    def __init__(self, dataframe: Any = None, representation_fields: Dict[str, Union[str, int]] = None,
+    def __init__(self, dataframe: Any = None, representation_field: Dict[str, Union[str, int]] = None,
                  labels_field: Union[str, List[Union[str, int]]] = None,
                  instances_ids_field: Dict[str, Union[str, int]] = None,
                  batch_size: int = None):
@@ -33,7 +33,7 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
         ----------
         dataframe: Any
             dataframe to be consumed by the class and defined as class property
-        representation_fields: str | List[str | int] (optional)
+        representation_field: str | List[str | int] (optional)
             representation column field (to be processed)
         labels_field: str | List[str | int] (optional)
             labels column field
@@ -51,7 +51,7 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
             self._features = {}
             self._labels = None
             self.instances_ids_field = instances_ids_field
-            self.representation_field = representation_fields
+            self.representation_field = representation_field
 
             # the dataframe setter will derive the instance ids field if it is None
             # and also will try to set the features names
@@ -72,7 +72,7 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
         return self._dataframe
 
     @classmethod
-    def from_csv(cls, file_path: FilePathOrBuffer, representation_fields: Dict[str, Union[str, int]] = None,
+    def from_csv(cls, file_path: FilePathOrBuffer, representation_field: Dict[str, Union[str, int]] = None,
                  labels_field: Union[str, List[Union[str, int]]] = None,
                  instances_ids_field: Dict[str, Union[str, int]] = None,
                  batch_size: Union[None, int] = None,
@@ -80,21 +80,21 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
 
         instance = cls()
         dataframe = instance._from_csv(file_path, batch_size, **kwargs)
-        dataset = MultiInputDataset(dataframe, representation_fields,
+        dataset = MultiInputDataset(dataframe, representation_field,
                                     labels_field, instances_ids_field,
                                     batch_size=batch_size)
         return dataset
 
     @classmethod
     def from_excel(cls, file_path: FilePathOrBuffer,
-                   representation_fields: Dict[str, Union[str, int]] = None,
+                   representation_field: Dict[str, Union[str, int]] = None,
                    labels_field: Union[str, List[Union[str, int]]] = None,
                    instances_ids_field: Dict[str, Union[str, int]] = None,
                    batch_size: Union[None, int] = None, **kwargs) -> 'MultiInputDataset':
 
         instance = cls()
         dataframe = instance._from_excel(file_path, batch_size, **kwargs)
-        dataset = MultiInputDataset(dataframe, representation_fields,
+        dataset = MultiInputDataset(dataframe, representation_field,
                                     labels_field, instances_ids_field,
                                     batch_size=batch_size)
         return dataset
@@ -225,6 +225,7 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
         """
         Property for features. It should return the features of the dataset.
         """
+        self._clear_cached_properties()
         return self._features
 
     @features.setter

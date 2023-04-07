@@ -1,4 +1,5 @@
-import copy
+import os
+import shutil
 from abc import abstractmethod
 from typing import Any, Dict, Union, Iterable
 
@@ -8,6 +9,7 @@ from cached_property import cached_property
 
 from plants_sm.data_structures.dataset.batch_manager.batch_manager import BatchManager
 from plants_sm.design_patterns.observer import ConcreteSubject
+from plants_sm.io.pickle import write_pickle, read_pickle
 from plants_sm.mixins.mixins import PickleMixin
 
 
@@ -20,7 +22,7 @@ class Dataset(ConcreteSubject, PickleMixin):
         ("_dataframe", "csv"),
         ("_instances", "pkl"),
         ("_identifiers", "pkl"),
-        ("_features", "pkl"),
+        ("features", "pkl"),
     ]
 
     def __init__(self, batch_size: Union[int, None] = None):
@@ -49,6 +51,101 @@ class Dataset(ConcreteSubject, PickleMixin):
             if isinstance(getattr(type(self), name), cached_property):
                 vars(self).pop(name, None)
 
+    def save_features(self, folder_path: str):
+        """
+        Method to save the features of the dataset.
+
+        Parameters
+        ----------
+        folder_path: str
+            The path to the folder where the features will be saved.
+        """
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+        if self.batch_size is not None:
+            i = 0
+            while self.next_batch():
+                write_pickle(os.path.join(folder_path, f"features_{i}.pkl"), self.features)
+                i += 1
+        else:
+            write_pickle(os.path.join(folder_path, f"features.pkl"), self.features)
+
+    def load_features(self, folder_path: str):
+        """
+        Method to load the features of the dataset.
+
+        Parameters
+        ----------
+        folder_path: str
+            The path to the file where the features are saved.
+        """
+        if self.batch_size is not None:
+            i = 0
+            while self.next_batch():
+                self.features = read_pickle(os.path.join(folder_path, f"features_{i}.pkl"))
+                i += 1
+        else:
+            self.features = read_pickle(os.path.join(folder_path, f"features.pkl"))
+
+    def save(self, folder_path: str):
+        """
+        Method to save the dataset.
+
+        Parameters
+        ----------
+        folder_path: str
+            The path to the folder where the dataset will be saved.
+        """
+        if self.batch_size is not None:
+            if not os.path.exists(folder_path):
+                os.makedirs(folder_path)
+            temporary_folder = self._observer.temporary_folder
+            # copy the content of the temporary folder to the folder where the dataset will be saved
+            batches_directory = os.path.join(folder_path, "batches")
+            if not os.path.exists(batches_directory):
+                os.makedirs(os.path.join(batches_directory))
+
+            for file in os.listdir(temporary_folder.name):
+                if os.path.exists(batches_directory):
+                    shutil.rmtree(batches_directory)
+                shutil.copytree(os.path.join(temporary_folder.name, file), os.path.join(batches_directory, file))
+
+            self.to_pickle(os.path.join(folder_path, f"{folder_path}.pkl"))
+
+        else:
+            self.to_pickle(os.path.join(f"{folder_path}.pkl"))
+
+    @classmethod
+    def load(cls, path: str):
+        """
+        Method to load the dataset.
+
+        Parameters
+        ----------
+        path: str
+            The path to the folder where the dataset is saved.
+        """
+        if os.path.isdir(path):
+            dirs = os.listdir(path)
+
+            if len(dirs) != 0:
+                # create the dataset
+                dataset = cls.from_pickle(os.path.join(path, f"{path}.pkl"))
+                batches_directory = os.path.join(path, "batches")
+                for folder in os.listdir(batches_directory):
+                    if os.path.exists(os.path.join(dataset._observer.temporary_folder.name, folder)):
+                        shutil.rmtree(os.path.join(dataset._observer.temporary_folder.name, folder))
+                    shutil.copytree(os.path.join(batches_directory, folder),
+                                    os.path.join(dataset._observer.temporary_folder.name, folder))
+            else:
+                raise ValueError("The directory is empty.")
+
+        else:
+            folder_path = path.replace(".pkl", "")
+            dataset = cls.from_pickle(os.path.join(f"{folder_path}.pkl"))
+
+        return dataset
+
     def __next__(self):
         """
         Method to iterate over the dataset.
@@ -60,6 +157,7 @@ class Dataset(ConcreteSubject, PickleMixin):
                 df = next(self._dataframe_generator)
             except StopIteration:
                 self.end()
+                self._dataframe_generator = None
                 return False
 
             self.dataframe = df

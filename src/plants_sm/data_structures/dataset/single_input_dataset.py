@@ -238,6 +238,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         Returns
         -------
         """
+        self._clear_cached_properties()
         self._features = value
 
     def add_features(self, instance_type: str, features: Dict[str, np.ndarray]):
