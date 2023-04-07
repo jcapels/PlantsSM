@@ -1,5 +1,6 @@
 import warnings
 from typing import Any, List, Union, Dict, Iterable
+from typing import Any, Iterable, List, Union, Dict
 
 import numpy as np
 import pandas as pd
@@ -11,6 +12,7 @@ from plants_sm.io import write_csv
 from plants_sm.io.commons import FilePathOrBuffer
 from plants_sm.io.pickle import write_pickle
 from plants_sm.mixins.mixins import CSVMixin, ExcelMixin
+from plants_sm.data_structures.dataset._utils import process_slices
 
 PLACEHOLDER_FIELD = 'place_holder'
 
@@ -71,10 +73,27 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             self.dataframe = dataframe
 
             if labels_field is not None:
-                if not isinstance(labels_field, List):
-                    self._labels_names = [labels_field]
+
+                if isinstance(labels_field, slice):
+
+                    indexes_list = process_slices(self._dataframe.columns, labels_field)
+
+                    self.labels_names = [self._dataframe.columns[i] for i in indexes_list]
+
+                elif isinstance(labels_field, Iterable):
+
+                    if isinstance(labels_field[0], int):
+                        self.labels_names = [self._dataframe.columns[i] for i in
+                                             labels_field]
+
+                    else:
+                        self.labels_names = [labels_field]
                 else:
-                    self._labels_names = labels_field
+                    self.labels_names = [labels_field]
+
+                self._labels = self.dataframe.loc[:, self.labels_names].T.to_dict('list')
+            else:
+                self._labels = None
 
             if self._features_fields:
                 self._features = \
@@ -381,22 +400,9 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             if self._features_fields:
                 if isinstance(self._features_fields[PLACEHOLDER_FIELD], slice):
                     features_fields_slice = self._features_fields[PLACEHOLDER_FIELD]
-                    if features_fields_slice.start is not None:
-                        start = features_fields_slice.start
-                    else:
-                        start = 0
 
-                    if features_fields_slice.stop is not None:
-                        stop = features_fields_slice.stop
-                    else:
-                        stop = self._dataframe.columns.size
+                    indexes_list = process_slices(self._dataframe.columns, features_fields_slice)
 
-                    if features_fields_slice.step is not None:
-                        step = features_fields_slice.step
-                    else:
-                        step = 1
-
-                    indexes_list = list(range(start, stop, step))
                     self._features_fields = {PLACEHOLDER_FIELD: [self._dataframe.columns[i] for i in indexes_list]}
 
                 elif isinstance(self._features_fields[PLACEHOLDER_FIELD][0], int):

@@ -1,11 +1,18 @@
-import numpy as np
-import torch
+from esm import Alphabet
+from torch import nn
 from tqdm import tqdm
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.featurization._utils import call_set_features_names
+from plants_sm.featurization.proteins.bio_embeddings._esm_utils import TorchSpawner
 from plants_sm.featurization.proteins.bio_embeddings.constants import ESM_DIMENSIONS, ESM_FUNCTIONS, ESM_LAYERS
 from plants_sm.transformation.transformer import Transformer
+
+from fairscale.nn.data_parallel import FullyShardedDataParallel as FSDP
+from fairscale.nn.wrap import enable_wrap, wrap
+
+import torch
+from plants_sm.parallelisation.torch_spawner import ESMModel
 
 
 class ESMEncoder(Transformer):
@@ -17,50 +24,191 @@ class ESMEncoder(Transformer):
     ----------
     batch_size: int, optional (default=16)
         The batch size to be used in the encoding process. Higher batch sizes can lead to OOM issues.
-
+    esm_function: str, optional (default="esm1b_t33_650M_UR50S")
+        The ESM function to be used.
+    device: str, optional (default="cpu")
+        The device to be used for the encoding process.
+    num_gpus: int, optional (default=None)
+        The number of GPUs to be used for the encoding process.
+    output_dim: int, optional (default=2)
+        The output dimension of the model.
     """
 
     batch_size: int = 16
     features_names = list = []
     esm_function: str = "esm2_t6_8M_UR50D"
     device: str = "cpu"
+    num_gpus: int = None
+    output_dim: int = 2
+    return_contacts: bool = False
 
     def set_features_names(self):
-        self.features_names = [f"ESM_{i}" for i in range(ESM_DIMENSIONS[self.esm_function])]
+        """
+        Set the features names of the encoded dataset.
+        """
+        self.features_names = [f"ESM_{self.esm_function}_{i}" for i in range(ESM_DIMENSIONS[self.esm_function])]
 
     def _fit(self, dataset: Dataset, instance_type: str) -> 'ESMEncoder':
         """
-        Fit the Esm1bEncoder. It loads the pre-trained model and the batch converter.
+        Fit the ESM. It loads the pre-trained model and the batch converter.
 
         Parameters
         ----------
         dataset: Dataset
             The dataset to be used to fit the Esm1bEncoder.
+        instance_type: str
+            The type of instance to be used to fit the ESM.
 
         Returns
         -------
-        encoder: a fitted Esm1bEncoder
+        encoder: a fitted ESM
         """
 
         if self.esm_function in ESM_DIMENSIONS:
 
-            self.esm_callable = ESM_FUNCTIONS[self.esm_function]
-
-            model, alphabet = self.esm_callable()
-
-            self.model = model.to(self.device)
-            self.model = model.eval()
-            self.batch_converter = alphabet.get_batch_converter()
-
+            esm_callable = ESM_FUNCTIONS[self.esm_function]
             self.layers = ESM_LAYERS[self.esm_function]
+
+            model, self.alphabet = esm_callable()
+            self.model = model.to(self.device)
+            self.batch_converter = self.alphabet.get_batch_converter()
+
+            if self.num_gpus is not None:
+                self.is_ddf = True
+            else:
+                self.num_gpus = 0
+                self.is_ddf = False
 
             return self
         else:
             raise ValueError(f"Invalid esm_function. Available functions are: {list(ESM_DIMENSIONS.keys())}")
 
+
     def _fit_batch(self, dataset: Dataset, instance_type: str) -> 'ESMEncoder':
 
         return self._fit(dataset, instance_type)
+
+
+    @staticmethod
+    def _generate_esm_model(model: nn.Module,
+                            layers: int,
+                            instances: dict,
+                            batch_size: int,
+                            batch_converter: callable,
+                            output_dim: int,
+                            num_gpus: int,
+                            alphabet: Alphabet,
+                            is_ddf: bool):
+        """
+        Generate the ESM model.
+
+        Parameters
+        ----------
+        model: nn.Module
+            The ESM model.
+        layers: int
+            The number of layers of the ESM model.
+        instances: dict
+            The instances to be encoded.
+        batch_size: int
+            The batch size to be used in the encoding process.
+        batch_converter: callable
+            The batch converter to be used in the encoding process.
+        output_dim: int
+            The output dimension of the ESM model.
+        num_gpus: int
+            The number of GPUs to be used in the encoding process.
+        alphabet: Alphabet
+            The alphabet of the ESM model.
+        is_ddf: bool
+            Whether to use DDP or not.
+        """
+
+        if is_ddf:
+            fsdp_params = dict(
+                mixed_precision=True,
+                flatten_parameters=True,
+                state_dict_device=torch.device("cpu"),  # reduce GPU mem usage
+                cpu_offload=False,  # enable cpu offloading
+            )
+
+            with enable_wrap(wrapper_cls=FSDP, **fsdp_params):
+                model.eval()
+
+                ddp_model = ESMModel(alphabet=alphabet, num_layers=model.num_layers, embed_dim=model.embed_dim,
+                                     attention_heads=model.attention_heads, token_dropout=model.token_dropout,
+                                     is_ddp=True, num_gpus=num_gpus)
+                ddp_model.load_state_dict(model.state_dict())
+                model = ddp_model
+
+                # Wrap each layer in FSDP separately
+                for name, child in model.named_children():
+
+                    if name == "layers":
+                        for layer_name, layer in child.named_children():
+                            wrapped_layer = wrap(layer)
+                            setattr(child, layer_name, wrapped_layer)
+
+                model = wrap(model)
+
+        res = []
+        batch = []
+        batch_ids = []
+
+        pbar = tqdm(desc="ESM", total=len(instances.items()))
+        for instance_id, instance_representation in instances.items():
+
+            batch.append((instance_id, instance_representation))
+            batch_ids.append(instance_id)
+            if len(batch) == batch_size:
+                representations = {}
+                _, _, batch_tokens = batch_converter(batch)
+
+                if is_ddf:
+                    batch_tokens = batch_tokens.cuda()
+                else:
+                    batch_tokens = batch_tokens.to("cpu")
+
+                with torch.no_grad():
+                    results = model(batch_tokens, repr_layers=[layers], return_contacts=False)
+                    representations['representations'] = results["representations"][layers].cpu().detach().numpy()
+
+                    for i, batch_instance_id in enumerate(batch_ids):
+                        if output_dim == 2:
+                            res.append((batch_instance_id,
+                                        representations['representations'][i, 1: len(batch[i][1]) + 1].mean(0)))
+                        else:
+                            res.append((batch_instance_id,
+                                        representations['representations'][i, 1: len(batch[i][1]) + 1]))
+
+                    batch = []
+                    batch_ids = []
+                    pbar.update(batch_size)
+
+        if len(batch) != 0:
+
+            representations = {}
+            _, _, batch_tokens = batch_converter(batch)
+
+            if is_ddf:
+                batch_tokens = batch_tokens.cuda()
+            else:
+                batch_tokens = batch_tokens.to("cpu")
+
+            results = model(batch_tokens, repr_layers=[layers], return_contacts=False)
+            representations['representations'] = results["representations"][layers].cpu().detach().numpy()
+
+            for i, batch_instance_id in enumerate(batch_ids):
+                if output_dim == 2:
+                    res.append((batch_instance_id,
+                                representations['representations'][i, 1: len(batch[i][1]) + 1].mean(0)))
+                else:
+                    res.append((batch_instance_id,
+                                representations['representations'][i, 1: len(batch[i][1]) + 1]))
+
+            pbar.update(len(batch_ids))
+
+        return res
 
     @call_set_features_names
     def _transform(self, dataset: Dataset, instance_type: str) -> Dataset:
@@ -81,47 +229,32 @@ class ESMEncoder(Transformer):
         """
         # it has to run in batch of 16, otherwise can lead to OOM issues
 
-        res = []
-        batch = []
-        batch_ids = []
         instances = dataset.get_instances(instance_type)
-        pbar = tqdm(desc="ESM", total=len(instances.items()))
-        for instance_id, instance_representation in instances.items():
-            if len(instance_representation) <= 1024:
-                batch.append((instance_id, instance_representation))
-            else:
-                batch.append((instance_id, instance_representation[:1024]))
-            batch_ids.append(instance_id)
-            if len(batch) == self.batch_size:
-                representations = {}
-                batch_labels, batch_strs, batch_tokens = self.batch_converter(batch)
-                # Extract per-residue representations (on CPU)
-                with torch.no_grad():
-                    batch_tokens = batch_tokens.to(self.device)
-                    results = self.model(batch_tokens, repr_layers=[self.layers], return_contacts=True)
 
-                representations['representations'] = results["representations"][self.layers].cpu().detach().numpy()
+        # initialize the model with FSDP wrapper
 
-                for i, batch_instance_id in enumerate(batch_ids):
-                    res.append((batch_instance_id,
-                                representations['representations'][i, 1: len(batch[i][1]) + 1].mean(0)))
+        if self.is_ddf:
+            res = TorchSpawner().run(self._generate_esm_model,
+                                     model=self.model,
+                                     layers=self.layers,
+                                     instances=instances,
+                                     batch_size=self.batch_size,
+                                     batch_converter=self.batch_converter,
+                                     output_dim=self.output_dim,
+                                     num_gpus=self.num_gpus,
+                                     alphabet=self.alphabet,
+                                     is_ddf=self.is_ddf)
 
-                batch = []
-                batch_ids = []
-                pbar.update(self.batch_size)
-
-        if len(batch) != 0:
-            representations = {}
-            batch_labels, batch_strs, batch_tokens = self.batch_converter(batch)
-            # Extract per-residue representations (on CPU)
-            with torch.no_grad():
-                batch_tokens = batch_tokens.to(self.device)
-                results = self.model(batch_tokens, repr_layers=[self.layers], return_contacts=True)
-
-            representations['representations'] = results["representations"][self.layers].cpu().detach().numpy()
-
-            for i, batch_instance_id in enumerate(batch_ids):
-                res.append((batch_instance_id, representations['representations'][i, 1: len(batch[i][1]) + 1].mean(0)))
+        else:
+            res = self._generate_esm_model(self.model,
+                                           layers=self.layers,
+                                           instances=instances,
+                                           batch_size=self.batch_size,
+                                           batch_converter=self.batch_converter,
+                                           output_dim=self.output_dim,
+                                           num_gpus=self.num_gpus,
+                                           alphabet=self.alphabet,
+                                           is_ddf=self.is_ddf)
 
         dataset.features[instance_type] = dict(res)
 
