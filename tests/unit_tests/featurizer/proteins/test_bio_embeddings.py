@@ -7,7 +7,7 @@ from plants_sm.featurization.proteins.bio_embeddings._utils import get_model_fil
 from plants_sm.featurization.proteins.bio_embeddings.esm import ESMEncoder
 from plants_sm.featurization.proteins.bio_embeddings.prot_bert import ProtBert
 from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
-from ...featurizer.proteins.test_protein_featurizers import TestProteinFeaturizers
+from tests.unit_tests.featurizer.proteins.test_protein_featurizers import TestProteinFeaturizers
 
 from plants_sm.featurization.proteins.bio_embeddings.unirep import UniRepEmbeddings
 from tests import TEST_DIR
@@ -53,8 +53,9 @@ class TestEmbeddings(TestProteinFeaturizers):
     def test_esm_1b(self):
         ESMEncoder(device="cpu").fit_transform(self.dataset)
 
+    @skip("No memory on CI")
     def test_esm_2(self):
-        ESMEncoder(device="cpu", esm_function="esm2_t6_8M_UR50D", batch_size=2).fit_transform(self.dataset)
+        ESMEncoder(device="cuda", esm_function="esm2_t6_8M_UR50D", batch_size=2, num_gpus=3).fit_transform(self.dataset)
         self.assertEqual(self.dataset.X().shape, (2, 320))
         self.assertAlmostEqual(-0.014742036, self.dataset.X()[0, 0], delta=0.005)
 
