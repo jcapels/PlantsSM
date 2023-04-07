@@ -59,9 +59,9 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
 
             if labels_field is not None:
                 if not isinstance(labels_field, List):
-                    self.labels_names = [labels_field]
+                    self._labels_names = [labels_field]
                 else:
-                    self.labels_names = labels_field
+                    self._labels_names = labels_field
 
             if self.batch_size is not None:
                 while next(self):
@@ -328,5 +328,5 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
 
     @property
     def y(self):
-        if self.labels_names is not None:
-            return np.array(self.dataframe.loc[:, self.labels_names].values)
+        if self._labels_names is not None:
+            return np.array(self.dataframe.loc[:, self._labels_names].values)

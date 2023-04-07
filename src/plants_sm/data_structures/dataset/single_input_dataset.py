@@ -75,23 +75,19 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             if labels_field is not None:
 
                 if isinstance(labels_field, slice):
-
                     indexes_list = process_slices(self._dataframe.columns, labels_field)
+                    self._labels_names = [self._dataframe.columns[i] for i in indexes_list]
 
-                    self.labels_names = [self._dataframe.columns[i] for i in indexes_list]
-
-                elif isinstance(labels_field, Iterable):
+                elif isinstance(labels_field, list):
 
                     if isinstance(labels_field[0], int):
-                        self.labels_names = [self._dataframe.columns[i] for i in
-                                             labels_field]
+                        self._labels_names = [self._dataframe.columns[i] for i in
+                                              labels_field]
 
-                    else:
-                        self.labels_names = [labels_field]
                 else:
-                    self.labels_names = [labels_field]
+                    self._labels_names = [labels_field]
 
-                self._labels = self.dataframe.loc[:, self.labels_names].T.to_dict('list')
+                self._labels = self.dataframe.loc[:, self._labels_names].T.to_dict('list')
             else:
                 self._labels = None
 
