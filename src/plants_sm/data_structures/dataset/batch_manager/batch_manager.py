@@ -94,13 +94,15 @@ class BatchManager(Observer):
                 variable = getattr(self._cls, variable_name)
                 if variable is not None:
                     write_json(file_path, variable)
+                    
             elif variable_format in CSVWriter.file_types():
                 file_path = os.path.join(self.temporary_folder.name, str(self.counter),
                                          f"{variable_name}.csv")
 
                 variable = getattr(self._cls, variable_name)
                 if variable is not None:
-                    write_csv(file_path, variable)
+                    write_csv(file_path, variable, index=False)
+
             elif variable_format in PickleWriter.file_types():
                 file_path = os.path.join(self.temporary_folder.name, str(self.counter),
                                          f"{variable_name}.pkl")

@@ -66,6 +66,7 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
             if self.batch_size is not None:
                 while next(self):
                     pass
+                self.next_batch()
 
     @property
     def dataframe(self) -> Any:
@@ -277,23 +278,29 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
         """
         new_dataframe = self.dataframe.copy()
         for instance_type in self.instances.keys():
-            for instance_id, instance in self.instances[instance_type].items():
-                index = new_dataframe[new_dataframe[self.instances_ids_field[instance_type]] == instance_id].index
-                new_dataframe.loc[index, self.representation_field[instance_type]] = instance
-        try:
-            instances = self.X.keys()
-        except ValueError:
-            instances = None
+            data = list(self.instances[instance_type].items())
+            data = pd.DataFrame(data, columns = [self.instances_ids_field[instance_type], self.representation_field[instance_type]])
 
-        if self._features_fields is not None and instances is not None:
+            new_dataframe = pd.merge(new_dataframe, data, on=self.instances_ids_field[instance_type], how='left')
+
+        try:
+            instances_types = self.X.keys()
+        except ValueError:
+            instances_types = None
+
+        if self._features_fields is not None and instances_types is not None:
             write_pkl = False
-            for instance in instances:
-                instance_features = self.X[instance]
+            for instance_type in instances_types:
+                instance_features = self.X[instance_type]
+                
                 if instance_features.ndim > 2:
-                    warnings.warn(f"The features of the instance {instance} are not 2D, writing to pickle file")
+                    warnings.warn(f"The features of the instance {instance_type} are not 2D, writing to pickle file")
                     write_pkl = True
                     break
-                new_dataframe.loc[:, self._features_fields[instance]] = instance_features
+                
+                
+                new_dataframe = pd.concat([new_dataframe, pd.DataFrame(instance_features, 
+                                                       columns=self.features_fields[instance_type])], axis=1)
 
             if write_pkl:
                 write_pickle(file_path.replace("csv", "pkl"), self.features)

@@ -51,6 +51,13 @@ class Dataset(ConcreteSubject, PickleMixin):
             if isinstance(getattr(type(self), name), cached_property):
                 vars(self).pop(name, None)
 
+    def reset_batch(self):
+        """
+        Method to reset the batch.
+        """
+        self._batch_state = False
+        self._observer.end()
+
     def save_features(self, folder_path: str):
         """
         Method to save the features of the dataset.

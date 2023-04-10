@@ -141,3 +141,7 @@ dmypy.json
 
 #performance datasets
 tests/performance_datasets
+
+#large datasets
+examples/data/*
+examples/*.ipynb

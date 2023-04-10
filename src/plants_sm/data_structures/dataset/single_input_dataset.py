@@ -56,7 +56,14 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         if dataframe is not None:
             if not isinstance(features_fields, List) and not isinstance(features_fields, slice) and \
                     features_fields is not None:
+                
                 self._features_fields = {PLACEHOLDER_FIELD: [features_fields]}
+
+            elif isinstance(labels_field, slice):
+                indexes_list = process_slices(dataframe.columns, features_fields)
+                features_fields = [dataframe.columns[i] for i in indexes_list]
+                self._features_fields = {PLACEHOLDER_FIELD: features_fields}
+
             elif features_fields is not None:
                 self._features_fields = {PLACEHOLDER_FIELD: features_fields}
             else:
@@ -92,6 +99,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                 self._labels = None
 
             if self._features_fields:
+
                 self._features = \
                     {PLACEHOLDER_FIELD:
                          self.dataframe.loc[:, self._features_fields[PLACEHOLDER_FIELD]].T.to_dict('list')}
@@ -101,6 +109,8 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             if self.batch_size is not None:
                 while next(self):
                     pass
+
+                self.next_batch()
 
         # in the case that the dataframe is None and the features field is not None, the features names will be set
 
@@ -162,22 +172,28 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         """
 
         new_dataframe = self.dataframe.copy()
-        # merge per ids the features and the labels
-        for instance_id, instance in self.instances[PLACEHOLDER_FIELD].items():
-            index = new_dataframe[new_dataframe[self.instances_ids_field] == instance_id].index
-            new_dataframe.loc[index, self.representation_field] = instance
+        data = list(self.instances[PLACEHOLDER_FIELD].items())
+        data = pd.DataFrame(data, columns = [self.instances_ids_field, self.representation_field])
+
+        new_dataframe = pd.merge(new_dataframe, data, on=self.instances_ids_field, how='left')
 
         if self.features:
             write_pkl = False
-            for instance_id, features in self.features[PLACEHOLDER_FIELD].items():
-                if features.ndim > 1:
-                    warnings.warn(f"The features are not 2D, writing to pickle file")
-                    write_pkl = True
-                    break
-                index = new_dataframe[new_dataframe[self.instances_ids_field] == instance_id].index
-                new_dataframe.loc[index, self.features_fields[PLACEHOLDER_FIELD]] = features
+            features = list(self.features[PLACEHOLDER_FIELD].values())[0]
+            if features.ndim > 1:
+                warnings.warn(f"The features are not 2D, writing to pickle file")
+                write_pkl = True
+            
+            if not write_pkl:
+                #convert a dictionary into a list of tuples
+                data = [(k, *v.tolist()) for k, v in self.features[PLACEHOLDER_FIELD].items()]
+                data = pd.DataFrame(data, columns = [self.instances_ids_field] + 
+                                                        self.features_fields[PLACEHOLDER_FIELD])
 
-            if write_pkl:
+                new_dataframe = pd.merge(new_dataframe, data, on=self.instances_ids_field, how='left')
+
+
+            else:
                 write_pickle(file_path.replace("csv", "pkl"), self.features)
 
         write_csv(file_path, new_dataframe, **kwargs)
@@ -310,7 +326,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             raise ValueError('Features are not defined')
         return np.array(list(self.features[PLACEHOLDER_FIELD].values()))
 
-    @property
+    @cached_property
     def y(self) -> np.ndarray:
         """
         Alias for the labels property.

@@ -327,7 +327,6 @@ class PyTorchModel(Model):
         """
 
         inputs, targets = inputs_targets[:-1], inputs_targets[-1]
-
         for j, inputs_elem in enumerate(inputs):
             inputs[j] = inputs_elem.to(self.device)
 

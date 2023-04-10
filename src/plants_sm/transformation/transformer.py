@@ -34,6 +34,7 @@ class Transformer(Estimator):
         """
         if self.fitted:
             if dataset.batch_size is not None:
+                dataset.reset_batch()
                 batch = dataset.next_batch()
                 while batch is not None:
                     self._transform_dataset(dataset, instance_type)
