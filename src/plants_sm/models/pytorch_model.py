@@ -16,7 +16,7 @@ from torch.utils.tensorboard import SummaryWriter
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.io.pickle import read_pickle, write_pickle
 from plants_sm.models._utils import _convert_proba_to_unified_form, \
-    write_model_parameters_to_pickle, array_from_tensor, array_reshape
+    write_model_parameters_to_pickle, array_from_tensor, array_reshape, multi_label_binarize
 from plants_sm.models.constants import REGRESSION, QUANTILE, BINARY, FileConstants
 from plants_sm.models.model import Model
 import torch
@@ -26,7 +26,8 @@ class PyTorchModel(Model):
 
     def __init__(self, model: nn.Module, loss_function: _Loss, optimizer: Optimizer = None,
                  scheduler: ReduceLROnPlateau = None, epochs: int = 32, batch_size: int = 32,
-                 patience: int = 4, validation_metric: Callable = None, problem_type: str = BINARY,
+                 patience: int = 4, validation_metric: Callable = None,
+                 problem_type: str = BINARY,
                  device: Union[str, torch.device] = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
                  trigger_times: int = 0, last_loss: int = None, progress: int = 100, logger_path: str = None):
 
@@ -287,7 +288,12 @@ class PyTorchModel(Model):
         """
         self.model.eval()
         loss_total = 0
-        predictions, actuals = np.empty(shape=(0, 1)), np.empty(shape=(0, 1))
+        second_shape = validation_set.y.shape[1]
+        predictions, actuals = np.empty(shape=(0, second_shape)), np.empty(shape=(0, second_shape))
+
+        predictions = array_reshape(predictions)
+        actuals = array_reshape(actuals)
+
         with torch.no_grad():
 
             if validation_set.batch_size is None:
@@ -427,8 +433,14 @@ class PyTorchModel(Model):
         """
         self.model.train()
         loss_total = 0
-        predictions, actuals = np.empty(shape=(0, 1)), np.empty(shape=(0, 1))
-        train_dataset_preprocessed = self._preprocess_data(train_dataset, shuffle=True)
+
+        second_shape = train_dataset.y.shape[1]
+        predictions, actuals = np.empty(shape=(0, second_shape)), np.empty(shape=(0, second_shape))
+
+        predictions = array_reshape(predictions)
+        actuals = array_reshape(actuals)
+
+        train_dataset_preprocessed = self._preprocess_data(train_dataset, shuffle=False)
 
         len_train_dataset = len(train_dataset_preprocessed)
 
@@ -443,18 +455,21 @@ class PyTorchModel(Model):
                 self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] loss: {loss.item():.8}')
 
                 predictions = self.get_pred_from_proba(predictions)
-                validation_metric_result = self.validation_metric(actuals, predictions)
+                if self.validation_metric:
+                    validation_metric_result = self.validation_metric(actuals, predictions)
 
-                self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] '
+                    self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] '
                                  f'metric result: {validation_metric_result:.8}')
 
         loss = loss_total / len_train_dataset
 
         predictions = self.get_pred_from_proba(predictions)
-        validation_metric_result = self.validation_metric(actuals, predictions)
-        self.logger.info(
-            f'Training loss: {loss:.8};  Metric result: {validation_metric_result:.8}')
-        self._register_history(loss, epoch, validation_metric_result)
+
+        if self.validation_metric:
+            validation_metric_result = self.validation_metric(actuals, predictions)
+            self.logger.info(
+                f'Training loss: {loss:.8};  Metric result: {validation_metric_result:.8}')
+            self._register_history(loss, epoch, validation_metric_result)
 
         if validation_dataset:
             assert validation_dataset != train_dataset, "Validation dataset should not be the same as training dataset"
@@ -536,7 +551,10 @@ class PyTorchModel(Model):
             Array of predictions
         """
         if self.problem_type == BINARY:
-            y_pred = np.array([1 if pred >= 0.5 else 0 for pred in y_pred_proba])
+            if y_pred_proba.shape[1] == 1:
+                y_pred = np.array([1 if pred >= 0.5 else 0 for pred in y_pred_proba])
+            else:
+                y_pred = multi_label_binarize(y_pred_proba)
         elif self.problem_type == REGRESSION:
             y_pred = y_pred_proba
         elif self.problem_type == QUANTILE:
@@ -599,10 +617,13 @@ class PyTorchModel(Model):
             return y_pred
 
         self.model.eval()
-        predictions = np.empty(shape=(0, 1))
+
+        second_shape = dataset.y.shape[1]
+        predictions, actuals = np.empty(shape=(0, second_shape)), np.empty(shape=(0, second_shape))
+
+        predictions = array_reshape(predictions)
 
         # the "shuffle" argument always has to be False in predicting probabilities in an evaluation context
-
         with torch.no_grad():
 
             if dataset.batch_size is None:

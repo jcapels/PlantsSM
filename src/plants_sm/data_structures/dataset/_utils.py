@@ -1,6 +1,4 @@
 
-
-
 def process_slices(_columns, _slice):
 
     if _slice.start is not None:

@@ -59,9 +59,11 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                 
                 self._features_fields = {PLACEHOLDER_FIELD: [features_fields]}
 
-            elif isinstance(labels_field, slice):
+            elif isinstance(features_fields, slice):
+
                 indexes_list = process_slices(dataframe.columns, features_fields)
                 features_fields = [dataframe.columns[i] for i in indexes_list]
+
                 self._features_fields = {PLACEHOLDER_FIELD: features_fields}
 
             elif features_fields is not None:

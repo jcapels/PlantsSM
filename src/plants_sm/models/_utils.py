@@ -35,7 +35,7 @@ def _convert_proba_to_unified_form(problem_type, y_pred_proba: np.ndarray) -> np
     elif problem_type == BINARY:
         if len(y_pred_proba.shape) == 1:
             return y_pred_proba
-        elif y_pred_proba.shape[1] > 1:
+        elif y_pred_proba.shape[1] > 1 and y_pred_proba.shape[1] == 1:
             return y_pred_proba[:, 1]
         else:
             return y_pred_proba
@@ -102,6 +102,27 @@ def array_reshape(array: np.ndarray) -> np.ndarray:
     if len(array.shape) == 1 or (len(array.shape) == 2 and array.shape[1] == 1):
         array = array.reshape(-1, 1)
     return array
+
+
+def multi_label_binarize(y_pred_proba, threshold=0.5) -> np.ndarray:
+    """
+    Binarize the predicted probabilities for multi-label classification.
+
+    Parameters
+    ----------
+    y_pred_proba: np.ndarray
+        Predicted probabilities with shape (n_samples, n_classes).
+    threshold: float
+        Threshold for binarization.
+
+    Returns:
+        np.ndarray: Binary predictions with shape (n_samples, n_classes).
+    """
+    n_samples, n_classes = y_pred_proba.shape
+    y_pred = np.zeros((n_samples, n_classes))
+    for i in range(n_classes):
+        y_pred[:, i] = (y_pred_proba[:, i] >= threshold).astype(int)
+    return y_pred
 
 
 def _batch_generator(dataset: Dataset) -> Iterable:
