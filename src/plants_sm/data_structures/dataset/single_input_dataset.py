@@ -21,16 +21,16 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
     _features: Dict[str, Dict[str, np.ndarray]]
     _features_names: List[str]
     _dataframe: Any
-    _labels_names: List[str] = None
+    _labels_names: Union[List[str], None] = None
     _instances: Dict[str, dict]
     _features_fields: Dict[str, Union[str, List[Union[str, int]], slice]]
-    _identifiers: List[Union[str, int]] = None
+    _identifiers: Union[List[Union[str, int]], None] = None
 
-    def __init__(self, dataframe: Any = None, representation_field: str = None,
-                 features_fields: Union[str, List[Union[str, int]], slice] = None,
-                 labels_field: Union[str, List[Union[str, int]]] = None,
-                 instances_ids_field: str = None,
-                 batch_size: int = None):
+    def __init__(self, dataframe: Any = None, representation_field: Union[str, None] = None,
+                 features_fields: Union[str, List[Union[str, int]], slice, None] = None,
+                 labels_field: Union[str, List[Union[str, int]], slice, None] = None,
+                 instances_ids_field: Union[str, None] = None,
+                 batch_size: Union[int, None] = None):
         """
         Constructor
         Parameters
@@ -117,10 +117,11 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         # in the case that the dataframe is None and the features field is not None, the features names will be set
 
     @classmethod
-    def from_csv(cls, file_path: FilePathOrBuffer, representation_field: str = None,
-                 features_fields: Union[str, List[Union[str, int]], slice] = None,
-                 labels_field: Union[str, List[Union[str, int]]] = None,
-                 instances_ids_field: str = None, batch_size: Union[None, int] = None,
+    def from_csv(cls, file_path: FilePathOrBuffer, representation_field: Union[str, None] = None,
+                 features_fields: Union[str, List[Union[str, int]], slice, None] = None,
+                 labels_field: Union[str, List[Union[str, int]], slice, None] = None,
+                 instances_ids_field: Union[str, None] = None,
+                 batch_size: Union[None, int] = None,
                  **kwargs) -> 'SingleInputDataset':
         """
         Method to create a dataset from a csv file.
@@ -201,10 +202,11 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         write_csv(file_path, new_dataframe, **kwargs)
 
     @classmethod
-    def from_excel(cls, file_path: FilePathOrBuffer, representation_field: str = None,
-                   features_fields: Union[str, List[Union[str, int]], slice] = None,
-                   labels_field: Union[str, List[Union[str, int]]] = None,
-                   instances_ids_field: str = None, batch_size: Union[None, int] = None, **kwargs) \
+    def from_excel(cls, file_path: FilePathOrBuffer, representation_field: Union[str, None] = None,
+                 features_fields: Union[str, List[Union[str, int]], slice, None] = None,
+                 labels_field: Union[str, List[Union[str, int]], slice, None] = None,
+                 instances_ids_field: Union[str, None] = None,
+                 batch_size: Union[int, None] = None, **kwargs) \
             -> 'SingleInputDataset':
         """
         Method to create a dataset from an excel file.

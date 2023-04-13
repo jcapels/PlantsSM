@@ -11,6 +11,7 @@ from plants_sm.io import write_csv
 from plants_sm.io.commons import FilePathOrBuffer
 from plants_sm.io.pickle import write_pickle
 from plants_sm.mixins.mixins import CSVMixin, ExcelMixin
+from plants_sm.data_structures.dataset._utils import process_slices
 
 
 class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
@@ -58,10 +59,19 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
             self.dataframe = dataframe
 
             if labels_field is not None:
-                if not isinstance(labels_field, List):
-                    self._labels_names = [labels_field]
+
+                if isinstance(labels_field, slice):
+                    indexes_list = process_slices(self._dataframe.columns, labels_field)
+                    self._labels_names = [self._dataframe.columns[i] for i in indexes_list]
+
+                elif isinstance(labels_field, list):
+
+                    if isinstance(labels_field[0], int):
+                        self._labels_names = [self._dataframe.columns[i] for i in
+                                              labels_field]
+
                 else:
-                    self._labels_names = labels_field
+                    self._labels_names = [labels_field]
 
             if self.batch_size is not None:
                 while next(self):

@@ -356,7 +356,7 @@ class PyTorchModel(Model):
 
         return actual, yhat, loss
 
-    def _register_history(self, loss: float, epoch: int, metric_result: float, train: bool = True) -> None:
+    def _register_history(self, loss: float, epoch: int, metric_result: float = None, train: bool = True) -> None:
         """
         Register the history of the model
 
@@ -375,8 +375,10 @@ class PyTorchModel(Model):
 
         self.writer.add_scalar(f"Loss/{dataset_type}", loss, epoch)
         self._history["loss"].at[epoch - 1, f"{dataset_type}_loss"] = loss
-        self.writer.add_scalar(f"Metric/{dataset_type}", metric_result, epoch)
-        self._history["metric_results"].at[epoch - 1, f"{dataset_type}_metric_result"] = metric_result
+
+        if metric_result is not None:
+            self.writer.add_scalar(f"Metric/{dataset_type}", metric_result, epoch)
+            self._history["metric_results"].at[epoch - 1, f"{dataset_type}_metric_result"] = metric_result
 
     def _early_stopping(self, validation_dataset: Dataset, epoch: int) -> Union[nn.Module, None]:
         """
@@ -460,16 +462,19 @@ class PyTorchModel(Model):
 
                     self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] '
                                  f'metric result: {validation_metric_result:.8}')
-
+                    
         loss = loss_total / len_train_dataset
 
         predictions = self.get_pred_from_proba(predictions)
 
+        validation_metric_result = None
         if self.validation_metric:
             validation_metric_result = self.validation_metric(actuals, predictions)
+            self.logger.info(f'[{epoch}/{self.epochs}] metric result: {validation_metric_result:.8}')
             self.logger.info(
-                f'Training loss: {loss:.8};  Metric result: {validation_metric_result:.8}')
-            self._register_history(loss, epoch, validation_metric_result)
+                f'[{epoch}/{self.epochs}] Training loss: {loss:.8}')
+        
+        self._register_history(loss, epoch, validation_metric_result)
 
         if validation_dataset:
             assert validation_dataset != train_dataset, "Validation dataset should not be the same as training dataset"
@@ -619,7 +624,7 @@ class PyTorchModel(Model):
         self.model.eval()
 
         second_shape = dataset.y.shape[1]
-        predictions, actuals = np.empty(shape=(0, second_shape)), np.empty(shape=(0, second_shape))
+        predictions, _ = np.empty(shape=(0, second_shape)), np.empty(shape=(0, second_shape))
 
         predictions = array_reshape(predictions)
 
