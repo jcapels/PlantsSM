@@ -88,6 +88,8 @@ class Dataset(ConcreteSubject, PickleMixin):
         """
         if self.batch_size is not None:
             i = 0
+            self.features = read_pickle(os.path.join(folder_path, f"features_{i}.pkl"))
+            i+=1
             while self.next_batch():
                 self.features = read_pickle(os.path.join(folder_path, f"features_{i}.pkl"))
                 i += 1

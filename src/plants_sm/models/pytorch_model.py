@@ -248,6 +248,25 @@ class PyTorchModel(Model):
 
     def _validate_batches(self, validation_set: DataLoader, loss_total: float, predictions: ndarray,
                           actuals: ndarray) -> Tuple[float, ndarray, ndarray]:
+        """
+        Validate the model on the validation set
+
+        Parameters
+        ----------
+        validation_set: DataLoader
+            Validation set
+        loss_total: float
+            Total loss
+        predictions: ndarray
+            Predictions
+        actuals: ndarray
+            Actual values
+
+        Returns
+        -------
+        Tuple[float, ndarray, ndarray]
+            Total loss, predictions and actual values
+        """
 
         len_valid_dataset = len(validation_set)
         for i, inputs_targets in enumerate(validation_set):

@@ -200,6 +200,7 @@ class TestDatasetImportExport(TestDataset):
         dataset.load_features("test")
 
         dataset.next_batch()
+        print(dataset.X["proteins"].shape)
         self.assertTrue(dataset.X["proteins"].shape == (2, 512))
         dataset.next_batch()
         self.assertTrue(dataset.X["proteins"].shape == (2, 512))

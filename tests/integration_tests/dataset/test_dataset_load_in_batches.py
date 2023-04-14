@@ -72,11 +72,12 @@ class TestLoadInBatches(TestDataset):
 
         multi_input_dataset = pd.read_csv(self.multi_input_dataset_csv)
         y = []
+        y.extend(dataset.y)
         while dataset.next_batch():
             y.extend(dataset.y)
 
         for i, label in enumerate(y):
-            self.assertEqual(label, multi_input_dataset["LogSpActivity"][i])
+            self.assertEqual(label[0], multi_input_dataset["LogSpActivity"][i])
 
     def test_load_in_batches_multi_dataset_with_padder(self):
         batch_size = 3
@@ -89,8 +90,6 @@ class TestLoadInBatches(TestDataset):
 
         PropythiaWrapper().fit_transform(dataset, "proteins")
         DeepMolDescriptors().fit_transform(dataset, "ligands")
-        while dataset.next_batch():
-            print(dataset.X)
 
     def test_protein_padding(self):
         dataset = SingleInputDataset.from_csv(os.path.join(TEST_DIR, "data", "proteins.csv"),
@@ -102,9 +101,6 @@ class TestLoadInBatches(TestDataset):
 
         SequencePadder().fit_transform(dataset)
 
-        while dataset.next_batch():
-            print(dataset.instances[PLACEHOLDER_FIELD])
-
     def test_protein_standardizer(self):
         dataset = SingleInputDataset.from_csv(os.path.join(TEST_DIR, "data", "proteins.csv"),
                                               batch_size=2,
@@ -113,10 +109,4 @@ class TestLoadInBatches(TestDataset):
 
         ProteinStandardizer().fit_transform(dataset)
 
-        while dataset.next_batch():
-            print(dataset.instances[PLACEHOLDER_FIELD])
-
         PropythiaWrapper().fit_transform(dataset)
-        while dataset.next_batch():
-            print(dataset.instances[PLACEHOLDER_FIELD])
-            print(dataset.features[PLACEHOLDER_FIELD])

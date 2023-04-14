@@ -236,7 +236,6 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
         """
         Property for features. It should return the features of the dataset.
         """
-        self._clear_cached_properties()
         return self._features
 
     @features.setter
@@ -251,6 +250,7 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
         -------
         """
         self._features = value
+        self._clear_cached_properties()
         self.__dict__.pop('X', None)
 
     def add_features(self, instance_type: str, features: Dict[str, np.ndarray]):
@@ -289,7 +289,8 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
         new_dataframe = self.dataframe.copy()
         for instance_type in self.instances.keys():
             data = list(self.instances[instance_type].items())
-            data = pd.DataFrame(data, columns = [self.instances_ids_field[instance_type], self.representation_field[instance_type]])
+            data = pd.DataFrame(data, columns=[self.instances_ids_field[instance_type],
+                                               self.representation_field[instance_type]])
 
             new_dataframe = pd.merge(new_dataframe, data, on=self.instances_ids_field[instance_type], how='left')
 
@@ -302,15 +303,15 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
             write_pkl = False
             for instance_type in instances_types:
                 instance_features = self.X[instance_type]
-                
+
                 if instance_features.ndim > 2:
                     warnings.warn(f"The features of the instance {instance_type} are not 2D, writing to pickle file")
                     write_pkl = True
                     break
-                
-                
-                new_dataframe = pd.concat([new_dataframe, pd.DataFrame(instance_features, 
-                                                       columns=self.features_fields[instance_type])], axis=1)
+
+                new_dataframe = pd.concat([new_dataframe, pd.DataFrame(instance_features,
+                                                                       columns=self.features_fields[instance_type])],
+                                          axis=1)
 
             if write_pkl:
                 write_pickle(file_path.replace("csv", "pkl"), self.features)
