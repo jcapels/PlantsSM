@@ -189,7 +189,7 @@ class Pipeline:
                 config["metrics"].append(f"{metric.__name__}.pkl")
                 write_pickle(metric, os.path.join(path, f"{metric.__name__}.pkl"))
 
-        write_json(config, os.path.join(path, "config.json"))
+        write_json(os.path.join(path, "config.json"), config)
 
     def save(self, path: str) -> None:
         """

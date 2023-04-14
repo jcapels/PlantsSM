@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Tuple
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.transformation._utils import transform_instances
@@ -54,6 +54,22 @@ class ProteinStandardizer(Transformer):
         """
         self.replace_dict = {'B': self.B, 'Z': self.Z, 'U': self.U, 'O': self.O, 'J': self.J, 'X': self.X}
         return self
+
+    def _fit_batch(self, dataset: Dataset, instance_type: str) -> 'ProteinStandardizer':
+        """
+        Fit the transformer.
+
+        Parameters
+        ----------
+        dataset : Dataset
+            Dataset to fit.
+
+        Returns
+        -------
+        self : ProteinStandardizer
+            Fitted transformer.
+        """
+        return self._fit(dataset, instance_type)
 
     def _transform(self, dataset: Dataset, instance_type: str) -> Dataset:
         """

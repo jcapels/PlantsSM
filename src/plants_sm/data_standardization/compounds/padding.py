@@ -19,6 +19,14 @@ class SMILESPadder(Transformer):
     """
     pad_width: int = None
     padding: str = "left"
+    _pad_width_set: bool = False
+
+    def __init__(self, pad_width: int = None, padding: str = "left"):
+        super().__init__()
+        if pad_width is not None:
+            self._pad_width_set = True
+        self.pad_width = pad_width
+        self.padding = padding
 
     def _fit(self, dataset: Dataset, instance_type: str) -> 'SMILESPadder':
         """
@@ -37,6 +45,31 @@ class SMILESPadder(Transformer):
             # get the maximum length of the sequences
             lengths = [len(instance) for instance in dataset.get_instances(instance_type).values()]
             self.pad_width = max(lengths)
+
+        if self.padding not in ["right", "left", "center"]:
+            raise ValueError(f"Padding type not supported: {self.padding}")
+
+        return self
+
+    def _fit_batch(self, dataset: Dataset, instance_type: str) -> 'SMILESPadder':
+        """
+        Method that fits the sequence padder to the dataset
+
+        Parameters
+        ----------
+        dataset: Dataset
+            dataset to fit the transformer where instances are the representation or object to be processed.
+
+        Returns
+        -------
+        fitted sequence padder: SequencePadder
+        """
+        if not self._pad_width_set:
+            # get the maximum length of the sequences
+            lengths = [len(instance) for instance in dataset.get_instances(instance_type).values()]
+            max_length = max(lengths)
+            if self.pad_width < max_length:
+                self.pad_width = max_length
 
         if self.padding not in ["right", "left", "center"]:
             raise ValueError(f"Padding type not supported: {self.padding}")

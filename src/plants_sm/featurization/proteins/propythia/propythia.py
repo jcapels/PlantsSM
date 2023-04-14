@@ -39,6 +39,19 @@ class PropythiaWrapper(FeaturesGenerator):
 
         return self
 
+    def _fit_batch(self, dataset: Dataset, instance_type: str) -> 'PropythiaWrapper':
+        """
+        Abstract method that has to be implemented by all feature generators
+
+        Parameters
+        ----------
+        dataset: Dataset
+            dataset to fit the transformer where instances are the representation or object to be processed.
+        instance_type: str
+            type of the instances to be featurized
+        """
+        return self._fit(dataset, instance_type)
+
     def _featurize(self, protein_sequence: str) -> np.ndarray:
         """
         The method _featurize will generate the desired features for a given protein sequence

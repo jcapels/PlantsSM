@@ -1,3 +1,5 @@
+import warnings
+from typing import Any, List, Union, Dict, Iterable
 from typing import Any, Iterable, List, Union, Dict
 
 import numpy as np
@@ -6,7 +8,9 @@ from cached_property import cached_property
 from pandas import Series
 
 from plants_sm.data_structures.dataset.dataset import Dataset
+from plants_sm.io import write_csv
 from plants_sm.io.commons import FilePathOrBuffer
+from plants_sm.io.pickle import write_pickle
 from plants_sm.mixins.mixins import CSVMixin, ExcelMixin
 from plants_sm.data_structures.dataset._utils import process_slices
 
@@ -17,14 +21,16 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
     _features: Dict[str, Dict[str, np.ndarray]]
     _features_names: List[str]
     _dataframe: Any
-    _labels_names: List[str]
+    _labels_names: Union[List[str], None] = None
     _instances: Dict[str, dict]
     _features_fields: Dict[str, Union[str, List[Union[str, int]], slice]]
+    _identifiers: Union[List[Union[str, int]], None] = None
 
-    def __init__(self, dataframe: Any = None, representation_field: str = None,
-                 features_fields: Union[str, List[Union[str, int]], slice] = None,
-                 labels_field: Union[str, List[Union[str, int]]] = None,
-                 instances_ids_field: str = None):
+    def __init__(self, dataframe: Any = None, representation_field: Union[str, None] = None,
+                 features_fields: Union[str, List[Union[str, int]], slice, None] = None,
+                 labels_field: Union[str, List[Union[str, int]], slice, None] = None,
+                 instances_ids_field: Union[str, None] = None,
+                 batch_size: Union[int, None] = None):
         """
         Constructor
         Parameters
@@ -39,16 +45,27 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             labels column field
         instances_ids_field: str | List[str | int] (optional)
             instances column field
+        batch_size: int (optional)
+            batch size
         """
 
         # the features fields is a list of fields that are used to extract the features
         # however, they can be both strings or integers, so we need to check the type of the field
         # and convert it to a list of strings
-        super().__init__()
+        super().__init__(batch_size=batch_size)
         if dataframe is not None:
             if not isinstance(features_fields, List) and not isinstance(features_fields, slice) and \
                     features_fields is not None:
+                
                 self._features_fields = {PLACEHOLDER_FIELD: [features_fields]}
+
+            elif isinstance(features_fields, slice):
+
+                indexes_list = process_slices(dataframe.columns, features_fields)
+                features_fields = [dataframe.columns[i] for i in indexes_list]
+
+                self._features_fields = {PLACEHOLDER_FIELD: features_fields}
+
             elif features_fields is not None:
                 self._features_fields = {PLACEHOLDER_FIELD: features_fields}
             else:
@@ -58,7 +75,6 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             # setter
             self.instances_ids_field = instances_ids_field
 
-            self.representation_fields = {PLACEHOLDER_FIELD: representation_field}
             self.representation_field = representation_field
 
             # the dataframe setter will derive the instance ids field if it is None
@@ -68,67 +84,174 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             if labels_field is not None:
 
                 if isinstance(labels_field, slice):
-
                     indexes_list = process_slices(self._dataframe.columns, labels_field)
+                    self._labels_names = [self._dataframe.columns[i] for i in indexes_list]
 
-                    self.labels_names = [self._dataframe.columns[i] for i in indexes_list]
-
-                elif isinstance(labels_field, Iterable):
+                elif isinstance(labels_field, list):
 
                     if isinstance(labels_field[0], int):
-                        self.labels_names = [self._dataframe.columns[i] for i in
-                                             labels_field]
+                        self._labels_names = [self._dataframe.columns[i] for i in
+                                              labels_field]
 
-                    else:
-                        self.labels_names = [labels_field]
                 else:
-                    self.labels_names = [labels_field]
+                    self._labels_names = [labels_field]
 
-                self._labels = self.dataframe.loc[:, self.labels_names].T.to_dict('list')
+                self._labels = self.dataframe.loc[:, self._labels_names].T.to_dict('list')
             else:
                 self._labels = None
 
             if self._features_fields:
+
                 self._features = \
                     {PLACEHOLDER_FIELD:
                          self.dataframe.loc[:, self._features_fields[PLACEHOLDER_FIELD]].T.to_dict('list')}
             else:
                 self._features = {}
 
+            if self.batch_size is not None:
+                while next(self):
+                    pass
+
+                self.next_batch()
+
         # in the case that the dataframe is None and the features field is not None, the features names will be set
 
     @classmethod
-    def from_csv(cls, file_path: FilePathOrBuffer, representation_field: str = None,
-                 features_fields: Union[str, List[Union[str, int]], slice] = None,
-                 labels_field: Union[str, List[Union[str, int]]] = None,
-                 instances_ids_field: str = None, **kwargs) -> 'SingleInputDataset':
+    def from_csv(cls, file_path: FilePathOrBuffer, representation_field: Union[str, None] = None,
+                 features_fields: Union[str, List[Union[str, int]], slice, None] = None,
+                 labels_field: Union[str, List[Union[str, int]], slice, None] = None,
+                 instances_ids_field: Union[str, None] = None,
+                 batch_size: Union[None, int] = None,
+                 **kwargs) -> 'SingleInputDataset':
+        """
+        Method to create a dataset from a csv file.
+
+        Parameters
+        ----------
+        file_path: FilePathOrBuffer
+            path to the csv file
+        representation_field: str | List[str | int] (optional)
+            representation column field (to be processed)
+        features_fields: str | List[str | int] | slice (optional)
+            features column field
+        labels_field: str | List[str | int] (optional)
+            labels column field
+        instances_ids_field:
+            instances column field
+        batch_size: int (optional)
+            batch size to be used for the dataset
+        kwargs:
+            additional arguments for the pandas read_csv method
+
+        Returns
+        -------
+        dataset: SingleInputDataset
+            dataset created from the csv file
+        """
 
         instance = cls()
-        dataframe = instance._from_csv(file_path, **kwargs)
+        dataframe = instance._from_csv(file_path, batch_size, **kwargs)
         dataset = SingleInputDataset(dataframe, representation_field,
-                                     features_fields, labels_field, instances_ids_field)
+                                     features_fields, labels_field,
+                                     instances_ids_field,
+                                     batch_size=batch_size)
         return dataset
+
+    def to_csv(self, file_path: FilePathOrBuffer, **kwargs):
+        """
+        Method to write the dataset to a csv file.
+
+        Parameters
+        ----------
+        file_path: FilePathOrBuffer
+            path to the csv file
+        kwargs:
+            additional arguments for the pandas to_csv method
+
+        Returns
+        -------
+        success: bool
+            True if the file was written successfully, False otherwise
+        """
+
+        new_dataframe = self.dataframe.copy()
+        data = list(self.instances[PLACEHOLDER_FIELD].items())
+        data = pd.DataFrame(data, columns = [self.instances_ids_field, self.representation_field])
+
+        new_dataframe = pd.merge(new_dataframe, data, on=self.instances_ids_field, how='left')
+
+        if self.features:
+            write_pkl = False
+            features = list(self.features[PLACEHOLDER_FIELD].values())[0]
+            if features.ndim > 1:
+                warnings.warn(f"The features are not 2D, writing to pickle file")
+                write_pkl = True
+            
+            if not write_pkl:
+                #convert a dictionary into a list of tuples
+                data = [(k, *v.tolist()) for k, v in self.features[PLACEHOLDER_FIELD].items()]
+                data = pd.DataFrame(data, columns = [self.instances_ids_field] + 
+                                                        self.features_fields[PLACEHOLDER_FIELD])
+
+                new_dataframe = pd.merge(new_dataframe, data, on=self.instances_ids_field, how='left')
+
+
+            else:
+                write_pickle(file_path.replace("csv", "pkl"), self.features)
+
+        write_csv(file_path, new_dataframe, **kwargs)
 
     @classmethod
-    def from_excel(cls, file_path: FilePathOrBuffer, representation_field: str = None,
-                   features_fields: Union[str, List[Union[str, int]], slice] = None,
-                   labels_field: Union[str, List[Union[str, int]]] = None,
-                   instances_ids_field: str = None, **kwargs) -> 'SingleInputDataset':
+    def from_excel(cls, file_path: FilePathOrBuffer, representation_field: Union[str, None] = None,
+                 features_fields: Union[str, List[Union[str, int]], slice, None] = None,
+                 labels_field: Union[str, List[Union[str, int]], slice, None] = None,
+                 instances_ids_field: Union[str, None] = None,
+                 batch_size: Union[int, None] = None, **kwargs) \
+            -> 'SingleInputDataset':
+        """
+        Method to create a dataset from an excel file.
+
+        Parameters
+        ----------
+        Parameters
+        ----------
+        file_path: FilePathOrBuffer
+            path to the csv file
+        representation_field: str | List[str | int] (optional)
+            representation column field (to be processed)
+        features_fields: str | List[str | int] | slice (optional)
+            features column field
+        labels_field: str | List[str | int] (optional)
+            labels column field
+        instances_ids_field:
+            instances column field
+        batch_size: int (optional)
+            batch size to be used for the dataset
+        kwargs:
+            additional arguments for the pandas read_excel method
+
+        Returns
+        -------
+        dataset: SingleInputDataset
+            dataset created from the excel file
+        """
 
         instance = cls()
-        dataframe = instance._from_excel(file_path, **kwargs)
+        dataframe = instance._from_excel(file_path, batch_size=batch_size, **kwargs)
         dataset = SingleInputDataset(dataframe, representation_field,
-                                     features_fields, labels_field, instances_ids_field)
+                                     features_fields, labels_field,
+                                     instances_ids_field,
+                                     batch_size=batch_size)
         return dataset
 
-    @cached_property
+    @property
     def identifiers(self) -> List[Union[str, int]]:
         """
         Property for identifiers. It should return the identifiers of the dataset.
         -------
         list of the identifiers: List[Union[str, int]]
         """
-        return self.dataframe.index.values.tolist()
+        return self._identifiers
 
     @property
     def features(self) -> Dict[str, Dict[str, np.ndarray]]:
@@ -150,6 +273,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         Returns
         -------
         """
+        self._clear_cached_properties()
         self._features = value
 
     def add_features(self, instance_type: str, features: Dict[str, np.ndarray]):
@@ -194,34 +318,25 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         -------
         Labels for training and prediction. ALIASES: y vector with labels for classification and regression.
         """
-        return self._labels
-
-    @labels.setter
-    def labels(self, value: Dict[str, Any]):
-        """
-        Setter for the labels.
-        Parameters
-        ----------
-        value: Dict[str, Any]
-            dictionary of labels
-        """
-        if isinstance(value, Dict):
-            self._labels = value
-        else:
-            raise TypeError("Labels should be a dictionary.")
+        if self._labels_names is not None:
+            return self.dataframe.loc[:, self._labels_names].T.to_dict('list')
 
     @cached_property
     def X(self) -> np.ndarray:
         """
         Property for X. It should return the features of the dataset.
         """
+        if self.features == {}:
+            raise ValueError('Features are not defined')
         return np.array(list(self.features[PLACEHOLDER_FIELD].values()))
 
-    @property
+    @cached_property
     def y(self) -> np.ndarray:
         """
         Alias for the labels property.
         """
+        if not self._labels_names:
+            raise ValueError('Labels are not defined')
         return np.array(list(self.labels.values()))
 
     @property
@@ -261,13 +376,17 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         -------
         """
         if value is not None:
+            go = isinstance(value, Iterable) and not isinstance(value, pd.DataFrame) and self.batch_size is not None
+            if go:
+                # accounting on generators for batch reading
+                self._dataframe_generator = value
+                value = next(self._dataframe_generator)
+
             self._set_dataframe(value)
             if self.instances_ids_field is None:
                 self._set_instances_ids_field()
             else:
-                self._dataframe.set_index(self.instances_ids_field, inplace=True)
-
-                identifiers = self.dataframe.index.values
+                identifiers = self._dataframe.loc[:, self.instances_ids_field].values
                 instances = self.dataframe.loc[:, self.representation_field].values
                 self._instances = {PLACEHOLDER_FIELD: dict(zip(identifiers, instances))}
                 self.dataframe.drop(self.representation_field, axis=1, inplace=True)
@@ -308,23 +427,10 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
 
             self._dataframe = pd.concat((identifiers_series, self._dataframe), axis=1)
             self._dataframe["identifier"] = self._dataframe["identifier"].astype(str)
-            self._dataframe.set_index("identifier", inplace=True)
+            self._identifiers = self._dataframe["identifier"].values
 
             instances = self.dataframe.loc[:, self.representation_field].values
             self._instances = {PLACEHOLDER_FIELD: dict(zip(identifiers_series.values, instances))}
             self.dataframe.drop(self.representation_field, axis=1, inplace=True)
-
-    def _set_dataframe(self, value: Any):
-        """
-        Private method to set the dataframe.
-        Parameters
-        ----------
-        value: Any
-            dataframe to be set, it can be in pd.DataFrame format, but can also be a List or Dictionary
-            (it can be specific for each data type)
-        """
-        if isinstance(value, pd.DataFrame) or value is None:
-            self._dataframe = value
         else:
-            raise TypeError("It seems that the type of your input is not a pandas DataFrame."
-                            "The type of the dataframe should be a pandas DataFrame")
+            self._identifiers = self._dataframe[self.instances_ids_field].values

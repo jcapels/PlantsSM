@@ -15,7 +15,7 @@ class TestMultiInputDataset(TestCase):
         dataframe.loc[2] = ["6", "0", "representation", "6", "representation2", 1]
 
         dataset = MultiInputDataset(dataframe,
-                                    representation_fields={"proteins": "a", "compounds": "b"},
+                                    representation_field={"proteins": "a", "compounds": "b"},
                                     instances_ids_field={"proteins": "ids_a", "compounds": "ids_b",
                                                          "interaction": "ids_interaction"},
                                     labels_field='labels')
@@ -37,7 +37,7 @@ class TestMultiInputDataset(TestCase):
         dataframe.loc[2] = ["6", "0", "representation", "6", "representation2", 1]
 
         dataset = MultiInputDataset(dataframe,
-                                    representation_fields={"proteins": "a", "compounds": "b"},
+                                    representation_field={"proteins": "a", "compounds": "b"},
                                     instances_ids_field={"proteins": "ids_a", "compounds": "ids_b",
                                                          "interaction": "ids_interaction"},
                                     labels_field='labels')

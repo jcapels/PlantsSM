@@ -1,12 +1,12 @@
 import os
-from typing import Union
+from typing import Union, Iterable
 
 import numpy as np
 from keras.callbacks import History
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.io.pickle import read_pickle
-from plants_sm.models._utils import _convert_proba_to_unified_form,  write_model_parameters_to_pickle
+from plants_sm.models._utils import _convert_proba_to_unified_form, write_model_parameters_to_pickle, _batch_generator
 from plants_sm.models.constants import REGRESSION, QUANTILE, FileConstants
 from plants_sm.models.model import Model
 
@@ -67,18 +67,40 @@ class TensorflowModel(Model):
         """
         self._preprocess_data(train_dataset)
         self._preprocess_data(validation_dataset)
-        if isinstance(train_dataset.X, dict):
-            train_dataset_x = train_dataset.X.values()
-            validation_dataset_x = validation_dataset.X.values()
-        else:
-            train_dataset_x = train_dataset.X
-            validation_dataset_x = validation_dataset.X
 
-        self._history = self.model.fit(train_dataset_x, train_dataset.y,
-                                       epochs=self.epochs,
-                                       batch_size=self.batch_size,
-                                       callbacks=self.callbacks,
-                                       validation_data=(validation_dataset_x, validation_dataset.y))
+        if train_dataset.batch_size is None:
+            if isinstance(train_dataset.X, dict):
+                train_dataset_x = train_dataset.X.values()
+            else:
+                train_dataset_x = train_dataset.X
+            train_dataset_y = train_dataset.y
+            train_dataset_tuple = (train_dataset_x, train_dataset_y)
+        else:
+            train_dataset_tuple = _batch_generator(train_dataset)
+
+        if validation_dataset.batch_size is None:
+            if isinstance(validation_dataset.X, dict):
+                validation_dataset_x = validation_dataset.X.values()
+            else:
+                validation_dataset_x = validation_dataset.X
+            validation_dataset_y = validation_dataset.y
+            validation_dataset_tuple = (validation_dataset_x, validation_dataset_y)
+        else:
+            validation_dataset_tuple = _batch_generator(validation_dataset)
+
+        if train_dataset.batch_size is None:
+            self._history = self.model.fit(train_dataset_tuple[0], train_dataset_tuple[1],
+                                           epochs=self.epochs,
+                                           batch_size=self.batch_size,
+                                           callbacks=self.callbacks,
+                                           validation_data=validation_dataset_tuple)
+
+        else:
+            self._history = self.model.fit(train_dataset_tuple,
+                                           epochs=self.epochs,
+                                           batch_size=self.batch_size,
+                                           callbacks=self.callbacks,
+                                           validation_data=validation_dataset_tuple)
 
     def _predict_proba(self, dataset: Dataset) -> np.ndarray:
         """
@@ -94,10 +116,13 @@ class TensorflowModel(Model):
         np.ndarray
             Predicted probabilities for each class.
         """
-        if isinstance(dataset.X, dict):
-            y_pred = self.model.predict(dataset.X.values())
+        if dataset.batch_size is None:
+            if isinstance(dataset.X, dict):
+                y_pred = self.model.predict(dataset.X.values())
+            else:
+                y_pred = self.model.predict(dataset.X)
         else:
-            y_pred = self.model.predict(dataset.X)
+            y_pred = self.model.predict(_batch_generator(dataset))
 
         return y_pred
 
@@ -115,10 +140,15 @@ class TensorflowModel(Model):
         np.ndarray
             Predicted class for each sample.
         """
-        if isinstance(dataset.X, dict):
-            y_pred = self.model.predict(dataset.X.values())
+
+        if dataset.batch_size is None:
+            if isinstance(dataset.X, dict):
+                y_pred = self.model.predict(dataset.X.values())
+            else:
+                y_pred = self.model.predict(dataset.X)
+
         else:
-            y_pred = self.model.predict(dataset.X)
+            y_pred = self.model.predict(_batch_generator(dataset))
 
         if self.problem_type in [REGRESSION, QUANTILE]:
             return y_pred

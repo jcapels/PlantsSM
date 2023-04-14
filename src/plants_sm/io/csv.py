@@ -1,8 +1,6 @@
-from typing import List, Union
+from typing import List
 
-import dask
-
-from plants_sm.data_structures.pandas_dataframe import pd
+import pandas as pd
 from plants_sm.io.commons import FilePathOrBuffer
 from plants_sm.io.reader import Reader
 from plants_sm.io.writer import Writer
@@ -31,8 +29,8 @@ class CSVReader(Reader):
         """
         super().__init__(filepath_or_buffer, sep=sep, **kwargs)
 
-    @property
-    def file_types(self) -> List[str]:
+    @staticmethod
+    def file_types() -> List[str]:
         """
         Returns the file types that the reader can read.
 
@@ -43,7 +41,6 @@ class CSVReader(Reader):
         """
         return ['txt', 'csv', 'tsv']
 
-    @dask.delayed
     def read(self) -> pd.DataFrame:
         """
         Method to read the data from file(s) and returns a pandas pd.DataFrame.
@@ -56,7 +53,7 @@ class CSVReader(Reader):
         data : pd.DataFrame
             Read DataFrame
         """
-        return pd.read_csv(self.buffer, **self.kwargs)
+        return pd.read_csv(self.path, **self.kwargs)
 
 
 class CSVWriter(Writer):
@@ -83,8 +80,8 @@ class CSVWriter(Writer):
 
         super().__init__(filepath_or_buffer, sep=sep, **kwargs)
 
-    @property
-    def file_types(self) -> List[str]:
+    @staticmethod
+    def file_types() -> List[str]:
         """
         Returns the file types that the writer can write.
 
@@ -132,9 +129,7 @@ def read_csv(filepath_or_buffer: FilePathOrBuffer, **kwargs) -> pd.DataFrame:
     """
 
     reader = CSVReader(filepath_or_buffer=filepath_or_buffer, **kwargs)
-    ddf = reader.read()
-    df = ddf.compute()
-    reader.close_buffer()
+    df = reader.read()
     return df
 
 

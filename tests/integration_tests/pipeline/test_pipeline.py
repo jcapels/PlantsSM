@@ -28,7 +28,7 @@ class TestPipeline(TestModels):
                                      logger_path="small_dataset.log"
                                      )
 
-        pipeline = Pipeline(steps, models=[pytorch_model])
+        pipeline = Pipeline(steps=steps, models=[pytorch_model])
 
         pipeline.fit(self.train_dataset, self.validation_dataset)
         for step in pipeline.steps[PLACEHOLDER_FIELD]:
@@ -42,7 +42,7 @@ class TestPipeline(TestModels):
         probs = pipeline.predict(self.validation_dataset)
 
         self.assertIsInstance(probs, np.ndarray)
-        self.assertEqual(probs.shape[0], self.train_dataset.y.shape[0])
+        self.assertEqual(probs.shape[0], self.validation_dataset.y.shape[0])
 
     def test_load_save(self):
 
@@ -71,7 +71,3 @@ class TestPipeline(TestModels):
             self.assertEqual(probs_after.shape[0], self.train_dataset.y.shape[0])
             for i in range(len(probs_after)):
                 self.assertEqual(probs_after[i], probs_before[i])
-
-
-
-

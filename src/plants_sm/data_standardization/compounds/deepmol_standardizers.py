@@ -33,6 +33,22 @@ class DeepMolStandardizer(Transformer):
         self.descriptor = descriptor(**self.kwargs)
         return self
 
+    def _fit_batch(self, dataset: Dataset, instance_type: str) -> 'DeepMolStandardizer':
+        """
+        Method to fit the transformer
+
+        Parameters
+        ----------
+
+        dataset: Dataset
+            dataset to fit the transformer where instances are the representation or object to be processed.
+
+        Returns
+        -------
+        self: DeepMolStandardizer
+        """
+        return self._fit(dataset, instance_type)
+
     def _transform(self, dataset: Dataset, instance_type: str) -> Dataset:
         """
         Method to transform the dataset

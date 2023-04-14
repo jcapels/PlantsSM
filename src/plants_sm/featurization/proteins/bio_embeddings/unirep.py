@@ -47,7 +47,7 @@ class UniRepEmbeddings(FeaturesGenerator):
         """
         self.features_names = [f"unirep_{num}" for num in range(1, self.embedding_dimension + 1)]
 
-    def _fit(self, dataset: Dataset, instance_type: str):
+    def _fit(self, dataset: Dataset, instance_type: str) -> 'UniRepEmbeddings':
         """
         Load the parameters of the mLSTM model.
         """
@@ -58,6 +58,26 @@ class UniRepEmbeddings(FeaturesGenerator):
 
         if self.device:
             warnings.warn("It will run on CPU, because UniRep does not allow configuring the device")
+
+        return self
+
+    def _fit_batch(self, dataset: Dataset, instance_type: str) -> 'UniRepEmbeddings':
+        """
+        Fit the UniRep model to the dataset.
+
+        Parameters
+        ----------
+        dataset: Dataset
+            dataset to fit the transformer where instances are the representation or object to be processed.
+        instance_type: str
+            type of the instances to be featurized
+
+        Returns
+        -------
+        self: Estimator
+            the fitted UniRep
+        """
+        return self._fit(dataset, instance_type)
 
     def _featurize(self, sequence: str) -> ndarray:
         """

@@ -12,9 +12,9 @@ class TestIODataset(TestDataset):
                                                 representation_field="SMILES",
                                                 labels_field="TargetedMZ")
         self.assertEqual(list(dataset.get_instances().values())[0], 'Nc1nc(NC2CC2)c2ncn(C3C=CC(CO)C3)c2n1')
-        self.assertEqual(286.154209, dataset.y[0])
-        self.assertEqual(dataset.representation_fields, {'place_holder': 'SMILES'})
-        self.assertEqual(dataset.labels_names, ["TargetedMZ"])
+        self.assertIn(286.154209, dataset.y)
+        self.assertEqual(dataset.representation_field, 'SMILES')
+        self.assertEqual(dataset._labels_names, ["TargetedMZ"])
 
     @skip("Not implemented yet")
     def test_write_excel_from_dataset(self):
@@ -28,7 +28,7 @@ class TestIODataset(TestDataset):
         self.assertEqual(list(dataset.get_instances().values())[0], 'Nc1nc(NC2CC2)c2ncn(C3C=CC(CO)C3)c2n1')
         self.assertIn(286.154209, dataset.y)
         self.assertEqual(dataset.representation_fields, "SMILES")
-        self.assertEqual(dataset.labels_names, ["TargetedMZ"])
+        self.assertEqual(dataset._labels_names, ["TargetedMZ"])
         with self.assertRaises(AttributeError):
             print(dataset.features)
 
@@ -37,7 +37,7 @@ class TestIODataset(TestDataset):
                                               instances_ids_field="id")
         self.assertEqual(list(dataset.get_instances().values())[0],
                          'MGWVGKKKSTAGQLAGTANELTKEVLERAVHRESPVIRPDVVVGIPAVDRRPKQ')
-        self.assertEqual(dataset.representation_fields, {'place_holder': 'sequence'})
+        self.assertEqual(dataset.representation_field, 'sequence')
         self.assertEqual(dataset.instances_ids_field, "id")
 
     @skip("Not implemented yet")
@@ -57,7 +57,7 @@ class TestIODataset(TestDataset):
 
     def test_read_csv_to_multi_line_dataset(self):
         self.dataset_400_instances = MultiInputDataset.from_csv(self.multi_input_dataset_csv,
-                                                                representation_fields={"proteins": "SEQ",
+                                                                representation_field={"proteins": "SEQ",
                                                                                        "ligands": "SUBSTRATES"},
                                                                 instances_ids_field={"interaction": "ids"},
                                                                 labels_field="LogSpActivity")

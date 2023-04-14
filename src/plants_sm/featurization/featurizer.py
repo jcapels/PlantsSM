@@ -36,6 +36,16 @@ class FeaturesGenerator(Transformer):
             dataset to fit the transformer where instances are the representation or object to be processed.
         """
 
+    def _fit_batch(self, dataset: Dataset, instance_type: str) -> 'FeaturesGenerator':
+        """
+        Abstract method that has to be implemented by all feature generators
+
+        Parameters
+        ----------
+        dataset: Dataset
+            dataset to fit the transformer where instances are the representation or object to be processed.
+        """
+
     @call_set_features_names
     def _transform(self, dataset: Dataset, instance_type: str) -> Dataset:
         """
@@ -66,11 +76,8 @@ class FeaturesGenerator(Transformer):
                 pbar.update(1)
 
         dataset.add_features(instance_type, dict(res))
+        dataset.features_fields[instance_type] = self.features_names
 
-        if instance_type not in dataset.features_fields:
-            dataset.features_fields[instance_type] = self.features_names
-        else:
-            dataset.features_fields[instance_type].extend(self.features_names)
         return dataset
 
     def _featurize_and_add_identifier(self, instance: Any, identifier: str) -> Tuple[str, ndarray]:

@@ -35,6 +35,7 @@ class TestStandardizer(TestCase):
                                                    }}
         self.dataset.get_instances.return_value = self.dataset.instances[PLACEHOLDER_FIELD]
         self.dataset.dataframe["identifiers"] = self.dataset.identifiers
+        self.dataset.batch_size = None
 
     def test_standardizer(self):
         ProteinStandardizer().fit_transform(self.dataset)

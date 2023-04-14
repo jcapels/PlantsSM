@@ -44,3 +44,4 @@ class TestProteinFeaturizers(TestCase):
         torch.seed()
         self.dataset.X = self.X
         self.dataset.add_features = self.add_features
+        self.dataset.batch_size = None

@@ -58,6 +58,31 @@ class BLOSSUMEncoder(FeaturesGenerator):
 
         return self
 
+    def _fit_batch(self, dataset: Dataset, instance_type: str) -> 'BLOSSUMEncoder':
+        """
+        It fits the blosumEncoder.
+
+        Parameters
+        ----------
+        dataset : Dataset
+            Dataset containing the protein sequences to be encoded.
+
+        Returns
+        -------
+        blosumEncoder
+
+        """
+        if self.blosum == "blosum62":
+            self._blosum = BLOSUM_62
+
+        elif self.blosum == "blosum50":
+            self._blosum = BLOSUM_50
+
+        else:
+            ValueError(f'{self.blosum} is not a valid blosum.')
+
+        return self
+
     def _featurize(self, sequence: Any) -> np.ndarray:
 
         return np.array([np.array(self._blosum[aa]) for aa in sequence], dtype=np.float32)

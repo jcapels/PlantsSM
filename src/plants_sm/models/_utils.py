@@ -1,9 +1,11 @@
 import os
 import warnings
+from typing import Iterable
 
 import numpy as np
 from tensorflow import Tensor
 
+from plants_sm.data_structures.dataset import Dataset
 from plants_sm.io.pickle import write_pickle, is_pickable
 from plants_sm.models.constants import REGRESSION, BINARY, FileConstants
 
@@ -33,7 +35,7 @@ def _convert_proba_to_unified_form(problem_type, y_pred_proba: np.ndarray) -> np
     elif problem_type == BINARY:
         if len(y_pred_proba.shape) == 1:
             return y_pred_proba
-        elif y_pred_proba.shape[1] > 1:
+        elif y_pred_proba.shape[1] > 1 and y_pred_proba.shape[1] == 1:
             return y_pred_proba[:, 1]
         else:
             return y_pred_proba
@@ -61,7 +63,7 @@ def write_model_parameters_to_pickle(model_parameters: dict, path: str) -> None:
         else:
             warning_str = f'Could not save {key} to save file. Skipping attribute {key}.'
             warnings.warn(warning_str)
-    write_pickle(parameters, os.path.join(path, FileConstants.MODEL_PARAMETERS_PKL.value))
+    write_pickle(os.path.join(path, FileConstants.MODEL_PARAMETERS_PKL.value), parameters)
 
 
 def array_from_tensor(tensor: Tensor) -> np.ndarray:
@@ -96,7 +98,49 @@ def array_reshape(array: np.ndarray) -> np.ndarray:
     np.ndarray
         The reshaped array.
     """
-    if array.shape[-1] == 1:
-        array = array.reshape(-1)
-
+    # Reshape array if necessary if it is a 1D array or if it is a 2D array with only 1 column
+    if len(array.shape) == 1 or (len(array.shape) == 2 and array.shape[1] == 1):
+        array = array.reshape(-1, 1)
     return array
+
+
+def multi_label_binarize(y_pred_proba, threshold=0.5) -> np.ndarray:
+    """
+    Binarize the predicted probabilities for multi-label classification.
+
+    Parameters
+    ----------
+    y_pred_proba: np.ndarray
+        Predicted probabilities with shape (n_samples, n_classes).
+    threshold: float
+        Threshold for binarization.
+
+    Returns:
+        np.ndarray: Binary predictions with shape (n_samples, n_classes).
+    """
+    n_samples, n_classes = y_pred_proba.shape
+    y_pred = np.zeros((n_samples, n_classes))
+    for i in range(n_classes):
+        y_pred[:, i] = (y_pred_proba[:, i] >= threshold).astype(int)
+    return y_pred
+
+
+def _batch_generator(dataset: Dataset) -> Iterable:
+    """
+    Generate batches of data.
+
+    Parameters
+    ----------
+    dataset: Dataset
+        Dataset to be used for training.
+
+    Returns
+    -------
+    Union[list, dict]
+        Batches of data.
+    """
+    while dataset.next_batch():
+        if dataset.y is None:
+            yield dataset.X
+        else:
+            yield dataset.X, dataset.y

@@ -47,6 +47,25 @@ class DeepMolDescriptors(FeaturesGenerator):
         self.descriptor = descriptor(**self.kwargs)
         return self
 
+    def _fit_batch(self, dataset: Dataset, instance_type: str) -> 'FeaturesGenerator':
+        """
+        Method to fit the transformer
+
+        Parameters
+        ----------
+        dataset: Dataset
+            dataset to fit the transformer where instances are the representation or object to be processed.
+        instance_type: str
+            type of the instance to be processed
+
+        Returns
+        -------
+        self: DeepMolDescriptors
+
+        """
+
+        return self._fit(dataset, instance_type)
+
     def _featurize(self, molecule: str) -> np.ndarray:
         """
         Method to featurize a molecule

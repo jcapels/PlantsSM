@@ -5,6 +5,8 @@ from plants_sm.io.commons import FilePathOrBuffer
 from plants_sm.io.reader import Reader
 from plants_sm.io.writer import Writer
 
+import tracemalloc
+
 
 class PickleReader(Reader):
 
@@ -20,8 +22,8 @@ class PickleReader(Reader):
         """
         super().__init__(filepath_or_buffer, mode="rb", **kwargs)
 
-    @property
-    def file_types(self) -> List[str]:
+    @staticmethod
+    def file_types() -> List[str]:
         """
         Returns the file types that the pickle reader can read.
 
@@ -40,7 +42,9 @@ class PickleReader(Reader):
         -------
 
         """
-        return pickle.load(self.buffer)
+        pickled_object = pickle.load(self.buffer)
+        self.close_buffer()
+        return pickled_object
 
 
 class PickleWriter(Writer):
@@ -57,8 +61,8 @@ class PickleWriter(Writer):
         """
         super().__init__(filepath_or_buffer, mode="wb", **kwargs)
 
-    @property
-    def file_types(self) -> List[str]:
+    @staticmethod
+    def file_types() -> List[str]:
         """
         Returns the file types that the pickle writer can read.
 
@@ -84,6 +88,7 @@ class PickleWriter(Writer):
             True if the file was written successfully, False otherwise.
         """
         pickle.dump(object_to_be_written, self.buffer)
+        self.close_buffer()
         return True
 
 
@@ -101,25 +106,28 @@ def read_pickle(path: str) -> Any:
     Any
         The object that was saved in the pickle file.
     """
-    return PickleReader(path).read()
+    reader = PickleReader(path)
+    pickled_object = reader.read()
+    return pickled_object
 
 
-def write_pickle(object_to_be_written: Any, path: str) -> bool:
+def write_pickle(path: str, object_to_be_written: Any) -> bool:
     """
     Writes an object into a pickle file.
 
     Parameters
     ----------
-    object_to_be_written: Any
-        The object to be written.
     path: str
         The path to the pickle file.
+    object_to_be_written: Any
+        The object to be written.
 
     Returns
     -------
     bool
         True if the file was written successfully, False otherwise.
     """
+    tracemalloc.start()
     return PickleWriter(path).write(object_to_be_written)
 
 

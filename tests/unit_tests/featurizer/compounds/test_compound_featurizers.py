@@ -36,3 +36,4 @@ class TestCompoundFeaturizers(TestCase):
         self.dataset.dataframe["identifiers"] = self.dataset.identifiers
         self.dataset.X = self.X
         self.dataset.add_features = self.add_features
+        self.dataset.batch_size = None

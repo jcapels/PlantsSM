@@ -83,6 +83,10 @@ class ESMEncoder(Transformer):
         else:
             raise ValueError(f"Invalid esm_function. Available functions are: {list(ESM_DIMENSIONS.keys())}")
 
+    def _fit_batch(self, dataset: Dataset, instance_type: str) -> 'ESMEncoder':
+
+        return self._fit(dataset, instance_type)
+
     @staticmethod
     def _generate_esm_model(model: nn.Module,
                             layers: int,
@@ -157,7 +161,6 @@ class ESMEncoder(Transformer):
             if len(batch) == batch_size:
                 representations = {}
                 _, _, batch_tokens = batch_converter(batch)
-
                 if is_ddf:
                     batch_tokens = batch_tokens.cuda()
                 else:
@@ -165,7 +168,8 @@ class ESMEncoder(Transformer):
 
                 with torch.no_grad():
                     results = model(batch_tokens, repr_layers=[layers], return_contacts=False)
-                    representations['representations'] = results["representations"][layers].cpu().detach().numpy()
+                    results["representations"][layers] = results["representations"][layers].cpu().detach().numpy()
+                    representations['representations'] = results["representations"][layers]
 
                     for i, batch_instance_id in enumerate(batch_ids):
                         if output_dim == 2:
@@ -175,9 +179,11 @@ class ESMEncoder(Transformer):
                             res.append((batch_instance_id,
                                         representations['representations'][i, 1: len(batch[i][1]) + 1]))
 
+                    torch.cuda.empty_cache()
                     batch = []
                     batch_ids = []
                     pbar.update(batch_size)
+
 
         if len(batch) != 0:
 
@@ -190,7 +196,8 @@ class ESMEncoder(Transformer):
                 batch_tokens = batch_tokens.to("cpu")
 
             results = model(batch_tokens, repr_layers=[layers], return_contacts=False)
-            representations['representations'] = results["representations"][layers].cpu().detach().numpy()
+            results["representations"][layers] = results["representations"][layers].cpu().detach().numpy()
+            representations['representations'] = results["representations"][layers]
 
             for i, batch_instance_id in enumerate(batch_ids):
                 if output_dim == 2:
@@ -200,6 +207,7 @@ class ESMEncoder(Transformer):
                     res.append((batch_instance_id,
                                 representations['representations'][i, 1: len(batch[i][1]) + 1]))
 
+            torch.cuda.empty_cache()
             pbar.update(len(batch_ids))
 
         return res
@@ -252,9 +260,6 @@ class ESMEncoder(Transformer):
 
         dataset.features[instance_type] = dict(res)
 
-        if instance_type not in dataset.features_fields:
-            dataset.features_fields[instance_type] = self.features_names
-        else:
-            dataset.features_fields[instance_type].extend(self.features_names)
+        dataset.features_fields[instance_type] = self.features_names
 
         return dataset

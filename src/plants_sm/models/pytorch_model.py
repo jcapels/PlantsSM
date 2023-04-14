@@ -5,6 +5,7 @@ from typing import Callable, Union, Tuple, List, Dict
 
 import numpy as np
 import pandas as pd
+from numpy import ndarray
 from torch import nn, Tensor
 from torch.nn.modules.loss import _Loss
 from torch.optim import Adam, Optimizer
@@ -15,7 +16,7 @@ from torch.utils.tensorboard import SummaryWriter
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.io.pickle import read_pickle, write_pickle
 from plants_sm.models._utils import _convert_proba_to_unified_form, \
-    write_model_parameters_to_pickle, array_from_tensor, array_reshape
+    write_model_parameters_to_pickle, array_from_tensor, array_reshape, multi_label_binarize
 from plants_sm.models.constants import REGRESSION, QUANTILE, BINARY, FileConstants
 from plants_sm.models.model import Model
 import torch
@@ -25,7 +26,8 @@ class PyTorchModel(Model):
 
     def __init__(self, model: nn.Module, loss_function: _Loss, optimizer: Optimizer = None,
                  scheduler: ReduceLROnPlateau = None, epochs: int = 32, batch_size: int = 32,
-                 patience: int = 4, validation_metric: Callable = None, problem_type: str = BINARY,
+                 patience: int = 4, validation_metric: Callable = None,
+                 problem_type: str = BINARY,
                  device: Union[str, torch.device] = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
                  trigger_times: int = 0, last_loss: int = None, progress: int = 100, logger_path: str = None):
 
@@ -157,7 +159,7 @@ class PyTorchModel(Model):
         """
         weights_path = os.path.join(path, FileConstants.PYTORCH_MODEL_WEIGHTS.value)
         torch.save(model.state_dict(), weights_path)
-        write_pickle(model, os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value))
+        write_pickle(os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value), model)
 
     def _save(self, path: str):
         """
@@ -244,7 +246,52 @@ class PyTorchModel(Model):
         )
         return data_loader
 
-    def _validate(self, validation_set: DataLoader) -> Tuple[float, float]:
+    def _validate_batches(self, validation_set: DataLoader, loss_total: float, predictions: ndarray,
+                          actuals: ndarray) -> Tuple[float, ndarray, ndarray]:
+        """
+        Validate the model on the validation set
+
+        Parameters
+        ----------
+        validation_set: DataLoader
+            Validation set
+        loss_total: float
+            Total loss
+        predictions: ndarray
+            Predictions
+        actuals: ndarray
+            Actual values
+
+        Returns
+        -------
+        Tuple[float, ndarray, ndarray]
+            Total loss, predictions and actual values
+        """
+
+        len_valid_dataset = len(validation_set)
+        for i, inputs_targets in enumerate(validation_set):
+            inputs, targets = inputs_targets[:-1], inputs_targets[-1]
+            for j, inputs_elem in enumerate(inputs):
+                inputs[j] = inputs_elem.to(self.device)
+
+            targets = targets.to(self.device)
+            output = self.model(inputs)
+
+            y_hat = array_from_tensor(output)
+            actual = array_from_tensor(targets)
+
+            predictions = np.concatenate((predictions, y_hat))
+            actuals = np.concatenate((actuals, actual))
+
+            loss = self.loss_function(output, targets)
+            loss_total += loss.item()
+
+            if i % self.progress == 0:
+                self.logger.info(f'Validation set: [{i}/{len_valid_dataset}] loss: {loss.item():.8}')
+
+        return loss_total, predictions, actuals
+
+    def _validate(self, validation_set: Dataset) -> Tuple[float, float]:
         """
         Validate the model
 
@@ -260,28 +307,27 @@ class PyTorchModel(Model):
         """
         self.model.eval()
         loss_total = 0
-        predictions, actuals = np.empty(shape=(0,)), np.empty(shape=(0,))
-        len_valid_dataset = len(validation_set)
+        second_shape = validation_set.y.shape[1]
+        predictions, actuals = np.empty(shape=(0, second_shape)), np.empty(shape=(0, second_shape))
+
+        predictions = array_reshape(predictions)
+        actuals = array_reshape(actuals)
+
         with torch.no_grad():
-            for i, inputs_targets in enumerate(validation_set):
-                inputs, targets = inputs_targets[:-1], inputs_targets[-1]
-                for j, inputs_elem in enumerate(inputs):
-                    inputs[j] = inputs_elem.to(self.device)
 
-                targets = targets.to(self.device)
-                output = self.model(inputs)
+            if validation_set.batch_size is None:
+                validation_set_preprocessed = self._preprocess_data(validation_set, shuffle=False)
+                len_valid_dataset = len(validation_set_preprocessed)
+                loss_total, predictions, actuals = \
+                    self._validate_batches(validation_set_preprocessed, loss_total, predictions, actuals)
 
-                y_hat = array_from_tensor(output)
-                actual = array_from_tensor(targets)
-
-                predictions = np.concatenate((predictions, y_hat))
-                actuals = np.concatenate((actuals, actual))
-
-                loss = self.loss_function(output, targets)
-                loss_total += loss.item()
-
-                if i % self.progress == 0:
-                    self.logger.info(f'Validation set: [{i}/{len_valid_dataset}] loss: {loss.item():.8}')
+            else:
+                len_valid_dataset = 0
+                while validation_set.next_batch():
+                    validation_set_preprocessed = self._preprocess_data(validation_set, shuffle=False)
+                    len_valid_dataset += len(validation_set_preprocessed)
+                    loss_total, predictions, actuals = \
+                        self._validate_batches(validation_set_preprocessed, loss_total, predictions, actuals)
 
         validation_metric_result = None
         if self.validation_metric:
@@ -306,7 +352,6 @@ class PyTorchModel(Model):
         """
 
         inputs, targets = inputs_targets[:-1], inputs_targets[-1]
-
         for j, inputs_elem in enumerate(inputs):
             inputs[j] = inputs_elem.to(self.device)
 
@@ -330,7 +375,7 @@ class PyTorchModel(Model):
 
         return actual, yhat, loss
 
-    def _register_history(self, loss: float, epoch: int, metric_result: float, train: bool = True) -> None:
+    def _register_history(self, loss: float, epoch: int, metric_result: float = None, train: bool = True) -> None:
         """
         Register the history of the model
 
@@ -349,8 +394,112 @@ class PyTorchModel(Model):
 
         self.writer.add_scalar(f"Loss/{dataset_type}", loss, epoch)
         self._history["loss"].at[epoch - 1, f"{dataset_type}_loss"] = loss
-        self.writer.add_scalar(f"Metric/{dataset_type}", metric_result, epoch)
-        self._history["metric_results"].at[epoch - 1, f"{dataset_type}_metric_result"] = metric_result
+
+        if metric_result is not None:
+            self.writer.add_scalar(f"Metric/{dataset_type}", metric_result, epoch)
+            self._history["metric_results"].at[epoch - 1, f"{dataset_type}_metric_result"] = metric_result
+
+    def _early_stopping(self, validation_dataset: Dataset, epoch: int) -> Union[nn.Module, None]:
+        """
+        Early stopping
+
+        Parameters
+        ----------
+        validation_dataset: DataLoader
+            Validation dataset
+        epoch: int
+            Epoch
+
+        Returns
+        -------
+        Union[nn.Module, None]
+            Model or None
+        """
+
+        # Early stopping
+        current_loss, validation_metric_result = self._validate(validation_dataset)
+        self.logger.info(
+            f'Validation loss: {current_loss:.8}; Validation metric: {validation_metric_result:.8}')
+        if current_loss >= self.last_loss:
+            self.trigger_times += 1
+
+            if self.trigger_times >= self.patience:
+                return self.model
+
+        else:
+            self.trigger_times = 0
+
+        self._register_history(current_loss, epoch, validation_metric_result, train=False)
+
+        self.last_loss = current_loss
+
+    def _train_epoch(self, train_dataset: Dataset, epoch: int,
+                     validation_dataset: Dataset = None) -> Union[nn.Module, None]:
+        """
+        Train the model for one epoch
+
+        Parameters
+        ----------
+        train_dataset: Dataset
+            Training dataset
+        epoch: int
+            Epoch
+        validation_dataset: Dataset
+            Validation dataset
+
+        Returns
+        -------
+        Union[nn.Module, None]
+            Model
+        """
+        self.model.train()
+        loss_total = 0
+
+        second_shape = train_dataset.y.shape[1]
+        predictions, actuals = np.empty(shape=(0, second_shape)), np.empty(shape=(0, second_shape))
+
+        predictions = array_reshape(predictions)
+        actuals = array_reshape(actuals)
+
+        train_dataset_preprocessed = self._preprocess_data(train_dataset, shuffle=False)
+
+        len_train_dataset = len(train_dataset_preprocessed)
+
+        for i, inputs_targets in enumerate(train_dataset_preprocessed):
+            actual, yhat, loss = self._train(inputs_targets)
+
+            predictions = np.concatenate((predictions, yhat))
+            actuals = np.concatenate((actuals, actual))
+            loss_total += loss.item()
+            # Show progress
+            if i % self.progress == 0 or i == len_train_dataset - 1:
+                self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] loss: {loss.item():.8}')
+
+                predictions = self.get_pred_from_proba(predictions)
+                if self.validation_metric:
+                    validation_metric_result = self.validation_metric(actuals, predictions)
+
+                    self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] '
+                                 f'metric result: {validation_metric_result:.8}')
+                    
+        loss = loss_total / len_train_dataset
+
+        predictions = self.get_pred_from_proba(predictions)
+
+        validation_metric_result = None
+        if self.validation_metric:
+            validation_metric_result = self.validation_metric(actuals, predictions)
+            self.logger.info(f'[{epoch}/{self.epochs}] metric result: {validation_metric_result:.8}')
+            self.logger.info(
+                f'[{epoch}/{self.epochs}] Training loss: {loss:.8}')
+        
+        self._register_history(loss, epoch, validation_metric_result)
+
+        if validation_dataset:
+            assert validation_dataset != train_dataset, "Validation dataset should not be the same as training dataset"
+            return self._early_stopping(validation_dataset, epoch)
+        else:
+            return None
 
     def _fit_data(self, train_dataset: Dataset, validation_dataset: Dataset = None) -> nn.Module:
         """
@@ -369,70 +518,48 @@ class PyTorchModel(Model):
             Trained model
         """
 
-        last_loss = 100
-        trigger_times = 0
+        self.last_loss = 100
+        self.trigger_times = 0
 
         self.logger.info("starting to fit the data...")
 
-        train_dataset = self._preprocess_data(train_dataset)
-        if validation_dataset:
-            validation_dataset = self._preprocess_data(validation_dataset)
+        if train_dataset.batch_size is None:
 
-        len_train_dataset = len(train_dataset)
+            for epoch in range(1, self.epochs + 1):
+                self._train_epoch(train_dataset, epoch, validation_dataset)
 
-        for epoch in range(1, self.epochs + 1):
-            self.model.train()
-            loss_total = 0
-            predictions, actuals = np.empty(shape=(0,)), np.empty(shape=(0,))
-            for i, inputs_targets in enumerate(train_dataset):
-                actual, yhat, loss = self._train(inputs_targets)
+                self._write_model_check_points(epoch)
 
-                predictions = np.concatenate((predictions, yhat))
-                actuals = np.concatenate((actuals, actual))
-                loss_total += loss.item()
-                # Show progress
-                if i % self.progress == 0 or i == len_train_dataset - 1:
-                    self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] loss: {loss.item():.8}')
-                    predictions = self.get_pred_from_proba(predictions)
-                    validation_metric_result = self.validation_metric(actuals, predictions)
-                    self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] '
-                                     f'metric result: {validation_metric_result:.8}')
+                self.scheduler.step(self.last_loss)
+        else:
 
-            loss = loss_total / len_train_dataset
+            for epoch in range(1, self.epochs + 1):
 
-            predictions = self.get_pred_from_proba(predictions)
-            validation_metric_result = self.validation_metric(actuals, predictions)
-            self.logger.info(
-                f'Training loss: {loss:.8};  Metric result: {validation_metric_result:.8}')
-            self._register_history(loss, epoch, validation_metric_result)
+                while train_dataset.next_batch():
 
-            # Early stopping
-            if validation_dataset:
-                current_loss, validation_metric_result = self._validate(validation_dataset)
-                self.logger.info(
-                    f'Validation loss: {current_loss:.8}; Validation metric: {validation_metric_result:.8}')
-                if current_loss >= last_loss:
-                    trigger_times += 1
+                    self._train_epoch(train_dataset, epoch, validation_dataset)
 
-                    if trigger_times >= self.patience:
-                        return self.model
+                    self._write_model_check_points(epoch)
 
-                else:
-                    trigger_times = 0
-
-                self._register_history(current_loss, epoch, validation_metric_result, train=False)
-
-                last_loss = current_loss
-
-            os.makedirs("./.model_checkpoints", exist_ok=True)
-            os.makedirs(f"./.model_checkpoints/{self.model.__class__.__name__}/epoch_{epoch}", exist_ok=True)
-            torch.save(self.model.state_dict(), f"./.model_checkpoints/{self.model.__class__.__name__}/epoch_{epoch}"
-                                                f"/model.pt")
-
-            self.scheduler.step(last_loss)
+                    self.scheduler.step(self.last_loss)
 
         self.writer.flush()
         return self.model
+
+    def _write_model_check_points(self, epoch: int) -> None:
+        """
+        Write the model checkpoints for tensorboard.
+
+        Parameters
+        ----------
+        epoch: int
+            Epoch
+        """
+
+        os.makedirs("./.model_checkpoints", exist_ok=True)
+        os.makedirs(f"./.model_checkpoints/{self.model.__class__.__name__}/epoch_{epoch}", exist_ok=True)
+        torch.save(self.model.state_dict(), f"./.model_checkpoints/{self.model.__class__.__name__}/epoch_{epoch}"
+                                            f"/model.pt")
 
     def get_pred_from_proba(self, y_pred_proba: np.ndarray) -> np.ndarray:
         """
@@ -448,7 +575,10 @@ class PyTorchModel(Model):
             Array of predictions
         """
         if self.problem_type == BINARY:
-            y_pred = np.array([1 if pred >= 0.5 else 0 for pred in y_pred_proba])
+            if y_pred_proba.shape[1] == 1:
+                y_pred = np.array([1 if pred >= 0.5 else 0 for pred in y_pred_proba])
+            else:
+                y_pred = multi_label_binarize(y_pred_proba)
         elif self.problem_type == REGRESSION:
             y_pred = y_pred_proba
         elif self.problem_type == QUANTILE:
@@ -459,7 +589,37 @@ class PyTorchModel(Model):
                 y_pred = np.argmax(y_pred_proba, axis=1)
                 return y_pred
 
+        y_pred = array_reshape(y_pred)
         return y_pred
+
+    def _predict_proba_batch(self, dataset: Dataset, predictions: np.ndarray) -> np.ndarray:
+        """
+        Predicts the probability of each class for each sample in the dataset.
+
+        Parameters
+        ----------
+        dataset: DataLoader
+            Dataset to predict on
+        predictions: np.ndarray
+            Array of predictions
+
+        Returns
+        -------
+
+        """
+        dataset_preprocessed = self._preprocess_data(dataset, shuffle=False)
+        for i, inputs_targets in enumerate(dataset_preprocessed):
+            for j, inputs_elem in enumerate(inputs_targets):
+                inputs_targets[j] = inputs_elem.to(self.device)
+
+            yhat = self.model(inputs_targets)
+
+            yhat = array_from_tensor(yhat)
+            yhat = array_reshape(yhat)
+
+            predictions = np.concatenate((predictions, yhat))
+
+        return predictions
 
     def _predict_proba(self, dataset: Dataset) -> np.ndarray:
         """
@@ -476,34 +636,25 @@ class PyTorchModel(Model):
             Array of prediction probabilities
         """
 
-        dataset = self._preprocess_data(dataset, shuffle=False)
-
         if self.problem_type in [REGRESSION, QUANTILE]:
             y_pred = self.model.predict(dataset)
             return y_pred
 
         self.model.eval()
-        predictions, actuals = np.empty(shape=(0,)), np.empty(shape=(0,))
+
+        second_shape = dataset.y.shape[1]
+        predictions, _ = np.empty(shape=(0, second_shape)), np.empty(shape=(0, second_shape))
+
+        predictions = array_reshape(predictions)
 
         # the "shuffle" argument always has to be False in predicting probabilities in an evaluation context
-
         with torch.no_grad():
-            for i, inputs_targets in enumerate(dataset):
-                inputs, targets = inputs_targets[:-1], inputs_targets[-1]
-                for j, inputs_elem in enumerate(inputs):
-                    inputs[j] = inputs_elem.to(self.device)
 
-                targets.to(self.device)
-                yhat = self.model(inputs)
-
-                targets = array_from_tensor(targets)
-                targets = array_reshape(targets)
-
-                yhat = array_from_tensor(yhat)
-                yhat = array_reshape(yhat)
-
-                predictions = np.concatenate((predictions, yhat))
-                actuals = np.concatenate((actuals, targets))
+            if dataset.batch_size is None:
+                predictions = self._predict_proba_batch(dataset, predictions)
+            else:
+                while dataset.next_batch():
+                    predictions = self._predict_proba_batch(dataset, predictions)
 
         return _convert_proba_to_unified_form(self.problem_type, np.array(predictions))
 
