@@ -24,7 +24,7 @@ import torch
 
 class PyTorchModel(Model):
 
-    def __init__(self, model: nn.Module, loss_function: _Loss, optimizer: Optimizer = None,
+    def __init__(self, model: nn.Module, loss_function: _Loss, model_name = None, optimizer: Optimizer = None,
                  scheduler: ReduceLROnPlateau = None, epochs: int = 32, batch_size: int = 32,
                  patience: int = 4, validation_metric: Callable = None,
                  problem_type: str = BINARY,
@@ -81,6 +81,11 @@ class PyTorchModel(Model):
 
         self.device = device
         self.model = model.to(self.device)
+        if model_name:
+            self.model_name = model_name
+        else:
+            self.model_name = model.__class__.__name__
+
         self.loss_function = loss_function
         self.optimizer = optimizer
         self.progress = progress
@@ -102,12 +107,14 @@ class PyTorchModel(Model):
         self._history = {'loss': loss_dataframe,
                          'metric_results': metric_dataframe}
 
-        self.writer = SummaryWriter()
+        self.writer = SummaryWriter(comment=self.model_name, filename_suffix=self.model_name)
 
         if not self.optimizer:
             self.optimizer = Adam(self.model.parameters())
         if not self.scheduler:
             self.scheduler = ReduceLROnPlateau(self.optimizer, 'min')
+
+        self.losses = {}
 
     @property
     def history(self) -> dict:
@@ -418,12 +425,29 @@ class PyTorchModel(Model):
 
         # Early stopping
         current_loss, validation_metric_result = self._validate(validation_dataset)
-        self.logger.info(
-            f'Validation loss: {current_loss:.8}; Validation metric: {validation_metric_result:.8}')
+
+        self.losses[epoch] = current_loss
+
+        if validation_metric_result is not None:
+            self.logger.info(
+                f'Validation metric: {validation_metric_result:.8}')
+        
+        self.logger.info(f'Validation loss: {current_loss:.8}')
+
         if current_loss >= self.last_loss:
             self.trigger_times += 1
 
             if self.trigger_times >= self.patience:
+                self.logger.info(f'Early stopping at epoch {epoch}')
+                self._register_history(current_loss, epoch, validation_metric_result, train=False)
+
+                # choose the best model based on the validation loss
+                # get the key of a dictionary whose value is the minimum
+                best_epoch = min(self.losses, key=self.losses.get)
+                self.logger.info(f'Best epoch: {best_epoch}')
+                self.logger.info(f'Best loss: {self.losses[best_epoch]}')
+                self.model.load_state_dict(torch.load(f"./.model_checkpoints/{self.model_name}/epoch_{best_epoch}/model.pt"))
+
                 return self.model
 
         else:
@@ -492,8 +516,8 @@ class PyTorchModel(Model):
             self.logger.info(f'[{epoch}/{self.epochs}] metric result: {validation_metric_result:.8}')
             self.logger.info(
                 f'[{epoch}/{self.epochs}] Training loss: {loss:.8}')
-        
         self._register_history(loss, epoch, validation_metric_result)
+        
 
         if validation_dataset:
             assert validation_dataset != train_dataset, "Validation dataset should not be the same as training dataset"
@@ -526,7 +550,10 @@ class PyTorchModel(Model):
         if train_dataset.batch_size is None:
 
             for epoch in range(1, self.epochs + 1):
-                self._train_epoch(train_dataset, epoch, validation_dataset)
+                model = self._train_epoch(train_dataset, epoch, validation_dataset)
+                if model:
+                    self.writer.flush()
+                    return model
 
                 self._write_model_check_points(epoch)
 
@@ -537,11 +564,16 @@ class PyTorchModel(Model):
 
                 while train_dataset.next_batch():
 
-                    self._train_epoch(train_dataset, epoch, validation_dataset)
+                    self._train_epoch(train_dataset, epoch, validation_dataset = None)
 
-                    self._write_model_check_points(epoch)
+                self._write_model_check_points(epoch)
 
-                    self.scheduler.step(self.last_loss)
+                self.scheduler.step(self.last_loss)
+                
+                model = self._early_stopping(validation_dataset, epoch)
+                if model:
+                    self.writer.flush()
+                    return model
 
         self.writer.flush()
         return self.model
@@ -557,8 +589,8 @@ class PyTorchModel(Model):
         """
 
         os.makedirs("./.model_checkpoints", exist_ok=True)
-        os.makedirs(f"./.model_checkpoints/{self.model.__class__.__name__}/epoch_{epoch}", exist_ok=True)
-        torch.save(self.model.state_dict(), f"./.model_checkpoints/{self.model.__class__.__name__}/epoch_{epoch}"
+        os.makedirs(f"./.model_checkpoints/{self.model_name}/epoch_{epoch}", exist_ok=True)
+        torch.save(self.model.state_dict(), f"./.model_checkpoints/{self.model_name}/epoch_{epoch}"
                                             f"/model.pt")
 
     def get_pred_from_proba(self, y_pred_proba: np.ndarray) -> np.ndarray:
