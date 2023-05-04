@@ -1,4 +1,4 @@
-import pickle
+import marshal as pickle
 from typing import List, Any
 
 from plants_sm.io.commons import FilePathOrBuffer

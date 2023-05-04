@@ -56,7 +56,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         if dataframe is not None:
             if not isinstance(features_fields, List) and not isinstance(features_fields, slice) and \
                     features_fields is not None:
-                
+
                 self._features_fields = {PLACEHOLDER_FIELD: [features_fields]}
 
             elif isinstance(features_fields, slice):
@@ -176,7 +176,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
 
         new_dataframe = self.dataframe.copy()
         data = list(self.instances[PLACEHOLDER_FIELD].items())
-        data = pd.DataFrame(data, columns = [self.instances_ids_field, self.representation_field])
+        data = pd.DataFrame(data, columns=[self.instances_ids_field, self.representation_field])
 
         new_dataframe = pd.merge(new_dataframe, data, on=self.instances_ids_field, how='left')
 
@@ -186,12 +186,12 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             if features.ndim > 1:
                 warnings.warn(f"The features are not 2D, writing to pickle file")
                 write_pkl = True
-            
+
             if not write_pkl:
-                #convert a dictionary into a list of tuples
+                # convert a dictionary into a list of tuples
                 data = [(k, *v.tolist()) for k, v in self.features[PLACEHOLDER_FIELD].items()]
-                data = pd.DataFrame(data, columns = [self.instances_ids_field] + 
-                                                        self.features_fields[PLACEHOLDER_FIELD])
+                data = pd.DataFrame(data, columns=[self.instances_ids_field] +
+                                                  self.features_fields[PLACEHOLDER_FIELD])
 
                 new_dataframe = pd.merge(new_dataframe, data, on=self.instances_ids_field, how='left')
 
@@ -203,10 +203,10 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
 
     @classmethod
     def from_excel(cls, file_path: FilePathOrBuffer, representation_field: Union[str, None] = None,
-                 features_fields: Union[str, List[Union[str, int]], slice, None] = None,
-                 labels_field: Union[str, List[Union[str, int]], slice, None] = None,
-                 instances_ids_field: Union[str, None] = None,
-                 batch_size: Union[int, None] = None, **kwargs) \
+                   features_fields: Union[str, List[Union[str, int]], slice, None] = None,
+                   labels_field: Union[str, List[Union[str, int]], slice, None] = None,
+                   instances_ids_field: Union[str, None] = None,
+                   batch_size: Union[int, None] = None, **kwargs) \
             -> 'SingleInputDataset':
         """
         Method to create a dataset from an excel file.

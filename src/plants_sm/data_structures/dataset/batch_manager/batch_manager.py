@@ -8,6 +8,7 @@ from pandas import read_csv
 
 from plants_sm.design_patterns.observer import Observer, Subject
 from plants_sm.io import CSVWriter, write_csv, CSVReader
+from plants_sm.io.h5 import H5Reader, read_h5, H5Writer, write_h5
 from plants_sm.io.json import JSONWriter, write_json, read_json
 from plants_sm.io.pickle import PickleReader, PickleWriter, write_pickle, read_pickle
 
@@ -111,6 +112,14 @@ class BatchManager(Observer):
                 if variable is not None:
                     write_pickle(file_path, variable)
 
+            elif variable_format in H5Writer.file_types():
+                file_path = os.path.join(self.temporary_folder.name, str(self.counter),
+                                         f"{variable_name}.h5")
+
+                variable = getattr(self._cls, variable_name)
+                if variable is not None:
+                    write_h5(variable, file_path)
+
     def read_intermediate_files(self, subject: Subject) -> bool:
         """
         Reads the intermediate files to be used in the batches.
@@ -153,6 +162,14 @@ class BatchManager(Observer):
                 variable = getattr(self._cls, variable_name)
                 if variable is not None:
                     _variable = read_pickle(file_path)
+                    setattr(subject, variable_name, _variable)
+            elif variable_format in H5Reader.file_types():
+                file_path = os.path.join(self.temporary_folder.name, str(self.counter),
+                                         f"{variable_name}.h5")
+
+                variable = getattr(self._cls, variable_name)
+                if variable is not None:
+                    _variable = read_h5(file_path)
                     setattr(subject, variable_name, _variable)
 
         return True

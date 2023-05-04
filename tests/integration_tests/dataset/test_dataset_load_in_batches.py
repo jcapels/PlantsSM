@@ -25,7 +25,6 @@ class TestLoadInBatches(TestDataset):
 
         temp_folder = dataset._observer.temporary_folder
         self.assertTrue(os.path.exists(temp_folder.name))
-        print(os.listdir(temp_folder.name))
         for folder in os.listdir(temp_folder.name):
             for file in os.listdir(os.path.join(temp_folder.name, folder)):
                 for variable_name, _ in dataset.variables_to_save:
