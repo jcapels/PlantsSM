@@ -24,12 +24,12 @@ import torch
 
 class PyTorchModel(Model):
 
-    def __init__(self, model: nn.Module, loss_function: _Loss, model_name = None, optimizer: Optimizer = None,
+    def __init__(self, model: nn.Module, loss_function: _Loss, validation_loss_function: _Loss = None, model_name = None, optimizer: Optimizer = None,
                  scheduler: ReduceLROnPlateau = None, epochs: int = 32, batch_size: int = 32,
                  patience: int = 4, validation_metric: Callable = None,
                  problem_type: str = BINARY,
                  device: Union[str, torch.device] = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
-                 trigger_times: int = 0, last_loss: int = None, progress: int = 100, logger_path: str = None):
+                 trigger_times: int = 0, last_loss: int = None, progress: int = 100, logger_path: str = None, tensorboard_file_path: str = None):
 
         """
         Constructor for PyTorchModel
@@ -40,6 +40,8 @@ class PyTorchModel(Model):
             PyTorch model
         loss_function: _Loss
             PyTorch loss function
+        validation_loss_function: _Loss
+            PyTorch loss function for validation
         optimizer: Optimizer
             PyTorch optimizer
         scheduler: ReduceLROnPlateau
@@ -64,15 +66,22 @@ class PyTorchModel(Model):
             Number of batches to wait before logging progress
         logger_path: str
             Path to save the logger
+        tensorboard_file_path: str
+            Path to save the tensorboard file
         """
 
         super().__init__()
+
+        if model_name:
+            self.model_name = model_name
+        else:
+            self.model_name = model.__class__.__name__
 
         formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
         if logger_path:
             handler = TimedRotatingFileHandler(logger_path, when='midnight', backupCount=30)
         else:
-            handler = TimedRotatingFileHandler('./pytorch_model.log', when='midnight', backupCount=20)
+            handler = TimedRotatingFileHandler(f'./{self.model_name}.log', when='midnight', backupCount=20)
         handler.setFormatter(formatter)
 
         self.logger = logging.getLogger(__name__)
@@ -81,12 +90,14 @@ class PyTorchModel(Model):
 
         self.device = device
         self.model = model.to(self.device)
-        if model_name:
-            self.model_name = model_name
-        else:
-            self.model_name = model.__class__.__name__
 
         self.loss_function = loss_function
+
+        if validation_loss_function is None:
+            self.validation_loss_function = loss_function
+        else:
+            self.validation_loss_function = validation_loss_function
+
         self.optimizer = optimizer
         self.progress = progress
         self.scheduler = scheduler
@@ -107,7 +118,10 @@ class PyTorchModel(Model):
         self._history = {'loss': loss_dataframe,
                          'metric_results': metric_dataframe}
 
-        self.writer = SummaryWriter(comment=self.model_name, filename_suffix=self.model_name)
+        if tensorboard_file_path is None:
+            tensorboard_file_path = "./runs"
+
+        self.writer = SummaryWriter(log_dir=tensorboard_file_path,comment=self.model_name, filename_suffix=self.model_name)
 
         if not self.optimizer:
             self.optimizer = Adam(self.model.parameters())
@@ -290,7 +304,7 @@ class PyTorchModel(Model):
             predictions = np.concatenate((predictions, y_hat))
             actuals = np.concatenate((actuals, actual))
 
-            loss = self.loss_function(output, targets)
+            loss = self.validation_loss_function(output, targets)
             loss_total += loss.item()
 
             if i % self.progress == 0:
@@ -497,7 +511,9 @@ class PyTorchModel(Model):
             loss_total += loss.item()
             # Show progress
             if i % self.progress == 0 or i == len_train_dataset - 1:
-                self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] loss: {loss.item():.8}')
+                loss_partial = loss_total / (i + 1)
+                self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] loss: {loss_partial:.8}')
+                
 
                 predictions = self.get_pred_from_proba(predictions)
                 if self.validation_metric:
