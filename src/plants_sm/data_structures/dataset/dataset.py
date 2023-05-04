@@ -19,7 +19,7 @@ class Dataset(ConcreteSubject, PickleMixin):
     _dataframe_generator: Iterable = None
     _batch_state: bool = True
     variables_to_save = [
-        ("_dataframe", "csv"),
+        ("_dataframe", "pkl"),
         ("_instances", "pkl"),
         ("_identifiers", "pkl"),
         ("features", "pkl"),

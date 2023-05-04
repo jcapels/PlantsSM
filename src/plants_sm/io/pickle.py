@@ -1,4 +1,4 @@
-import marshal as pickle
+import pickle
 from typing import List, Any
 
 from plants_sm.io.commons import FilePathOrBuffer
@@ -87,7 +87,8 @@ class PickleWriter(Writer):
         bool
             True if the file was written successfully, False otherwise.
         """
-        pickle.dump(object_to_be_written, self.buffer)
+        pickle.dump(object_to_be_written, self.buffer, protocol=pickle.HIGHEST_PROTOCOL)
+        # pickle.dump(object_to_be_written, self.buffer)
         self.close_buffer()
         return True
 
