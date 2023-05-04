@@ -530,8 +530,8 @@ class PyTorchModel(Model):
         if self.validation_metric:
             validation_metric_result = self.validation_metric(actuals, predictions)
             self.logger.info(f'[{epoch}/{self.epochs}] metric result: {validation_metric_result:.8}')
-            self.logger.info(
-                f'[{epoch}/{self.epochs}] Training loss: {loss:.8}')
+        self.logger.info(
+            f'[{epoch}/{self.epochs}] Training loss: {loss:.8}')
         self._register_history(loss, epoch, validation_metric_result)
         
 
