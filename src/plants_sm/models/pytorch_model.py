@@ -29,7 +29,11 @@ class PyTorchModel(Model):
                  patience: int = 4, validation_metric: Callable = None,
                  problem_type: str = BINARY,
                  device: Union[str, torch.device] = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
-                 trigger_times: int = 0, last_loss: int = None, progress: int = 100, logger_path: str = None, tensorboard_file_path: str = None):
+                 trigger_times: int = 0, 
+                 last_loss: int = None, 
+                 progress: int = 100, 
+                 logger_path: str = None, tensorboard_file_path: str = None,
+                 l2_regularization_lambda: float = None, l1_regularization_lambda: float = None):
 
         """
         Constructor for PyTorchModel
@@ -68,6 +72,10 @@ class PyTorchModel(Model):
             Path to save the logger
         tensorboard_file_path: str
             Path to save the tensorboard file
+        l2_regularization_lambda: float
+            L2 regularization lambda
+        l1_regularization_lambda: float
+            L1 regularization lambda
         """
 
         super().__init__()
@@ -129,6 +137,9 @@ class PyTorchModel(Model):
             self.scheduler = ReduceLROnPlateau(self.optimizer, 'min')
 
         self.losses = {}
+
+        self.l2_regularization_lambda = l2_regularization_lambda
+        self.l1_regularization_lambda = l1_regularization_lambda
 
     @property
     def history(self) -> dict:
@@ -381,10 +392,24 @@ class PyTorchModel(Model):
         self.optimizer.zero_grad()
 
         output = self.model(inputs)
-        # Zero the gradients
 
         # Forward and backward propagation
         loss = self.loss_function(output, targets)
+
+        if self.l2_regularization_lambda:
+            l2_lambda = self.l2_regularization_lambda
+            l2_norm = sum(p.pow(2.0).sum()
+                        for p in self.model.parameters())
+        
+            loss = loss + l2_lambda * l2_norm
+
+        if self.l1_regularization_lambda:
+            l1_lambda = self.l1_regularization_lambda
+            l1_norm = sum(p.abs().sum()
+                        for p in self.model.parameters())
+        
+            loss = loss + l1_lambda * l1_norm
+
         loss.backward()
         self.optimizer.step()
 
