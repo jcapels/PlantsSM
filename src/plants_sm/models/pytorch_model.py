@@ -319,7 +319,8 @@ class PyTorchModel(Model):
             loss_total += loss.item()
 
             if i % self.progress == 0:
-                self.logger.info(f'Validation set: [{i}/{len_valid_dataset}] loss: {loss.item():.8}')
+                loss_partial = loss_total / (i + 1)
+                self.logger.info(f'Validation set: [{i}/{len_valid_dataset}] loss: {loss_partial:.8}')
 
         return loss_total, predictions, actuals
 
