@@ -36,6 +36,7 @@ class Dataset(ConcreteSubject, PickleMixin):
         """
         self.batch_size = batch_size
         if self.batch_size is not None:
+            self._folder_to_load_features = None
             if self.batch_size <= 0:
                 raise ValueError("Batch size must be a positive integer.")
             else:
@@ -87,9 +88,10 @@ class Dataset(ConcreteSubject, PickleMixin):
             The path to the file where the features are saved.
         """
         if self.batch_size is not None:
+            self._folder_to_load_features = folder_path
             i = 0
             self.features = read_pickle(os.path.join(folder_path, f"features_{i}.pkl"))
-            i+=1
+            i += 1
             while self.next_batch():
                 self.features = read_pickle(os.path.join(folder_path, f"features_{i}.pkl"))
                 i += 1

@@ -1,15 +1,10 @@
 import os
-import shutil
 from unittest import TestCase
 
 import pandas as pd
 
-from plants_sm.data_standardization.proteins.padding import SequencePadder
 from plants_sm.data_structures.dataset import SingleInputDataset
 from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputDataset
-from plants_sm.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
-from plants_sm.featurization.encoding.one_hot_encoder import OneHotEncoder
-from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
 from tests import TEST_DIR
 
 
