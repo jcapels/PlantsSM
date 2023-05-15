@@ -4,7 +4,6 @@ from plants_sm.data_structures.dataset.single_input_dataset import SingleInputDa
 from plants_sm.featurization.proteins.bio_embeddings.esm import ESMEncoder
 from plants_sm.featurization.proteins.bio_embeddings.prot_bert import ProtBert
 
-
 def generate_features(transformer, transformer_name):
 
     datasets = ["test", "train", "validation"]
@@ -13,6 +12,7 @@ def generate_features(transformer, transformer_name):
         print(f"Generating features for {dataset_}")
         dataset = SingleInputDataset.from_csv(f"/scratch/jribeiro/ec_number_prediction/final_data/{dataset_}.csv", instances_ids_field="accession", representation_field="sequence", 
                             labels_field=slice(8, -1))
+        
         Truncator(max_length=1545).fit_transform(dataset)
         transformer.fit_transform(dataset)
 
