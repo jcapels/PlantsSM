@@ -194,7 +194,6 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
 
                 new_dataframe = pd.merge(new_dataframe, data, on=self.instances_ids_field, how='left')
 
-
             else:
                 write_pickle(file_path.replace("csv", "pkl"), self.features)
 
