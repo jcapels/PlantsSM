@@ -29,19 +29,19 @@ class DenseNet(nn.Module):
     def forward(self, x):
         x = x[0]
         out = self.fc_initial(x)
+        if self.batch_norm:
+            out = self.batch_norm_initial(out)
         out = self.relu_initial(out)
         if self.dropout is not None:
             out = self.dropout(out)
-        if self.batch_norm:
-            out = self.batch_norm_initial(out)
         for i in range(1, len(self.hidden_sizes)):
             out = getattr(self, f"fc{i}")(out)
+            if self.batch_norm:
+                out = getattr(self, f"batch_norm_layer{i}")(out)
             out = getattr(self, f"relu{i}")(out)
             if self.dropout is not None:
                 out = self.dropout(out)
-            if self.batch_norm:
-                out = getattr(self, f"batch_norm_layer{i}")(out)
-            
+
         out = self.fc_final(out)
         if self.last_sigmoid:
             out = nn.Sigmoid()(out)
