@@ -72,7 +72,8 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
 
                 else:
                     self._labels_names = [labels_field]
-
+                    
+            self.dataframe.drop(list(self.representation_field.values()), axis=1, inplace=True)
             if self.batch_size is not None:
                 while next(self):
                     pass
@@ -208,7 +209,6 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
                     _identifiers_ids.append(ids_field)
 
             self._identifiers = self.dataframe.loc[:, _identifiers_ids].values
-        self.dataframe.drop(list(self.representation_field.values()), axis=1, inplace=True)
 
     def generate_ids(self, instance_type):
         """
