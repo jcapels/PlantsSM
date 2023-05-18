@@ -107,6 +107,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             else:
                 self._features = {}
 
+            self.dataframe.drop(self.representation_field, axis=1, inplace=True)
             if self.batch_size is not None:
                 while next(self):
                     pass
@@ -387,7 +388,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                 identifiers = self._dataframe.loc[:, self.instances_ids_field].values
                 instances = self.dataframe.loc[:, self.representation_field].values
                 self._instances = {PLACEHOLDER_FIELD: dict(zip(identifiers, instances))}
-                self.dataframe.drop(self.representation_field, axis=1, inplace=True)
+                # self.dataframe.drop(self.representation_field, axis=1, inplace=True)
 
     @dataframe.setter
     def dataframe(self, value: Any):
@@ -429,6 +430,6 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
 
             instances = self.dataframe.loc[:, self.representation_field].values
             self._instances = {PLACEHOLDER_FIELD: dict(zip(identifiers_series.values, instances))}
-            self.dataframe.drop(self.representation_field, axis=1, inplace=True)
+            # self.dataframe.drop(self.representation_field, axis=1, inplace=True)
         else:
             self._identifiers = self._dataframe[self.instances_ids_field].values
