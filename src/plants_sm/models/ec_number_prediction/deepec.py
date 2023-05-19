@@ -1,4 +1,8 @@
+import torch
 import torch.nn as nn
+
+from PlantsSM.src.plants_sm.models.pytorch_model import PyTorchModel
+
 
 
 class DeepECCNN(nn.Module):
@@ -54,5 +58,24 @@ class DeepECCNNOptimal(DeepECCNN):
 
     def __init__(self, num_columns, num_classes):
         super().__init__(128, num_columns, [4, 8, 16], 2, 512, num_classes)
+
+class DeepEC(PyTorchModel):
+
+    def __init__(self, num_columns, num_classes, 
+                 loss_function, validation_loss_function,
+                 batch_size,
+                 optimizer=torch.optim.Adam, learning_rate=0.009999999776482582, 
+                 epochs=30):
+        
+        self.num_columns = num_columns
+        self.num_classes = num_classes
+        self.loss_function = loss_function
+        self.validation_loss_function = validation_loss_function
+        self.optimizer = optimizer
+        self.learning_rate = learning_rate
+        self.batch_size = batch_size
+        self.epochs = epochs
+        # self.device = device
+        
 
 
