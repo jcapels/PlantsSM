@@ -31,7 +31,7 @@ class Encoder(FeaturesGenerator):
     _max_length_set: bool = False
     _alphabet_set: bool = False
 
-    def __init__(self, alphabet: Union[Set[str], str] = None, tokenizer: Tokenizer = None, max_length: int = None):
+    def __init__(self, alphabet: Union[Set[str], str] = None, tokenizer: Tokenizer = None, max_length: int = None, padding=""):
         """
         Abstract method that has to be implemented by all encoders to set the tokens.
 
@@ -58,6 +58,8 @@ class Encoder(FeaturesGenerator):
             self._max_length_set = True
 
         self.max_length = max_length
+
+        self.padding = padding
 
     def set_features_names(self):
         """
@@ -92,7 +94,8 @@ class Encoder(FeaturesGenerator):
                     tokenized_sequence = copy(sequence)
                 lengths.append(len(tokenized_sequence))
                 for char in tokenized_sequence:
-                    self.alphabet.add(char)
+                    if char != self.padding:
+                        self.alphabet.add(char)
         else:
             if not self.max_length:
                 sequences = list(dataset.get_instances(instance_type).values())
@@ -145,7 +148,8 @@ class Encoder(FeaturesGenerator):
                     tokenized_sequence = copy(sequence)
                 lengths.append(len(tokenized_sequence))
                 for char in tokenized_sequence:
-                    self.alphabet.add(char)
+                    if char != self.padding:
+                        self.alphabet.add(char)
         else:
             if not self.max_length:
                 sequences = list(dataset.get_instances(instance_type).values())
@@ -196,8 +200,8 @@ class Encoder(FeaturesGenerator):
             instance = self.tokenizer.tokenize(instance)
         for i, token in enumerate(instance[:self.max_length]):
             if token in self.tokens:
-                if self.output_shape_dimension == 3:
+                if self.output_shape_dimension == 3 and token in self.alphabet:
                     res[i, :] = self.tokens[token]
-                else:
+                elif self.output_shape_dimension == 2 and token in self.alphabet:
                     res[i] = self.tokens[token]
         return res
