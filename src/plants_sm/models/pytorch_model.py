@@ -33,7 +33,8 @@ class PyTorchModel(Model):
                  last_loss: int = None, 
                  progress: int = 100, 
                  logger_path: str = None, tensorboard_file_path: str = None,
-                 l2_regularization_lambda: float = None, l1_regularization_lambda: float = None):
+                 l2_regularization_lambda: float = None, l1_regularization_lambda: float = None, 
+                 checkpoints_path: str = None):
 
         """
         Constructor for PyTorchModel
@@ -140,6 +141,10 @@ class PyTorchModel(Model):
 
         self.l2_regularization_lambda = l2_regularization_lambda
         self.l1_regularization_lambda = l1_regularization_lambda
+
+        if checkpoints_path is None:
+            checkpoints_path = "./checkpoints"
+        self.checkpoints_path = checkpoints_path
 
     @property
     def history(self) -> dict:
@@ -486,7 +491,7 @@ class PyTorchModel(Model):
                 best_epoch = min(self.losses, key=self.losses.get)
                 self.logger.info(f'Best epoch: {best_epoch}')
                 self.logger.info(f'Best loss: {self.losses[best_epoch]}')
-                self.model.load_state_dict(torch.load(f"./.model_checkpoints/{self.model_name}/epoch_{best_epoch}/model.pt"))
+                self.model.load_state_dict(torch.load(f"{self.checkpoints_path}/{self.model_name}/epoch_{best_epoch}/model.pt"))
 
                 return self.model
 
@@ -630,9 +635,9 @@ class PyTorchModel(Model):
             Epoch
         """
 
-        os.makedirs("./.model_checkpoints", exist_ok=True)
-        os.makedirs(f"./.model_checkpoints/{self.model_name}/epoch_{epoch}", exist_ok=True)
-        torch.save(self.model.state_dict(), f"./.model_checkpoints/{self.model_name}/epoch_{epoch}"
+        os.makedirs(self.checkpoints_path, exist_ok=True)
+        os.makedirs(f"{self.checkpoints_path}/{self.model_name}/epoch_{epoch}", exist_ok=True)
+        torch.save(self.model.state_dict(), f"{self.checkpoints_path}/{self.model_name}/epoch_{epoch}"
                                             f"/model.pt")
 
     def get_pred_from_proba(self, y_pred_proba: np.ndarray) -> np.ndarray:
