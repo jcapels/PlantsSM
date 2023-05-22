@@ -160,7 +160,8 @@ class Encoder(FeaturesGenerator):
         if not self.max_length:
             self.max_length = max(lengths)
 
-        for i, token in enumerate(self.alphabet):
+        alphabet = sorted(list(self.alphabet))
+        for i, token in enumerate(alphabet):
             self._set_tokens(i, token)
 
         return self
@@ -200,8 +201,8 @@ class Encoder(FeaturesGenerator):
             instance = self.tokenizer.tokenize(instance)
         for i, token in enumerate(instance[:self.max_length]):
             if token in self.tokens:
-                if self.output_shape_dimension == 3 and token in self.alphabet:
+                if self.output_shape_dimension == 3:
                     res[i, :] = self.tokens[token]
-                elif self.output_shape_dimension == 2 and token in self.alphabet:
+                elif self.output_shape_dimension == 2:
                     res[i] = self.tokens[token]
         return res
