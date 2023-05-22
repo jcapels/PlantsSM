@@ -18,7 +18,7 @@ from plants_sm.parallelisation.torch_spawner import ESMModel
 class ESMEncoder(Transformer):
     """
     It encodes protein sequences with the embedding layer of the pre-trained model ESM-1B.
-    The Esm1bEncoder operates only over pandas DataFrame.
+    The EsmEncoder operates only over pandas DataFrame.
 
     Parameters
     ----------
@@ -172,6 +172,7 @@ class ESMEncoder(Transformer):
                     representations['representations'] = results["representations"][layers]
 
                     for i, batch_instance_id in enumerate(batch_ids):
+
                         if output_dim == 2:
                             res.append((batch_instance_id,
                                         representations['representations'][i, 1: len(batch[i][1]) + 1].mean(0)))
@@ -183,7 +184,6 @@ class ESMEncoder(Transformer):
                     batch = []
                     batch_ids = []
                     pbar.update(batch_size)
-
 
         if len(batch) != 0:
 
@@ -258,7 +258,7 @@ class ESMEncoder(Transformer):
                                            alphabet=self.alphabet,
                                            is_ddf=self.is_ddf)
 
-        dataset.features[instance_type] = dict(res)
+        dataset.add_features(instance_type, dict(res))
 
         dataset.features_fields[instance_type] = self.features_names
 
