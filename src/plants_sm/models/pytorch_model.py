@@ -24,16 +24,17 @@ import torch
 
 class PyTorchModel(Model):
 
-    def __init__(self, model: nn.Module, loss_function: _Loss, validation_loss_function: _Loss = None, model_name = None, optimizer: Optimizer = None,
+    def __init__(self, model: nn.Module, loss_function: _Loss, validation_loss_function: _Loss = None, model_name=None,
+                 optimizer: Optimizer = None,
                  scheduler: ReduceLROnPlateau = None, epochs: int = 32, batch_size: int = 32,
                  patience: int = 4, validation_metric: Callable = None,
                  problem_type: str = BINARY,
                  device: Union[str, torch.device] = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
-                 trigger_times: int = 0, 
-                 last_loss: int = None, 
-                 progress: int = 100, 
+                 trigger_times: int = 0,
+                 last_loss: int = None,
+                 progress: int = 100,
                  logger_path: str = None, tensorboard_file_path: str = None,
-                 l2_regularization_lambda: float = None, l1_regularization_lambda: float = None, 
+                 l2_regularization_lambda: float = None, l1_regularization_lambda: float = None,
                  checkpoints_path: str = None):
 
         """
@@ -130,7 +131,8 @@ class PyTorchModel(Model):
         if tensorboard_file_path is None:
             tensorboard_file_path = "./runs"
 
-        self.writer = SummaryWriter(log_dir=tensorboard_file_path,comment=self.model_name, filename_suffix=self.model_name)
+        self.writer = SummaryWriter(log_dir=tensorboard_file_path, comment=self.model_name,
+                                    filename_suffix=self.model_name)
 
         if not self.optimizer:
             self.optimizer = Adam(self.model.parameters())
@@ -215,7 +217,7 @@ class PyTorchModel(Model):
         self.logger.info(f'Best epoch: {best_epoch}')
         self.logger.info(f'Best loss: {self.losses[best_epoch]}')
         self.model.load_state_dict(torch.load(f"{self.checkpoints_path}/{self.model_name}/epoch_{best_epoch}/model.pt"))
-        
+
         self._save_pytorch_model(self.model, path)
 
         model_parameters = {
@@ -410,15 +412,15 @@ class PyTorchModel(Model):
         if self.l2_regularization_lambda:
             l2_lambda = self.l2_regularization_lambda
             l2_norm = sum(p.pow(2.0).sum()
-                        for p in self.model.parameters())
-        
+                          for p in self.model.parameters())
+
             loss = loss + l2_lambda * l2_norm
 
         if self.l1_regularization_lambda:
             l1_lambda = self.l1_regularization_lambda
             l1_norm = sum(p.abs().sum()
-                        for p in self.model.parameters())
-        
+                          for p in self.model.parameters())
+
             loss = loss + l1_lambda * l1_norm
 
         loss.backward()
@@ -481,7 +483,7 @@ class PyTorchModel(Model):
         if validation_metric_result is not None:
             self.logger.info(
                 f'Validation metric: {validation_metric_result:.8}')
-        
+
         self.logger.info(f'Validation loss: {current_loss:.8}')
 
         if current_loss >= self.last_loss:
@@ -496,7 +498,8 @@ class PyTorchModel(Model):
                 best_epoch = min(self.losses, key=self.losses.get)
                 self.logger.info(f'Best epoch: {best_epoch}')
                 self.logger.info(f'Best loss: {self.losses[best_epoch]}')
-                self.model.load_state_dict(torch.load(f"{self.checkpoints_path}/{self.model_name}/epoch_{best_epoch}/model.pt"))
+                self.model.load_state_dict(
+                    torch.load(f"{self.checkpoints_path}/{self.model_name}/epoch_{best_epoch}/model.pt"))
 
                 return self.model
 
@@ -605,13 +608,12 @@ class PyTorchModel(Model):
             for epoch in range(1, self.epochs + 1):
 
                 while train_dataset.next_batch():
-
-                    self._train_epoch(train_dataset, epoch, validation_dataset = None)
+                    self._train_epoch(train_dataset, epoch, validation_dataset=None)
 
                 self._write_model_check_points(epoch)
 
                 self.scheduler.step(self.last_loss)
-                
+
                 model = self._early_stopping(validation_dataset, epoch)
                 if model:
                     self.writer.flush()

@@ -32,3 +32,4 @@ map4 @ git+https://github.com/reymond-group/map4@v1.0
 tensorboard==2.11.0
 tensorflow==2.11.0
 fairscale==0.4.13
+optuna==3.1.1
