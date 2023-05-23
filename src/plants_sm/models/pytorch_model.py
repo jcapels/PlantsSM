@@ -617,6 +617,11 @@ class PyTorchModel(Model):
                     self.writer.flush()
                     return model
 
+        best_epoch = min(self.losses, key=self.losses.get)
+        self.logger.info(f'Best epoch: {best_epoch}')
+        self.logger.info(f'Best loss: {self.losses[best_epoch]}')
+        self.model.load_state_dict(torch.load(f"{self.checkpoints_path}/{self.model_name}/epoch_{best_epoch}/model.pt"))
+        
         self.writer.flush()
         return self.model
 
