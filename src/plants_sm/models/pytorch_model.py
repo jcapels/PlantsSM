@@ -211,6 +211,11 @@ class PyTorchModel(Model):
         Returns
         -------
         """
+        best_epoch = min(self.losses, key=self.losses.get)
+        self.logger.info(f'Best epoch: {best_epoch}')
+        self.logger.info(f'Best loss: {self.losses[best_epoch]}')
+        self.model.load_state_dict(torch.load(f"{self.checkpoints_path}/{self.model_name}/epoch_{best_epoch}/model.pt"))
+        
         self._save_pytorch_model(self.model, path)
 
         model_parameters = {
@@ -544,27 +549,17 @@ class PyTorchModel(Model):
             if i % self.progress == 0 or i == len_train_dataset - 1:
                 loss_partial = loss_total / (i + 1)
                 self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] loss: {loss_partial:.8}')
-                
 
-                predictions = self.get_pred_from_proba(predictions)
-                if self.validation_metric:
-                    validation_metric_result = self.validation_metric(actuals, predictions)
-
-                    self.logger.info(f'[{epoch}/{self.epochs}, {i}/{len_train_dataset}] '
-                                 f'metric result: {validation_metric_result:.8}')
-                    
         loss = loss_total / len_train_dataset
-
-        predictions = self.get_pred_from_proba(predictions)
 
         validation_metric_result = None
         if self.validation_metric:
+            predictions = self.get_pred_from_proba(predictions)
             validation_metric_result = self.validation_metric(actuals, predictions)
             self.logger.info(f'[{epoch}/{self.epochs}] metric result: {validation_metric_result:.8}')
         self.logger.info(
             f'[{epoch}/{self.epochs}] Training loss: {loss:.8}')
         self._register_history(loss, epoch, validation_metric_result)
-        
 
         if validation_dataset:
             assert validation_dataset != train_dataset, "Validation dataset should not be the same as training dataset"
