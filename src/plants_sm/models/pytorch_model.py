@@ -291,9 +291,8 @@ class PyTorchModel(Model):
         return data_loader
 
     def _validate_batches(self, validation_set: DataLoader, loss_total: float,
-                          len_valid_dataset: int,
                           predictions: ndarray,
-                          actuals: ndarray, batch_n_whole_dataset: int) -> Tuple[float, ndarray, ndarray]:
+                          actuals: ndarray) -> Tuple[float, ndarray, ndarray]:
         """
         Validate the model on the validation set
 
@@ -331,9 +330,6 @@ class PyTorchModel(Model):
             loss = self.validation_loss_function(output, targets)
             loss_total += loss.item()
 
-        loss_partial = loss_total / len_valid_dataset
-        self.logger.info(f'Validation set: [batch {batch_n_whole_dataset}] loss: {loss_partial:.8}')
-
         return loss_total, predictions, actuals
 
     def _validate(self, validation_set: Dataset) -> Tuple[float, float]:
@@ -364,18 +360,17 @@ class PyTorchModel(Model):
                 validation_set_preprocessed = self._preprocess_data(validation_set, shuffle=False)
                 len_valid_dataset = len(validation_set_preprocessed)
                 loss_total, predictions, actuals = \
-                    self._validate_batches(validation_set_preprocessed, loss_total, predictions, actuals)
+                    self._validate_batches(validation_set_preprocessed, loss_total,
+                                               predictions, actuals)
 
             else:
                 len_valid_dataset = 0
-                batch_i = 0
                 while validation_set.next_batch():
                     validation_set_preprocessed = self._preprocess_data(validation_set, shuffle=False)
                     len_valid_dataset += len(validation_set_preprocessed)
-                    batch_i += 1
                     loss_total, predictions, actuals = \
-                        self._validate_batches(validation_set_preprocessed, loss_total, len_valid_dataset,
-                                               predictions, actuals, batch_i)
+                        self._validate_batches(validation_set_preprocessed, loss_total,
+                                               predictions, actuals)
 
         validation_metric_result = None
         if self.validation_metric:
@@ -516,7 +511,7 @@ class PyTorchModel(Model):
     def _calculate_metric_result(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
         validation_metric_result = None
         if self.validation_metric:
-            predictions = self.get_pred_from_proba(predictions)
+            predictions = self.get_pred_from_proba(np.array(predictions))
             validation_metric_result = self.validation_metric(actuals, predictions)
 
         return validation_metric_result
@@ -620,11 +615,10 @@ class PyTorchModel(Model):
             loss_total += loss.item()
             # Show progress
 
-        loss_partial = (loss_total_whole_dataset + loss_total) / batch_num
+        loss = loss_total / len_train_dataset
+        loss_partial = (loss_total_whole_dataset + loss) / batch_num
         self.logger.info(f'[{epoch}/{self.epochs}, batch '
                          f'{batch_num}] loss: {loss_partial:.8}')
-
-        loss = loss_total / len_train_dataset
 
         return loss, predictions, actuals
 
@@ -666,18 +660,20 @@ class PyTorchModel(Model):
                 loss_total = 0
 
                 predictions, actuals = np.empty(shape=(0, second_shape)), np.empty(shape=(0, second_shape))
-                predictions = array_reshape(predictions)
-                actuals = array_reshape(actuals)
+                predictions_final = array_reshape(predictions)
+                actuals_final = array_reshape(actuals)
 
                 while train_dataset.next_batch():
                     batch_i += 1
                     loss, predictions, actuals = self._train_epoch_batch(train_dataset, epoch, batch_i, loss_total)
+                    predictions_final = np.concatenate((predictions_final, predictions))
+                    actuals_final = np.concatenate((actuals_final, actuals))
 
                     loss_total += loss
 
                 loss = loss_total / batch_i
 
-                validation_metric_result = self._calculate_metric_result(actuals, predictions)
+                validation_metric_result = self._calculate_metric_result(actuals_final, predictions_final)
                 if validation_metric_result is not None:
                     self.logger.info(f'[{epoch}/{self.epochs}] metric result: {validation_metric_result:.8}')
 
@@ -697,10 +693,11 @@ class PyTorchModel(Model):
                         self.writer.flush()
                         return model
 
-        best_epoch = min(self.losses, key=self.losses.get)
-        self.logger.info(f'Best epoch: {best_epoch}')
-        self.logger.info(f'Best loss: {self.losses[best_epoch]}')
-        self.model.load_state_dict(torch.load(f"{self.checkpoints_path}/{self.model_name}/epoch_{best_epoch}/model.pt"))
+        if validation_dataset:
+            best_epoch = min(self.losses, key=self.losses.get)
+            self.logger.info(f'Best epoch: {best_epoch}')
+            self.logger.info(f'Best loss: {self.losses[best_epoch]}')
+            self.model.load_state_dict(torch.load(f"{self.checkpoints_path}/{self.model_name}/epoch_{best_epoch}/model.pt"))
 
         self.writer.flush()
         return self.model
