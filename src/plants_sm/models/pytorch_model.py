@@ -290,8 +290,10 @@ class PyTorchModel(Model):
         )
         return data_loader
 
-    def _validate_batches(self, validation_set: DataLoader, loss_total: float, predictions: ndarray,
-                          actuals: ndarray) -> Tuple[float, ndarray, ndarray]:
+    def _validate_batches(self, validation_set: DataLoader, loss_total: float,
+                          len_valid_dataset: int,
+                          predictions: ndarray,
+                          actuals: ndarray, batch_n_whole_dataset: int) -> Tuple[float, ndarray, ndarray]:
         """
         Validate the model on the validation set
 
@@ -312,7 +314,6 @@ class PyTorchModel(Model):
             Total loss, predictions and actual values
         """
 
-        len_valid_dataset = len(validation_set)
         for i, inputs_targets in enumerate(validation_set):
             inputs, targets = inputs_targets[:-1], inputs_targets[-1]
             for j, inputs_elem in enumerate(inputs):
@@ -330,9 +331,8 @@ class PyTorchModel(Model):
             loss = self.validation_loss_function(output, targets)
             loss_total += loss.item()
 
-            if i % self.progress == 0:
-                loss_partial = loss_total / (i + 1)
-                self.logger.info(f'Validation set: [{i}/{len_valid_dataset}] loss: {loss_partial:.8}')
+        loss_partial = loss_total / len_valid_dataset
+        self.logger.info(f'Validation set: [batch {batch_n_whole_dataset}] loss: {loss_partial:.8}')
 
         return loss_total, predictions, actuals
 
@@ -368,11 +368,14 @@ class PyTorchModel(Model):
 
             else:
                 len_valid_dataset = 0
+                batch_i = 0
                 while validation_set.next_batch():
                     validation_set_preprocessed = self._preprocess_data(validation_set, shuffle=False)
                     len_valid_dataset += len(validation_set_preprocessed)
+                    batch_i += 1
                     loss_total, predictions, actuals = \
-                        self._validate_batches(validation_set_preprocessed, loss_total, predictions, actuals)
+                        self._validate_batches(validation_set_preprocessed, loss_total, len_valid_dataset,
+                                               predictions, actuals, batch_i)
 
         validation_metric_result = None
         if self.validation_metric:
@@ -510,6 +513,14 @@ class PyTorchModel(Model):
 
         self.last_loss = current_loss
 
+    def _calculate_metric_result(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
+        validation_metric_result = None
+        if self.validation_metric:
+            predictions = self.get_pred_from_proba(predictions)
+            validation_metric_result = self.validation_metric(actuals, predictions)
+
+        return validation_metric_result
+
     def _train_epoch(self, train_dataset: Dataset, epoch: int,
                      validation_dataset: Dataset = None) -> Union[nn.Module, None]:
         """
@@ -555,11 +566,10 @@ class PyTorchModel(Model):
 
         loss = loss_total / len_train_dataset
 
-        validation_metric_result = None
-        if self.validation_metric:
-            predictions = self.get_pred_from_proba(predictions)
-            validation_metric_result = self.validation_metric(actuals, predictions)
+        validation_metric_result = self._calculate_metric_result(actuals, predictions)
+        if validation_metric_result is not None:
             self.logger.info(f'[{epoch}/{self.epochs}] metric result: {validation_metric_result:.8}')
+
         self.logger.info(
             f'[{epoch}/{self.epochs}] Training loss: {loss:.8}')
         self._register_history(loss, epoch, validation_metric_result)
@@ -569,6 +579,54 @@ class PyTorchModel(Model):
             return self._early_stopping(validation_dataset, epoch)
         else:
             return None
+
+    def _train_epoch_batch(self, train_dataset: Dataset, epoch: int, batch_num: int, loss_total_whole_dataset: float) \
+            -> Tuple[float, np.ndarray, np.ndarray]:
+        """
+        Train the model for one epoch
+
+        Parameters
+        ----------
+        train_dataset: Dataset
+            Training dataset
+        epoch: int
+            Epoch
+        batch_num: int
+            Batch number
+
+        Returns
+        -------
+        Union[nn.Module, None]
+            Model
+        """
+        self.model.train()
+        loss_total = 0
+
+        second_shape = train_dataset.y.shape[1]
+        predictions, actuals = np.empty(shape=(0, second_shape)), np.empty(shape=(0, second_shape))
+
+        predictions = array_reshape(predictions)
+        actuals = array_reshape(actuals)
+
+        train_dataset_preprocessed = self._preprocess_data(train_dataset, shuffle=False)
+
+        len_train_dataset = len(train_dataset_preprocessed)
+
+        for i, inputs_targets in enumerate(train_dataset_preprocessed):
+            actual, yhat, loss = self._train(inputs_targets)
+
+            predictions = np.concatenate((predictions, yhat))
+            actuals = np.concatenate((actuals, actual))
+            loss_total += loss.item()
+            # Show progress
+
+        loss_partial = (loss_total_whole_dataset + loss_total) / batch_num
+        self.logger.info(f'[{epoch}/{self.epochs}, batch '
+                         f'{batch_num}] loss: {loss_partial:.8}')
+
+        loss = loss_total / len_train_dataset
+
+        return loss, predictions, actuals
 
     def _fit_data(self, train_dataset: Dataset, validation_dataset: Dataset = None) -> nn.Module:
         """
@@ -595,26 +653,44 @@ class PyTorchModel(Model):
         if train_dataset.batch_size is None:
 
             for epoch in range(1, self.epochs + 1):
-                model = self._train_epoch(train_dataset, epoch, validation_dataset)
-                if model:
-                    self.writer.flush()
-                    return model
+                self._train_epoch(train_dataset, epoch, validation_dataset)
 
                 self._write_model_check_points(epoch)
 
                 self.scheduler.step(self.last_loss)
         else:
+            second_shape = train_dataset.y.shape[1]
 
             for epoch in range(1, self.epochs + 1):
+                batch_i = 0
+                loss_total = 0
+
+                predictions, actuals = np.empty(shape=(0, second_shape)), np.empty(shape=(0, second_shape))
+                predictions = array_reshape(predictions)
+                actuals = array_reshape(actuals)
 
                 while train_dataset.next_batch():
-                    self._train_epoch(train_dataset, epoch, validation_dataset=None)
+                    batch_i += 1
+                    loss, predictions, actuals = self._train_epoch_batch(train_dataset, epoch, batch_i, loss_total)
+
+                    loss_total += loss
+
+                loss = loss_total / batch_i
+
+                validation_metric_result = self._calculate_metric_result(actuals, predictions)
+                if validation_metric_result is not None:
+                    self.logger.info(f'[{epoch}/{self.epochs}] metric result: {validation_metric_result:.8}')
+
+                self.logger.info(
+                    f'[{epoch}/{self.epochs}] Training loss: {loss:.8}')
+                self._register_history(loss, epoch, validation_metric_result)
 
                 self._write_model_check_points(epoch)
 
                 self.scheduler.step(self.last_loss)
                 if validation_dataset:
-                    assert validation_dataset != train_dataset, "Validation dataset should not be the same as training dataset"
+                    assert validation_dataset != train_dataset, "Validation dataset should not be the same as " \
+                                                                "training dataset"
                     model = self._early_stopping(validation_dataset, epoch)
 
                     if model:
@@ -625,7 +701,7 @@ class PyTorchModel(Model):
         self.logger.info(f'Best epoch: {best_epoch}')
         self.logger.info(f'Best loss: {self.losses[best_epoch]}')
         self.model.load_state_dict(torch.load(f"{self.checkpoints_path}/{self.model_name}/epoch_{best_epoch}/model.pt"))
-        
+
         self.writer.flush()
         return self.model
 

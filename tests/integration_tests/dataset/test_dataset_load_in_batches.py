@@ -8,6 +8,7 @@ from plants_sm.data_standardization.proteins.standardization import ProteinStand
 from plants_sm.data_structures.dataset import SingleInputDataset, PLACEHOLDER_FIELD
 from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputDataset
 from plants_sm.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
+from plants_sm.featurization.encoding.one_hot_encoder import OneHotEncoder
 from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
 
 from tests import TEST_DIR
@@ -34,6 +35,23 @@ class TestLoadInBatches(TestDataset):
         while dataset.next_batch():
             print(dataset.instances[PLACEHOLDER_FIELD])
 
+    def test_save_load_batches(self):
+        dataset = SingleInputDataset.from_csv(os.path.join(TEST_DIR, "data", "proteins.csv"),
+                                              batch_size=2,
+                                              representation_field="sequence",
+                                              instances_ids_field="id")
+
+        OneHotEncoder().fit_transform(dataset)
+        dataset.save_features(os.path.join(TEST_DIR, "data", "proteins_features"))
+        new_dataset = SingleInputDataset.from_csv(os.path.join(TEST_DIR, "data", "proteins.csv"),
+                                                  batch_size=2,
+                                                  representation_field="sequence",
+                                                  instances_ids_field="id")
+
+        new_dataset.load_features(os.path.join(TEST_DIR, "data", "proteins_features"))
+        while new_dataset.next_batch():
+            self.assertTrue(new_dataset.X.shape[1] == 382)
+
     def test_creation_of_temporary_files(self):
         dataset = SingleInputDataset.from_csv(os.path.join(TEST_DIR, "data", "proteins.csv"),
                                               batch_size=2,
@@ -42,7 +60,7 @@ class TestLoadInBatches(TestDataset):
 
         dataset2 = MultiInputDataset.from_csv(self.multi_input_dataset_csv,
                                               representation_field={"proteins": "SEQ",
-                                                                     "ligands": "SUBSTRATES"},
+                                                                    "ligands": "SUBSTRATES"},
                                               instances_ids_field={"interaction": "ids"},
                                               labels_field="LogSpActivity",
                                               batch_size=2)
@@ -54,7 +72,7 @@ class TestLoadInBatches(TestDataset):
         batch_size = 2
         dataset = MultiInputDataset.from_csv(self.multi_input_dataset_csv,
                                              representation_field={"proteins": "SEQ",
-                                                                    "ligands": "SUBSTRATES"},
+                                                                   "ligands": "SUBSTRATES"},
                                              instances_ids_field={"interaction": "ids"},
                                              labels_field="LogSpActivity",
                                              batch_size=batch_size)
@@ -82,7 +100,7 @@ class TestLoadInBatches(TestDataset):
         batch_size = 3
         dataset = MultiInputDataset.from_csv(self.multi_input_dataset_csv,
                                              representation_field={"proteins": "SEQ",
-                                                                    "ligands": "SUBSTRATES"},
+                                                                   "ligands": "SUBSTRATES"},
                                              instances_ids_field={"interaction": "ids"},
                                              labels_field="LogSpActivity",
                                              batch_size=batch_size)

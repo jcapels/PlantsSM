@@ -1,6 +1,7 @@
 import os
 from unittest import TestCase
 
+import pandas as pd
 from sklearn.metrics import accuracy_score, coverage_error
 from torch import nn
 from torch.optim import Adam
@@ -46,7 +47,7 @@ class TestDatasetModel(TestCase):
     def test_multi_label_dataset(self):
         steps = [ProteinStandardizer(), Word2Vec()]
 
-        model = DenseNet(512, 256, 2894)
+        model = DenseNet(512, 256, 2895)
 
         optimizer = Adam(params=model.parameters(), lr=0.001)
         model = PyTorchModel(batch_size=25, epochs=10,

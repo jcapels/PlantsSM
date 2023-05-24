@@ -62,7 +62,7 @@ class BatchManager(Observer):
             if self.counter == 0:
                 self.counter += self.batch_size
                 subject._batch_state = self.read_intermediate_files(subject)
-                if subject._folder_to_load_features is not None:
+                if subject._folder_to_load_features is not None and subject._batch_state:
                     self._read_features(subject)
                     self.batch_i += 1
 
@@ -70,7 +70,7 @@ class BatchManager(Observer):
                 self.write_intermediate_files()
                 self.counter += self.batch_size
                 subject._batch_state = self.read_intermediate_files(subject)
-                if subject._folder_to_load_features is not None:
+                if subject._folder_to_load_features is not None and subject._batch_state:
                     self._read_features(subject)
                     self.batch_i += 1
 
