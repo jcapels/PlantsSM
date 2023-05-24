@@ -613,11 +613,13 @@ class PyTorchModel(Model):
                 self._write_model_check_points(epoch)
 
                 self.scheduler.step(self.last_loss)
+                if validation_dataset:
+                    assert validation_dataset != train_dataset, "Validation dataset should not be the same as training dataset"
+                    model = self._early_stopping(validation_dataset, epoch)
 
-                model = self._early_stopping(validation_dataset, epoch)
-                if model:
-                    self.writer.flush()
-                    return model
+                    if model:
+                        self.writer.flush()
+                        return model
 
         best_epoch = min(self.losses, key=self.losses.get)
         self.logger.info(f'Best epoch: {best_epoch}')
