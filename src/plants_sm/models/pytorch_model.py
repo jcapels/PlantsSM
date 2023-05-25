@@ -561,6 +561,8 @@ class PyTorchModel(Model):
 
         loss = loss_total / len_train_dataset
 
+        predictions = self.predict(train_dataset)
+
         validation_metric_result = self._calculate_metric_result(actuals, predictions)
         if validation_metric_result is not None:
             self.logger.info(f'[{epoch}/{self.epochs}] metric result: {validation_metric_result:.8}')
@@ -660,18 +662,18 @@ class PyTorchModel(Model):
                 loss_total = 0
 
                 predictions, actuals = np.empty(shape=(0, second_shape)), np.empty(shape=(0, second_shape))
-                predictions_final = array_reshape(predictions)
                 actuals_final = array_reshape(actuals)
 
                 while train_dataset.next_batch():
                     batch_i += 1
                     loss, predictions, actuals = self._train_epoch_batch(train_dataset, epoch, batch_i, loss_total)
-                    predictions_final = np.concatenate((predictions_final, predictions))
                     actuals_final = np.concatenate((actuals_final, actuals))
 
                     loss_total += loss
 
                 loss = loss_total / batch_i
+
+                predictions_final = self.predict(train_dataset)
 
                 validation_metric_result = self._calculate_metric_result(actuals_final, predictions_final)
                 if validation_metric_result is not None:

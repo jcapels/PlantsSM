@@ -1,9 +1,7 @@
 import os
 from unittest import TestCase
 
-import numpy as np
-import pandas as pd
-from sklearn.metrics import accuracy_score, coverage_error, precision_score
+from sklearn.metrics import accuracy_score, precision_score
 from torch import nn
 from torch.optim import Adam
 
@@ -94,23 +92,23 @@ class TestDatasetModel(TestCase):
             logger_path="small_dataset.log"
         )
         for step in steps:
-            step.fit_transform(self.single_input_dataset)
-            step.fit_transform(self.single_input_dataset_val)
+            step.fit_transform(self.single_input_dataset_batch)
+            step.fit_transform(self.single_input_dataset_val_batch)
             self.assertTrue(step.fitted)
 
-        pytorch_model.fit(self.single_input_dataset, self.single_input_dataset_val)
+        pytorch_model.fit(self.single_input_dataset_batch, self.single_input_dataset_val_batch)
 
-        probs = pytorch_model.predict(self.single_input_dataset)
+        probs = pytorch_model.predict(self.single_input_dataset_batch)
         self.assertTrue(probs.shape[0] == 3)
         ys = []
-        while self.single_input_dataset.next_batch():
-            ys.extend(self.single_input_dataset.y)
+        while self.single_input_dataset_batch.next_batch():
+            ys.extend(self.single_input_dataset_batch.y)
 
-        probs = pytorch_model.predict(self.single_input_dataset_val)
+        probs = pytorch_model.predict(self.single_input_dataset_val_batch)
         self.assertTrue(probs.shape[0] == 3)
         ys = []
-        while self.single_input_dataset_val.next_batch():
-            ys.extend(self.single_input_dataset_val.y)
+        while self.single_input_dataset_val_batch.next_batch():
+            ys.extend(self.single_input_dataset_val_batch.y)
 
     def test_pytorch_model_with_custom_metric(self):
 

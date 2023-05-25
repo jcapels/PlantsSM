@@ -336,7 +336,8 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         """
         if not self._labels_names:
             raise ValueError('Labels are not defined')
-        return np.array(list(self.labels.values()))
+        # return np.array(list(self.labels.values()))
+        return self.dataframe.loc[:, self._labels_names].to_numpy()
 
     @property
     def instances(self) -> Dict[str, dict]:

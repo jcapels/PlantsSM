@@ -72,7 +72,7 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
 
                 else:
                     self._labels_names = [labels_field]
-                    
+
             self.dataframe.drop(list(self.representation_field.values()), axis=1, inplace=True)
             if self.batch_size is not None:
                 while next(self):
@@ -347,4 +347,4 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
     @property
     def y(self):
         if self._labels_names is not None:
-            return np.array(self.dataframe.loc[:, self._labels_names].values)
+            return self.dataframe.loc[:, self._labels_names].to_numpy()
