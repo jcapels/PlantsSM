@@ -35,7 +35,9 @@ class PyTorchModel(Model):
                  progress: int = 100,
                  logger_path: str = None, tensorboard_file_path: str = None,
                  l2_regularization_lambda: float = None, l1_regularization_lambda: float = None,
-                 checkpoints_path: str = None):
+                 checkpoints_path: str = None,
+                 early_stopping_method="loss",
+                 objective="min"):
 
         """
         Constructor for PyTorchModel
@@ -78,6 +80,12 @@ class PyTorchModel(Model):
             L2 regularization lambda
         l1_regularization_lambda: float
             L1 regularization lambda
+        checkpoints_path: str
+            Path to save the checkpoints
+        early_stopping_method: str
+            Early stopping metric: Options: loss, metric
+        objective: str
+            Objective of the early stopping metric: Options: min, max
         """
 
         super().__init__()
@@ -140,6 +148,7 @@ class PyTorchModel(Model):
             self.scheduler = ReduceLROnPlateau(self.optimizer, 'min')
 
         self.losses = {}
+        self.metrics = {}
 
         self.l2_regularization_lambda = l2_regularization_lambda
         self.l1_regularization_lambda = l1_regularization_lambda
@@ -147,6 +156,16 @@ class PyTorchModel(Model):
         if checkpoints_path is None:
             checkpoints_path = "./checkpoints"
         self.checkpoints_path = checkpoints_path
+
+        if objective == "max":
+            self.best_metric_result = -np.inf
+        elif objective == "min":
+            self.best_metric_result = np.inf
+        else:
+            raise ValueError("Objective must be either min or max")
+
+        self.early_stopping_method = early_stopping_method
+        self.objective = objective
 
     @property
     def history(self) -> dict:
@@ -213,10 +232,6 @@ class PyTorchModel(Model):
         Returns
         -------
         """
-        best_epoch = min(self.losses, key=self.losses.get)
-        self.logger.info(f'Best epoch: {best_epoch}')
-        self.logger.info(f'Best loss: {self.losses[best_epoch]}')
-        self.model.load_state_dict(torch.load(f"{self.checkpoints_path}/{self.model_name}/epoch_{best_epoch}/model.pt"))
 
         self._save_pytorch_model(self.model, path)
 
@@ -361,7 +376,7 @@ class PyTorchModel(Model):
                 len_valid_dataset = len(validation_set_preprocessed)
                 loss_total, predictions, actuals = \
                     self._validate_batches(validation_set_preprocessed, loss_total,
-                                               predictions, actuals)
+                                           predictions, actuals)
 
             else:
                 len_valid_dataset = 0
@@ -477,6 +492,7 @@ class PyTorchModel(Model):
         current_loss, validation_metric_result = self._validate(validation_dataset)
 
         self.losses[epoch] = current_loss
+        self.metrics[epoch] = validation_metric_result
 
         if validation_metric_result is not None:
             self.logger.info(
@@ -484,7 +500,14 @@ class PyTorchModel(Model):
 
         self.logger.info(f'Validation loss: {current_loss:.8}')
 
-        if current_loss >= self.last_loss:
+        if self.early_stopping_method == "loss":
+            early_stop = current_loss >= self.last_loss
+        elif self.early_stopping_method == "metric":
+            early_stop = validation_metric_result <= self.best_metric_result
+        else:
+            raise ValueError(f"early_stopping_method must be 'loss' or 'metric', got {self.early_stopping_method}")
+
+        if early_stop:
             self.trigger_times += 1
 
             if self.trigger_times >= self.patience:
@@ -493,9 +516,8 @@ class PyTorchModel(Model):
 
                 # choose the best model based on the validation loss
                 # get the key of a dictionary whose value is the minimum
-                best_epoch = min(self.losses, key=self.losses.get)
+                best_epoch = self._get_best_epoch()
                 self.logger.info(f'Best epoch: {best_epoch}')
-                self.logger.info(f'Best loss: {self.losses[best_epoch]}')
                 self.model.load_state_dict(
                     torch.load(f"{self.checkpoints_path}/{self.model_name}/epoch_{best_epoch}/model.pt"))
 
@@ -696,13 +718,36 @@ class PyTorchModel(Model):
                         return model
 
         if validation_dataset:
-            best_epoch = min(self.losses, key=self.losses.get)
+            best_epoch = self._get_best_epoch()
             self.logger.info(f'Best epoch: {best_epoch}')
-            self.logger.info(f'Best loss: {self.losses[best_epoch]}')
-            self.model.load_state_dict(torch.load(f"{self.checkpoints_path}/{self.model_name}/epoch_{best_epoch}/model.pt"))
+            self.model.load_state_dict(
+                torch.load(f"{self.checkpoints_path}/{self.model_name}/epoch_{best_epoch}/model.pt"))
 
         self.writer.flush()
         return self.model
+
+    def _get_best_epoch(self) -> int:
+        if self.early_stopping_method == "loss":
+            if self.objective == "min":
+                best_epoch = min(self.losses, key=self.losses.get)
+            elif self.objective == "max":
+                best_epoch = max(self.losses, key=self.losses.get)
+            else:
+                raise ValueError("Objective not recognized. It should be either 'min' or 'max'")
+
+            self.logger.info(f'Best loss: {self.losses[best_epoch]}')
+        elif self.early_stopping_method == "metric":
+            if self.objective == "min":
+                best_epoch = min(self.metrics, key=self.metrics.get)
+            elif self.objective == "max":
+                best_epoch = max(self.metrics, key=self.metrics.get)
+            else:
+                raise ValueError("Objective not recognized. It should be either 'min' or 'max'")
+            self.logger.info(f'Best metric value: {self.metrics[best_epoch]}')
+        else:
+            raise ValueError("Early stopping method not recognized")
+
+        return best_epoch
 
     def _write_model_check_points(self, epoch: int) -> None:
         """

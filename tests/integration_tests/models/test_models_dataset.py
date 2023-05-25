@@ -77,6 +77,31 @@ class TestDatasetModel(TestCase):
         probs = model.predict(self.multi_label_dataset_val)
         self.assertTrue(probs.shape[1] == 2895)
 
+    def test_pytorch_model_early_stopping_with_metric(self):
+        steps = [ProteinStandardizer(), Word2Vec()]
+
+        model = DenseNet(512, 256, 2895)
+
+        def precision_average(y_true, y_pred):
+            return precision_score(y_true, y_pred, average="macro")
+
+        optimizer = Adam(params=model.parameters(), lr=0.001)
+        model = PyTorchModel(batch_size=25, epochs=10,
+                             loss_function=nn.BCEWithLogitsLoss(), optimizer=optimizer, model=model,
+                             device="cpu", validation_metric=precision_average, problem_type=BINARY,
+                             early_stopping_method="metric", objective="max")
+        for step in steps:
+            step.fit_transform(self.multi_label_dataset)
+            step.fit_transform(self.multi_label_dataset)
+            step.fit_transform(self.multi_label_dataset_val)
+            step.fit_transform(self.multi_label_dataset_val)
+            self.assertTrue(step.fitted)
+
+        model.fit(self.multi_label_dataset, self.multi_label_dataset_val)
+
+        probs = model.predict(self.multi_label_dataset_val)
+        self.assertTrue(probs.shape[1] == 2895)
+
         print(precision_score(self.multi_label_dataset_val.y, probs, average="macro"))
 
     def test_pytorch_model(self):
@@ -140,7 +165,6 @@ class TestDatasetModel(TestCase):
         probs = pytorch_model.predict(dataset)
 
         print(precision_average(dataset.y, probs))
-
 
     def test_tensorflow_model(self):
         steps = [ProteinStandardizer(), Word2Vec()]
