@@ -94,8 +94,6 @@ class ESMEncoder(Transformer):
                             batch_size: int,
                             batch_converter: callable,
                             output_dim: int,
-                            num_gpus: int,
-                            alphabet: Alphabet,
                             is_ddf: bool):
         """
         Generate the ESM model.
@@ -131,12 +129,6 @@ class ESMEncoder(Transformer):
 
         with enable_wrap(wrapper_cls=FSDP, **fsdp_params):
             model.eval()
-
-            ddp_model = ESM2Model(alphabet=alphabet, num_layers=model.num_layers, embed_dim=model.embed_dim,
-                                    attention_heads=model.attention_heads, token_dropout=model.token_dropout,
-                                    is_ddp=True, num_gpus=num_gpus)
-            ddp_model.load_state_dict(model.state_dict())
-            model = ddp_model
 
             # Wrap each layer in FSDP separately
             for name, child in model.named_children():
@@ -235,7 +227,7 @@ class ESMEncoder(Transformer):
         if "esm2" in self.esm_function:
             model = ESM2Model(alphabet=self.alphabet, num_layers=self.model.num_layers, embed_dim=self.model.embed_dim,
                                     attention_heads=self.model.attention_heads, token_dropout=self.model.token_dropout,
-                                    is_ddp=True, num_gpus=self.num_gpus)
+                                    is_ddf=self.is_ddf, num_gpus=self.num_gpus)
             model.load_state_dict(self.model.state_dict())
         
         else:
@@ -251,9 +243,7 @@ class ESMEncoder(Transformer):
                                     batch_size=self.batch_size,
                                     batch_converter=self.batch_converter,
                                     output_dim=self.output_dim,
-                                    num_gpus=self.num_gpus,
-                                    alphabet=self.alphabet,
-                                    is_ddf=self.is_ddf)
+                                    alphabet=self.alphabet)
 
         else:
             res = self._generate_esm2_model(self.model,
@@ -262,9 +252,7 @@ class ESMEncoder(Transformer):
                                            batch_size=self.batch_size,
                                            batch_converter=self.batch_converter,
                                            output_dim=self.output_dim,
-                                           num_gpus=self.num_gpus,
-                                           alphabet=self.alphabet,
-                                           is_ddf=self.is_ddf)
+                                           alphabet=self.alphabet)
 
         dataset.add_features(instance_type, dict(res))
 
