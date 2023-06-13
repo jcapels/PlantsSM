@@ -1,10 +1,11 @@
 from esm import Alphabet
+from plants_sm.featurization.proteins.bio_embeddings.esm_models import ESM1Model, ESM2Model
+from plants_sm.parallelisation import TorchSpawner
 from torch import nn
 from tqdm import tqdm
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.featurization._utils import call_set_features_names
-from plants_sm.featurization.proteins.bio_embeddings._esm_utils import TorchSpawner
 from plants_sm.featurization.proteins.bio_embeddings.constants import ESM_DIMENSIONS, ESM_FUNCTIONS, ESM_LAYERS
 from plants_sm.transformation.transformer import Transformer
 
@@ -12,7 +13,6 @@ from fairscale.nn.data_parallel import FullyShardedDataParallel as FSDP
 from fairscale.nn.wrap import enable_wrap, wrap
 
 import torch
-from plants_sm.parallelisation.torch_spawner import ESMModel
 
 
 class ESMEncoder(Transformer):
@@ -88,7 +88,7 @@ class ESMEncoder(Transformer):
         return self._fit(dataset, instance_type)
 
     @staticmethod
-    def _generate_esm_model(model: nn.Module,
+    def _generate_esm2_model(model: nn.Module,
                             layers: int,
                             instances: dict,
                             batch_size: int,
@@ -122,32 +122,31 @@ class ESMEncoder(Transformer):
             Whether to use DDP or not.
         """
 
-        if is_ddf:
-            fsdp_params = dict(
-                mixed_precision=True,
-                flatten_parameters=True,
-                state_dict_device=torch.device("cpu"),  # reduce GPU mem usage
-                cpu_offload=False,  # enable cpu offloading
-            )
+        fsdp_params = dict(
+            mixed_precision=True,
+            flatten_parameters=True,
+            state_dict_device=torch.device("cpu"),  # reduce GPU mem usage
+            cpu_offload=False,  # enable cpu offloading
+        )
 
-            with enable_wrap(wrapper_cls=FSDP, **fsdp_params):
-                model.eval()
+        with enable_wrap(wrapper_cls=FSDP, **fsdp_params):
+            model.eval()
 
-                ddp_model = ESMModel(alphabet=alphabet, num_layers=model.num_layers, embed_dim=model.embed_dim,
-                                     attention_heads=model.attention_heads, token_dropout=model.token_dropout,
-                                     is_ddp=True, num_gpus=num_gpus)
-                ddp_model.load_state_dict(model.state_dict())
-                model = ddp_model
+            ddp_model = ESM2Model(alphabet=alphabet, num_layers=model.num_layers, embed_dim=model.embed_dim,
+                                    attention_heads=model.attention_heads, token_dropout=model.token_dropout,
+                                    is_ddp=True, num_gpus=num_gpus)
+            ddp_model.load_state_dict(model.state_dict())
+            model = ddp_model
 
-                # Wrap each layer in FSDP separately
-                for name, child in model.named_children():
+            # Wrap each layer in FSDP separately
+            for name, child in model.named_children():
 
-                    if name == "layers":
-                        for layer_name, layer in child.named_children():
-                            wrapped_layer = wrap(layer)
-                            setattr(child, layer_name, wrapped_layer)
+                if name == "layers":
+                    for layer_name, layer in child.named_children():
+                        wrapped_layer = wrap(layer)
+                        setattr(child, layer_name, wrapped_layer)
 
-                model = wrap(model)
+            model = wrap(model)
 
         res = []
         batch = []
@@ -229,26 +228,35 @@ class ESMEncoder(Transformer):
         encoded_sequence: np.ndarray
             The encoded protein sequence.
         """
-        # it has to run in batch of 16, otherwise can lead to OOM issues
 
         instances = dataset.get_instances(instance_type)
 
         # initialize the model with FSDP wrapper
+        if "esm2" in self.esm_function:
+            model = ESM2Model(alphabet=self.alphabet, num_layers=self.model.num_layers, embed_dim=self.model.embed_dim,
+                                    attention_heads=self.model.attention_heads, token_dropout=self.model.token_dropout,
+                                    is_ddp=True, num_gpus=self.num_gpus)
+            model.load_state_dict(self.model.state_dict())
+        
+        else:
+            model = ESM1Model({}, alphabet=self.alphabet, 
+                              is_ddf=self.is_ddf, num_gpus=self.num_gpus)
+            model.load_state_dict(self.model.state_dict())
 
         if self.is_ddf:
-            res = TorchSpawner().run(self._generate_esm_model,
-                                     model=self.model,
-                                     layers=self.layers,
-                                     instances=instances,
-                                     batch_size=self.batch_size,
-                                     batch_converter=self.batch_converter,
-                                     output_dim=self.output_dim,
-                                     num_gpus=self.num_gpus,
-                                     alphabet=self.alphabet,
-                                     is_ddf=self.is_ddf)
+            res = TorchSpawner().run(self._generate_esm2_model,
+                                    model=self.model,
+                                    layers=self.layers,
+                                    instances=instances,
+                                    batch_size=self.batch_size,
+                                    batch_converter=self.batch_converter,
+                                    output_dim=self.output_dim,
+                                    num_gpus=self.num_gpus,
+                                    alphabet=self.alphabet,
+                                    is_ddf=self.is_ddf)
 
         else:
-            res = self._generate_esm_model(self.model,
+            res = self._generate_esm2_model(self.model,
                                            layers=self.layers,
                                            instances=instances,
                                            batch_size=self.batch_size,
