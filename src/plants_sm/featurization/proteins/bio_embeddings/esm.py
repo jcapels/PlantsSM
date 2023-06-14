@@ -231,7 +231,7 @@ class ESMEncoder(Transformer):
             model.load_state_dict(self.model.state_dict())
         
         else:
-            model = ESM1Model({}, alphabet=self.alphabet, 
+            model = ESM1Model(self.model.args, alphabet=self.alphabet, 
                               is_ddf=self.is_ddf, num_gpus=self.num_gpus)
             model.load_state_dict(self.model.state_dict())
 
@@ -243,7 +243,7 @@ class ESMEncoder(Transformer):
                                     batch_size=self.batch_size,
                                     batch_converter=self.batch_converter,
                                     output_dim=self.output_dim,
-                                    alphabet=self.alphabet)
+                                    is_ddf=self.is_ddf)
 
         else:
             res = self._generate_esm2_model(self.model,
@@ -252,7 +252,7 @@ class ESMEncoder(Transformer):
                                            batch_size=self.batch_size,
                                            batch_converter=self.batch_converter,
                                            output_dim=self.output_dim,
-                                           alphabet=self.alphabet)
+                                           is_ddf=self.is_ddf)
 
         dataset.add_features(instance_type, dict(res))
 

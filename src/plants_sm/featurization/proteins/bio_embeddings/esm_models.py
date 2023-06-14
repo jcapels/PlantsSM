@@ -12,9 +12,9 @@ class ESM2Model(ESM2):
                  embed_dim: int = 1280,
                  attention_heads: int = 20,
                  alphabet: Union[esm.data.Alphabet, str] = "ESM-1b",
-                 token_dropout: bool = True, is_ddp=False,
+                 token_dropout: bool = True, is_ddf=False,
                  num_gpus=1) -> None:
-        self.is_ddp = is_ddp
+        self.is_ddf = is_ddf
         self.num_gpus = num_gpus
         super().__init__(num_layers, embed_dim, attention_heads, alphabet, token_dropout)
 
@@ -55,7 +55,7 @@ class ESM2Model(ESM2):
         if not padding_mask.any():
             padding_mask = None
 
-        if self.is_ddp:
+        if self.is_ddf:
             gpus = list(range(torch.cuda.device_count()))
             if len(gpus) >= self.num_gpus:
                 gpus = gpus[:self.num_gpus]
@@ -63,7 +63,7 @@ class ESM2Model(ESM2):
 
         i = 0
         for layer_idx, layer in enumerate(self.layers):
-            if self.is_ddp:
+            if self.is_ddf:
                 gpu = gpus[i % len(gpus)]
                 x.to(gpu)
                 layer.to(gpu)
@@ -84,7 +84,7 @@ class ESM2Model(ESM2):
                 attn_weights.append(attn.transpose(1, 0))
             i += 1
 
-        if self.is_ddp:
+        if self.is_ddf:
             gpu = gpus[i % len(gpus)]
             x.to(gpu)
             self.emb_layer_norm_after.to(gpu)
@@ -100,7 +100,7 @@ class ESM2Model(ESM2):
         if (layer_idx + 1) in repr_layers:
             hidden_representations[layer_idx + 1] = x
 
-        if self.is_ddp:
+        if self.is_ddf:
             gpu = gpus[i % len(gpus)]
             x.to(gpu)
             self.lm_head.to(gpu)
@@ -138,9 +138,9 @@ import torch.nn.functional as F
 
 class ESM1Model(ProteinBertModel):
 
-    def __init__(self, args, alphabet, is_ddp, num_gpus):
+    def __init__(self, args, alphabet, is_ddf, num_gpus):
         super().__init__(args, alphabet)
-        self.is_ddp = is_ddp
+        self.is_ddf = is_ddf
         self.num_gpus = num_gpus
 
     def forward(self, tokens, repr_layers=[], need_head_weights=False, return_contacts=False):
@@ -162,7 +162,7 @@ class ESM1Model(ProteinBertModel):
 
         x = x + self.embed_positions(tokens)
 
-        if self.is_ddp:
+        if self.is_ddf:
             gpus = list(range(torch.cuda.device_count()))
             if len(gpus) >= self.num_gpus:
                 gpus = gpus[:self.num_gpus]
@@ -171,14 +171,14 @@ class ESM1Model(ProteinBertModel):
 
         if self.model_version == "ESM-1b":
             if self.emb_layer_norm_before:
-                if self.is_ddp:
+                if self.is_ddf:
                     gpu = gpus[i % len(gpus)]
                     x.to(gpu)
                     self.emb_layer_norm_before.to(gpu)
                     i+=1
                 else:
                     x = x.to("cpu")
-                    self.emb_layer_norm_before = self.emb_layer_norm_before.to("cpu")
+                    self.emb_layer_norm_before.to("cpu")
                 x = self.emb_layer_norm_before(x)
             if padding_mask is not None:
                 x = x * (1 - padding_mask.unsqueeze(-1).type_as(x))
@@ -199,7 +199,7 @@ class ESM1Model(ProteinBertModel):
 
         for layer_idx, layer in enumerate(self.layers):
 
-            if self.is_ddp:
+            if self.is_ddf:
                 gpu = gpus[i % len(gpus)]
                 x.to(gpu)
                 layer.to(gpu)
@@ -218,7 +218,7 @@ class ESM1Model(ProteinBertModel):
                 attn_weights.append(attn.transpose(1, 0))
 
         if self.model_version == "ESM-1b":
-            if self.is_ddp:
+            if self.is_ddf:
                 gpu = gpus[i % len(gpus)]
                 x.to(gpu)
                 self.emb_layer_norm_after.to(gpu)
@@ -234,7 +234,7 @@ class ESM1Model(ProteinBertModel):
             if (layer_idx + 1) in repr_layers:
                 hidden_representations[layer_idx + 1] = x
             
-            if self.is_ddp:
+            if self.is_ddf:
                 gpu = gpus[i % len(gpus)]
                 x.to(gpu)
                 self.lm_head.to(gpu)
