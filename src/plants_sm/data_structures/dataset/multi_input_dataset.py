@@ -197,10 +197,11 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
                 self.generate_ids(instance_type)
 
             identifiers = self.dataframe.loc[:, self.instances_ids_field[instance_type]].values
-            instances = self.dataframe.loc[:, instance_field].values
+            if instance_type not in self._instances:
+                instances = self.dataframe.loc[:, instance_field].values
 
-            self._instances[instance_type] = dict(zip(identifiers, instances))
-            instance_types.append(instance_type)
+                self._instances[instance_type] = dict(zip(identifiers, instances))
+                instance_types.append(instance_type)
 
         if self._identifiers is None:
             _identifiers_ids = []
@@ -348,3 +349,35 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
     def y(self):
         if self._labels_names is not None:
             return self.dataframe.loc[:, self._labels_names].to_numpy()
+
+    def select(self, ids: Union[List[str], List[int]], instance_type: str):
+        """
+        Selects the instances with the given ids
+
+        Parameters
+        ----------
+        ids: Union[List[str], List[int]]
+            the ids of the instances to select
+        instance_type: str
+            the instance type
+        """
+        self._dataframe = self._dataframe[self._dataframe[self.instances_ids_field[instance_type]].isin(ids)]
+        instance_types = []
+        for instance_type in self._instances:
+            instance_ids = self._dataframe.loc[:, self.instances_ids_field[instance_type]].values
+            self._instances[instance_type] = {k: v for k, v in self._instances[instance_type].items()
+                                              if k in instance_ids}
+
+            if self._features:
+                self._features[instance_type] = {k: v for k, v in self._features[instance_type].items()
+                                                    if k in instance_ids}
+
+            instance_types.append(instance_type)
+
+        _identifiers_ids = []
+        for id_type, ids_field in self.instances_ids_field.items():
+            if id_type not in instance_types:
+                _identifiers_ids.append(ids_field)
+
+        self._identifiers = self.dataframe.loc[:, _identifiers_ids].values
+        self._clear_cached_properties()

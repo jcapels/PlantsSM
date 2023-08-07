@@ -51,7 +51,7 @@ class TestEmbeddings(TestProteinFeaturizers):
 
     @skip("No memory on CI")
     def test_esm_1b(self):
-        ESMEncoder(device="cpu").fit_transform(self.dataset)
+        ESMEncoder(device="cpu", esm_function="esm1b_t33_650M_UR50S", batch_size=1).fit_transform(self.dataset)
 
     @skip("No memory on CI")
     def test_esm_2(self):

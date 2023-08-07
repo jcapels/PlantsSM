@@ -1,7 +1,7 @@
 import os
 import shutil
 from abc import abstractmethod
-from typing import Any, Dict, Union, Iterable
+from typing import Any, Dict, Union, Iterable, List
 
 import numpy as np
 import pandas as pd
@@ -190,6 +190,19 @@ class Dataset(ConcreteSubject, PickleMixin):
                 return None
         else:
             raise ValueError("The dataset is not iterable.")
+
+    @abstractmethod
+    def select(self, ids: Union[List[str], List[int]], instance_type: str):
+        """
+        Method to select a subset of the dataset.
+
+        Parameters
+        ----------
+        ids: List[str]
+            The identifiers of the instances to select.
+        instance_type: str
+            The type of the instances to select.
+        """
 
     @property
     @abstractmethod

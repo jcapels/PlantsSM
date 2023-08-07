@@ -426,7 +426,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                                                                 self._features_fields[PLACEHOLDER_FIELD]]
 
             self._dataframe = pd.concat((identifiers_series, self._dataframe), axis=1)
-            self._dataframe["identifier"] = self._dataframe["identifier"].astype(str)
+            self._dataframe["identifier"] = self._dataframe["identifier"]
             self._identifiers = self._dataframe["identifier"].values
 
             instances = self.dataframe.loc[:, self.representation_field].values
@@ -434,3 +434,29 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             # self.dataframe.drop(self.representation_field, axis=1, inplace=True)
         else:
             self._identifiers = self._dataframe[self.instances_ids_field].values
+
+    def select(self, ids: Union[List[str], List[int]], instance_type: str = PLACEHOLDER_FIELD):
+        """
+        Select a subset of the dataset based on the identifiers.
+
+        Parameters
+        ----------
+        ids : Union[List[str], List[int]]
+            list of identifiers to be selected
+        instance_type : str
+            type of the instances to be selected
+        """
+
+        if self.instances_ids_field is None:
+            raise ValueError("Instances ids field is not defined")
+
+        self._dataframe = self._dataframe[self._dataframe[self.instances_ids_field].isin(ids)]
+        self._identifiers = self._dataframe[self.instances_ids_field].values
+
+        for instance_type in self._instances:
+            self._instances[instance_type] = {k: v for k, v in self._instances[instance_type].items() if k in ids}
+
+            if self._features:
+                self._features[instance_type] = {k: v for k, v in self._features[instance_type].items() if k in ids}
+
+        self._clear_cached_properties()

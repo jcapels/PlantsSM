@@ -34,11 +34,16 @@ class TestIODataset(TestDataset):
 
     def test_read_csv_to_dataset(self):
         dataset = SingleInputDataset.from_csv(file_path=self.csv_to_read, representation_field="sequence",
-                                              instances_ids_field="id")
+                                              instances_ids_field="id",
+                                              labels_field="y")
         self.assertEqual(list(dataset.get_instances().values())[0],
                          'MGWVGKKKSTAGQLAGTANELTKEVLERAVHRESPVIRPDVVVGIPAVDRRPKQ')
         self.assertEqual(dataset.representation_field, 'sequence')
         self.assertEqual(dataset.instances_ids_field, "id")
+
+        dataset.select(["WP_003399735.1", "WP_003399745.1"])
+        self.assertEqual(list(dataset.get_instances().keys()), ["WP_003399735.1", "WP_003399745.1"])
+        self.assertEqual(dataset.y.shape[0], 2)
 
     @skip("Not implemented yet")
     def test_write_csv_from_dataset(self):
@@ -58,7 +63,6 @@ class TestIODataset(TestDataset):
     def test_read_csv_to_multi_line_dataset(self):
         self.dataset_400_instances = MultiInputDataset.from_csv(self.multi_input_dataset_csv,
                                                                 representation_field={"proteins": "SEQ",
-                                                                                       "ligands": "SUBSTRATES"},
+                                                                                      "ligands": "SUBSTRATES"},
                                                                 instances_ids_field={"interaction": "ids"},
                                                                 labels_field="LogSpActivity")
-

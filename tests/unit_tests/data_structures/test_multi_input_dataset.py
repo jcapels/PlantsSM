@@ -1,3 +1,4 @@
+from copy import copy
 from unittest import TestCase
 
 import pandas as pd
@@ -28,6 +29,14 @@ class TestMultiInputDataset(TestCase):
                                                                              'representation2'])
 
         self.assertEqual(list(dataset.y), [1, 0, 1])
+
+        new_dataset = copy(dataset)
+
+        new_dataset.select(['2', '3'], "interaction")
+        self.assertEqual(list(new_dataset.identifiers), ['2', '3'])
+
+        dataset.select(['1', '0'], "proteins")
+        self.assertEqual(list(dataset.identifiers), ['2', '6'])
 
     def test_with_repetitive_instances(self) -> None:
         dataframe = pd.DataFrame(columns=['ids_interaction', 'ids_a', 'a', 'ids_b', 'b', 'labels'])
