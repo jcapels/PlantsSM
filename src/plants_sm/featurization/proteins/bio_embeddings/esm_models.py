@@ -142,6 +142,11 @@ class ESM1Model(ProteinBertModel):
         super().__init__(args, alphabet)
         self.is_ddf = is_ddf
         self.num_gpus = num_gpus
+        for param in self.parameters():
+            # Check if parameter dtype is  Half (float16)
+            if param.dtype == torch.float16:
+                param.data = param.data.to(torch.float32)
+        
 
     def forward(self, tokens, repr_layers=[], need_head_weights=False, return_contacts=False):
         if return_contacts:
@@ -151,6 +156,7 @@ class ESM1Model(ProteinBertModel):
         padding_mask = tokens.eq(self.padding_idx)  # B, T
 
         x = self.embed_scale * self.embed_tokens(tokens)
+        x = x.float()
 
         if getattr(self.args, "token_dropout", False):
             x.masked_fill_((tokens == self.mask_idx).unsqueeze(-1), 0.0)
@@ -179,6 +185,8 @@ class ESM1Model(ProteinBertModel):
                 else:
                     x = x.to("cpu")
                     self.emb_layer_norm_before.to("cpu")
+                self.emb_layer_norm_before.weight = self.emb_layer_norm_before.weight.float()
+                self.emb_layer_norm_before.bias = self.emb_layer_norm_before.bias.float()
                 x = self.emb_layer_norm_before(x)
             if padding_mask is not None:
                 x = x * (1 - padding_mask.unsqueeze(-1).type_as(x))
@@ -208,6 +216,8 @@ class ESM1Model(ProteinBertModel):
                 x.to("cpu")
                 layer.to("cpu")
 
+            layer.buffer_dtype = torch.float32
+            layer.compute_dtype = torch.float32
             x, attn = layer(
                 x, self_attn_padding_mask=padding_mask, need_head_weights=need_head_weights
             )
@@ -226,7 +236,9 @@ class ESM1Model(ProteinBertModel):
             else:
                 x.to("cpu")
                 self.emb_layer_norm_after.to("cpu")
-
+            
+            self.emb_layer_norm_after.weight = self.emb_layer_norm_after.weight.float()
+            self.emb_layer_norm_after.bias = self.emb_layer_norm_after.bias.float()
             x = self.emb_layer_norm_after(x)
             x = x.transpose(0, 1)  # (T, B, E) => (B, T, E)
 
@@ -242,7 +254,13 @@ class ESM1Model(ProteinBertModel):
             else:
                 x.to("cpu")
                 self.lm_head.to("cpu")
-                
+
+            self.lm_head.weight = self.lm_head.weight.float()
+            self.lm_head.bias = self.lm_head.bias.float()
+            self.lm_head.dense.weight = self.lm_head.dense.weight.float()
+            self.lm_head.dense.bias = self.lm_head.dense.bias.float()
+            self.lm_head.layer_norm.weight = self.lm_head.layer_norm.weight.float()
+            self.lm_head.layer_norm.bias = self.lm_head.layer_norm.bias.float()
             x = self.lm_head(x)
         else:
             x = F.linear(x, self.embed_out, bias=self.embed_out_bias)

@@ -1,4 +1,3 @@
-from esm import Alphabet
 from plants_sm.featurization.proteins.bio_embeddings.esm_models import ESM1Model, ESM2Model
 from plants_sm.parallelisation import TorchSpawner
 from torch import nn
@@ -237,7 +236,7 @@ class ESMEncoder(Transformer):
 
         if self.is_ddf:
             res = TorchSpawner().run(self._generate_esm2_model,
-                                    model=self.model,
+                                    model=model,
                                     layers=self.layers,
                                     instances=instances,
                                     batch_size=self.batch_size,
@@ -246,7 +245,7 @@ class ESMEncoder(Transformer):
                                     is_ddf=self.is_ddf)
 
         else:
-            res = self._generate_esm2_model(self.model,
+            res = self._generate_esm2_model(model,
                                            layers=self.layers,
                                            instances=instances,
                                            batch_size=self.batch_size,
