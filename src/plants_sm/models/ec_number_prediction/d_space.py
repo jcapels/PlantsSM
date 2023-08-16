@@ -9,21 +9,21 @@ class DSPACEModel(nn.Module):
 
     def __init__(self, num_aa, sequence_dimension, num_classes):
         super().__init__()
-        self.conv0 = nn.Conv1d(in_channels=num_aa, out_channels=16, kernel_size=3, padding=1)
+        self.conv0 = nn.Conv1d(in_channels=num_aa, out_channels=16, kernel_size=3, padding="same")
         self.bn0 = nn.BatchNorm1d(16)
-        self.conv1 = nn.Conv1d(in_channels=16, out_channels=24, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv1d(in_channels=16, out_channels=24, kernel_size=3, padding="same")
         self.bn1 = nn.BatchNorm1d(24)
         self.maxpool1 = nn.MaxPool1d(kernel_size=2)
 
-        self.conv2 = nn.Conv1d(in_channels=24, out_channels=32, kernel_size=5, padding=2)
+        self.conv2 = nn.Conv1d(in_channels=24, out_channels=32, kernel_size=5, padding="same")
         self.bn2 = nn.BatchNorm1d(32)
-        self.conv3 = nn.Conv1d(in_channels=32, out_channels=48, kernel_size=5, padding=2)
+        self.conv3 = nn.Conv1d(in_channels=32, out_channels=48, kernel_size=5, padding="same")
         self.bn3 = nn.BatchNorm1d(48)
         self.maxpool2 = nn.MaxPool1d(kernel_size=2)
 
-        self.conv4 = nn.Conv1d(in_channels=48, out_channels=64, kernel_size=7, padding=3)
+        self.conv4 = nn.Conv1d(in_channels=48, out_channels=64, kernel_size=7, padding="same")
         self.bn4 = nn.BatchNorm1d(64)
-        self.conv5 = nn.Conv1d(in_channels=64, out_channels=96, kernel_size=7, padding=3)
+        self.conv5 = nn.Conv1d(in_channels=64, out_channels=96, kernel_size=7, padding="same")
         self.bn5 = nn.BatchNorm1d(96)
         self.maxpool3 = nn.MaxPool1d(kernel_size=2)
 
@@ -40,6 +40,7 @@ class DSPACEModel(nn.Module):
 
     def forward(self, x):
         x = x[0]
+        x = x.permute(0, 2, 1)
         x = F.elu(self.bn0(self.conv0(x)))
         x = F.elu(self.bn1(self.conv1(x)))
         x = self.maxpool1(x)
@@ -66,13 +67,13 @@ class DSPACEModel(nn.Module):
 
 class DSPACE(PyTorchModel):
 
-    def __init__(self, num_aa, num_columns, num_classes,
-                 loss_function, validation_loss_function,
-                 batch_size,
-                 optimizer=torch.optim.Adam, learning_rate=0.009999999776482582,
-                 epochs=30, device="cuda:0", patience=4, **kwargs):
-        model = DSPACEModel(num_aa, num_columns, num_classes)
-        self.optimizer = optimizer(params=model.parameters(), lr=learning_rate, betas=(0.9, 0.999), eps=1e-7)
+    def __init__(self, num_columns, input_size, num_classes,
+                loss_function, validation_loss_function,
+                batch_size,
+                optimizer=torch.optim.NAdam, learning_rate=0.001,
+                epochs=30, device="cuda:0", patience=4, **kwargs):
+        model = DSPACEModel(num_columns, input_size, num_classes)
+        self.optimizer = optimizer(params=model.parameters(), lr=learning_rate)
 
         super().__init__(model=model,
                          loss_function=loss_function,
