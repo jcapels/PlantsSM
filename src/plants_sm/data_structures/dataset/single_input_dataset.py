@@ -1,3 +1,4 @@
+import time
 import warnings
 from typing import Any, Iterable, List, Union, Dict
 
@@ -76,6 +77,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
 
             self.representation_field = representation_field
 
+
             # the dataframe setter will derive the instance ids field if it is None
             # and also will try to set the features names
             self.dataframe = dataframe
@@ -95,7 +97,8 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                 else:
                     self._labels_names = [labels_field]
 
-                self._labels = self.dataframe.loc[:, self._labels_names].T.to_dict('list')
+                self._labels = None
+                #self._labels = self.dataframe.loc[:, self._labels_names].T.to_dict('list')
             else:
                 self._labels = None
 
@@ -327,7 +330,8 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         """
         if self.features == {}:
             raise ValueError('Features are not defined')
-        return np.array(list(self.features[PLACEHOLDER_FIELD].values()))
+        features = [self.features["place_holder"][sequence_id] for sequence_id in self.dataframe[self.instances_ids_field]]
+        return np.array(features, dtype=np.float16)
 
     @cached_property
     def y(self) -> np.ndarray:

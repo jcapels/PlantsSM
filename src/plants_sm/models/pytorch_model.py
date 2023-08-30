@@ -144,8 +144,8 @@ class PyTorchModel(Model):
 
         if not self.optimizer:
             self.optimizer = Adam(self.model.parameters())
-        if not self.scheduler:
-            self.scheduler = ReduceLROnPlateau(self.optimizer, 'min')
+        # if not self.scheduler:
+        #     self.scheduler = ReduceLROnPlateau(self.optimizer, 'min')
 
         self.losses = {}
         self.metrics = {}
@@ -675,7 +675,8 @@ class PyTorchModel(Model):
 
                 self._write_model_check_points(epoch)
 
-                self.scheduler.step(self.last_loss)
+                if self.scheduler is not None:
+                    self.scheduler.step(self.last_loss)
         else:
             second_shape = train_dataset.y.shape[1]
 
@@ -707,7 +708,8 @@ class PyTorchModel(Model):
 
                 self._write_model_check_points(epoch)
 
-                self.scheduler.step(self.last_loss)
+                if self.scheduler is not None:
+                    self.scheduler.step(self.last_loss)
                 if validation_dataset:
                     assert validation_dataset != train_dataset, "Validation dataset should not be the same as " \
                                                                 "training dataset"
