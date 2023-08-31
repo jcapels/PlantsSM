@@ -124,9 +124,9 @@ class MultiPosNegDatasetWithMineEC(torch.utils.data.Dataset):
         return torch.cat(data)
 
 
-def get_dataloader(dist_map, id_ec, ec_id, n_pos, n_neg, train_dataset):
+def get_dataloader(dist_map, id_ec, ec_id, n_pos, n_neg, train_dataset, batch_size):
     params = {
-        'batch_size': 6000,
+        'batch_size': batch_size,
         'shuffle': True,
     }
     negative = mine_hard_negative(dist_map, 100)

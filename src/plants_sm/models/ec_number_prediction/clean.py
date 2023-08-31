@@ -90,13 +90,13 @@ class CLEANSupConH(Model):
         # ======================== ESM embedding  ===================#
         # loading ESM embedding for dist map
 
-        esm_emb = read_pickle(self.distance_map_path + 'esm.pkl').to(device=self.device, dtype=self.dtype)
+        esm_emb = read_pickle(self.distance_map_path + '_esm.pkl').to(device=self.device, dtype=self.dtype)
         dist_map = read_pickle(self.distance_map_path + '.pkl')
 
         id_ec, ec_id_dict = get_ec_id_dict(train_dataset, "EC")
         ec_id = {key: list(ec_id_dict[key]) for key in ec_id_dict.keys()}
         # ======================== initialize model =================#
-        train_loader = get_dataloader(dist_map, id_ec, ec_id, self.n_pos, self.n_neg, train_dataset)
+        train_loader = get_dataloader(dist_map, id_ec, ec_id, self.n_pos, self.n_neg, train_dataset, self.batch_size)
         print("The number of unique EC numbers: ", len(dist_map.keys()))
         # ======================== training =======-=================#
         # training
@@ -112,7 +112,7 @@ class CLEANSupConH(Model):
                 # sample new distance map
                 dist_map = get_dist_map(
                     ec_id_dict, esm_emb, self.device, self.dtype, model=self.model)
-                train_loader = get_dataloader(dist_map, id_ec, ec_id, self.n_pos, self.n_neg, train_dataset)
+                train_loader = get_dataloader(dist_map, id_ec, ec_id, self.n_pos, self.n_neg, train_dataset, self.batch_size)
             # -------------------------------------------------------------------- #
             epoch_start_time = time.time()
             train_loss = self._train(train_loader, epoch)
