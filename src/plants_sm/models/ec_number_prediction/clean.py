@@ -13,6 +13,7 @@ from plants_sm.models.ec_number_prediction._clean_distance_maps import compute_e
     get_ec_id_dict, model_embedding_test, get_dist_map_test, random_nk_model, get_random_nk_dist_map
 from plants_sm.models.ec_number_prediction._clean_utils import SupConHardLoss, get_dataloader
 from plants_sm.models.model import Model
+from plants_sm.models.ec_number_prediction._clean_distance_maps import divide_labels_by_EC_level
 
 
 class LayerNormNet(nn.Module):
@@ -89,6 +90,7 @@ class CLEANSupConH(Model):
         pass
 
     def _fit_data(self, train_dataset: Dataset, validation_dataset: Dataset):
+        self.labels = train_dataset._labels_names
         if not os.path.exists(self.distance_map_path + ".pkl") \
                 and not os.path.exists(self.distance_map_path + "_esm.pkl"):
             compute_esm_distance(train_dataset, self.distance_map_path, self.device)
@@ -140,8 +142,10 @@ class CLEANSupConH(Model):
                   f'training loss {train_loss:6.4f}')
             print('-' * 75)
         # remove tmp save weights
-        os.remove(os.path.join(self.path_to_save_model, self.model_name + '.pth'))
-        os.remove(os.path.join(self.path_to_save_model, self.model_name + '_' + str(epoch) + '.pth'))
+        if os.path.exists(os.path.join(self.path_to_save_model, self.model_name + '.pth')):
+            os.remove(os.path.join(self.path_to_save_model, self.model_name + '.pth'))
+        if os.path.exists(os.path.join(self.path_to_save_model, self.model_name + '_' + str(epoch) + '.pth')):
+            os.remove(os.path.join(self.path_to_save_model, self.model_name + '_' + str(epoch) + '.pth'))
         # save final weights
         torch.save(self.model.state_dict(), os.path.join(self.path_to_save_model, self.model_name + '.pth'))
 
@@ -176,6 +180,7 @@ class CLEANSupConH(Model):
         all_test_EC = set()
         nk = len(random_nk_dist_map.keys())
         threshold = p_value * nk
+        ecs = []
         for col in tqdm(df.columns):
             ec = []
             smallest_10_dist_df = df[col].nsmallest(10)
@@ -196,7 +201,18 @@ class CLEANSupConH(Model):
                 else:
                     break
             ec.insert(0, col)
-        return all_test_EC
+            ecs.append(ec)
+        return ecs
+    
+    def get_final_labels(self, EC1, EC2, EC3, EC4):
+        res = np.zeros((len(self.labels),), dtype=object)
+        
+        for ec in EC1 + EC2 + EC3 + EC4:
+            if ec in self.labels:
+                index_ = self.labels.index(ec)
+                res[index_] = 1
+
+        return res
 
     def _predict(self, dataset: Dataset) -> np.ndarray:
         id_ec_test, _ = get_ec_id_dict(dataset, self.ec_label)
@@ -213,9 +229,24 @@ class CLEANSupConH(Model):
         random_nk_dist_map = get_random_nk_dist_map(
             emb_train, rand_nk_emb_train, self._ec_id_dict_train, rand_nk_ids, self.device, self.dtype)
 
-        all_test_EC = self._get_pvalue_choices(eval_df, random_nk_dist_map, p_value=self.evaluation_class.p_value)
-        # optionally report prediction precision/recall/...
-        return all_test_EC
+        ecs = self._get_pvalue_choices(eval_df, random_nk_dist_map, p_value=self.evaluation_class.p_value)
+        pred_label = []
+        for row in ecs:
+            preds_ec_lst = []
+            preds_with_dist = row[1:]
+            for pred_ec_dist in preds_with_dist:
+                # get EC number 3.5.2.6 from EC:3.5.2.6/10.8359
+                ec_i = pred_ec_dist.split(":")[1].split("/")[0]
+                preds_ec_lst.append(ec_i)
+            pred_label.append(";".join(preds_ec_lst))
+
+        res = np.zeros((dataset.dataframe.shape[0], len(self.labels)), )
+        for i, ec in enumerate(pred_label):
+            
+            EC1, EC2, EC3, EC4 = divide_labels_by_EC_level(ec)
+            res[i, :] = self.get_final_labels(EC1, EC2, EC3, EC4)
+
+        return res
 
     def _save(self, path: str):
         pass
