@@ -2,13 +2,15 @@ import os
 import time
 
 import numpy as np
+import pandas as pd
 import torch
 from torch import nn
+from tqdm import tqdm
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.io.pickle import read_pickle
 from plants_sm.models.ec_number_prediction._clean_distance_maps import compute_esm_distance, get_dist_map, \
-    get_ec_id_dict
+    get_ec_id_dict, model_embedding_test, get_dist_map_test, random_nk_model, get_random_nk_dist_map
 from plants_sm.models.ec_number_prediction._clean_utils import SupConHardLoss, get_dataloader
 from plants_sm.models.model import Model
 
@@ -40,6 +42,12 @@ class LayerNormNet(nn.Module):
         return x
 
 
+class PValueInference:
+    def __init__(self, p_value=1e-5, nk_random=20):
+        self.p_value = p_value
+        self.nk_random = nk_random
+
+
 class CLEANSupConH(Model):
 
     def __init__(self,
@@ -47,7 +55,8 @@ class CLEANSupConH(Model):
                  device: str = "cuda", drop_out=0.1,
                  lr=5e-4, epochs=1500, n_pos=9, n_neg=30, adaptative_rate=10,
                  temp=0.1, batch_size=6000, verbose=True, ec_label="EC",
-                 model_name="CLEANSupConH", path_to_save_model="./data/model/"):
+                 model_name="CLEANSupConH", path_to_save_model="./data/model/",
+                 evaluation_class=PValueInference(p_value=1e-5, nk_random=20)):
         self.distance_map_path = distance_map_path
         parent_folder = os.path.dirname(distance_map_path)
         if not os.path.exists(parent_folder):
@@ -74,6 +83,7 @@ class CLEANSupConH(Model):
         self.verbose = verbose
         self.ec_label = ec_label
         self.model_name = model_name
+        self.evaluation_class = evaluation_class
 
     def _preprocess_data(self, dataset: Dataset, **kwargs) -> Dataset:
         pass
@@ -90,13 +100,14 @@ class CLEANSupConH(Model):
         # ======================== ESM embedding  ===================#
         # loading ESM embedding for dist map
 
-        esm_emb = read_pickle(self.distance_map_path + '_esm.pkl').to(device=self.device, dtype=self.dtype)
+        self._esm_emb_train = read_pickle(self.distance_map_path + '_esm.pkl').to(device=self.device, dtype=self.dtype)
         dist_map = read_pickle(self.distance_map_path + '.pkl')
 
-        id_ec, ec_id_dict = get_ec_id_dict(train_dataset, "EC")
-        ec_id = {key: list(ec_id_dict[key]) for key in ec_id_dict.keys()}
+        self._id_ec_train, self._ec_id_dict_train = get_ec_id_dict(train_dataset, self.ec_label)
+        ec_id = {key: list(self._ec_id_dict_train[key]) for key in self._ec_id_dict_train.keys()}
         # ======================== initialize model =================#
-        train_loader = get_dataloader(dist_map, id_ec, ec_id, self.n_pos, self.n_neg, train_dataset, self.batch_size)
+        train_loader = get_dataloader(dist_map, self._id_ec_train, ec_id, self.n_pos, self.n_neg, train_dataset,
+                                      self.batch_size)
         print("The number of unique EC numbers: ", len(dist_map.keys()))
         # ======================== training =======-=================#
         # training
@@ -104,15 +115,16 @@ class CLEANSupConH(Model):
             if epoch % self.adaptative_rate == 0 and epoch != self.epochs + 1:
                 # save updated model
                 torch.save(self.model.state_dict(), os.path.join(self.path_to_save_model,
-                           self.model_name + '_' + str(epoch) + '.pth'))
+                                                                 self.model_name + '_' + str(epoch) + '.pth'))
                 # delete last model checkpoint
                 if epoch != self.adaptative_rate:
                     os.remove(os.path.join(self.path_to_save_model, self.model_name + '_' +
-                              str(epoch - self.adaptative_rate) + '.pth'))
+                                           str(epoch - self.adaptative_rate) + '.pth'))
                 # sample new distance map
                 dist_map = get_dist_map(
-                    ec_id_dict, esm_emb, self.device, self.dtype, model=self.model)
-                train_loader = get_dataloader(dist_map, id_ec, ec_id, self.n_pos, self.n_neg, train_dataset, self.batch_size)
+                    self._ec_id_dict_train, self._esm_emb_train, self.device, self.dtype, model=self.model)
+                train_loader = get_dataloader(dist_map, self._id_ec_train, ec_id, self.n_pos, self.n_neg, train_dataset,
+                                              self.batch_size)
             # -------------------------------------------------------------------- #
             epoch_start_time = time.time()
             train_loss = self._train(train_loader, epoch)
@@ -159,8 +171,51 @@ class CLEANSupConH(Model):
     def _predict_proba(self, dataset: Dataset) -> np.ndarray:
         pass
 
+    @staticmethod
+    def _get_pvalue_choices(df, random_nk_dist_map, p_value=1e-5):
+        all_test_EC = set()
+        nk = len(random_nk_dist_map.keys())
+        threshold = p_value * nk
+        for col in tqdm(df.columns):
+            ec = []
+            smallest_10_dist_df = df[col].nsmallest(10)
+            for i in range(10):
+                EC_i = smallest_10_dist_df.index[i]
+                # find all the distances in the random nk w.r.t. EC_i
+                # then sorted the nk distances
+                rand_nk_dists = [random_nk_dist_map[rand_nk_id][EC_i]
+                                 for rand_nk_id in random_nk_dist_map.keys()]
+                rand_nk_dists = np.sort(rand_nk_dists)
+                # rank dist_i among rand_nk_dists
+                dist_i = smallest_10_dist_df[i]
+                rank = np.searchsorted(rand_nk_dists, dist_i)
+                if (rank <= threshold) or (i == 0):
+                    dist_str = "{:.4f}".format(dist_i)
+                    all_test_EC.add(EC_i)
+                    ec.append('EC:' + str(EC_i) + '/' + dist_str)
+                else:
+                    break
+            ec.insert(0, col)
+        return all_test_EC
+
     def _predict(self, dataset: Dataset) -> np.ndarray:
-        pass
+        id_ec_test, _ = get_ec_id_dict(dataset, self.ec_label)
+        self.model.eval()
+        # load precomputed EC cluster center embeddings if possible
+        emb_train = self.model(self._esm_emb_train)
+
+        emb_test = model_embedding_test(dataset, id_ec_test, self.model, self.device, self.dtype)
+        eval_dist = get_dist_map_test(emb_train, emb_test, self._ec_id_dict_train, id_ec_test,
+                                      self.device, self.dtype)
+        eval_df = pd.DataFrame.from_dict(eval_dist)
+        rand_nk_ids, rand_nk_emb_train = random_nk_model(
+            self._id_ec_train, self._ec_id_dict_train, emb_train, n=self.evaluation_class.nk_random, weighted=True)
+        random_nk_dist_map = get_random_nk_dist_map(
+            emb_train, rand_nk_emb_train, self._ec_id_dict_train, rand_nk_ids, self.device, self.dtype)
+
+        all_test_EC = self._get_pvalue_choices(eval_df, random_nk_dist_map, p_value=self.evaluation_class.p_value)
+        # optionally report prediction precision/recall/...
+        return all_test_EC
 
     def _save(self, path: str):
         pass
