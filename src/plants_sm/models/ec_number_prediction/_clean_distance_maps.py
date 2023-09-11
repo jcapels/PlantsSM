@@ -1,5 +1,6 @@
 import pickle
 import re
+import time
 
 import numpy as np
 import torch
@@ -73,13 +74,13 @@ def get_ec_id_dict(dataset, EC_label) -> tuple:
                         id_ec[sequence_id].append(ec)
                     else:
                         id_ec[sequence_id].append(ec)
-
-            for ec in id_ec[sequence_id]:
-                if ec not in ec_id.keys():
-                    ec_id[ec] = set()
-                    ec_id[ec].add(sequence_id)
-                else:
-                    ec_id[ec].add(sequence_id)
+            if ec in labels_to_consider:
+                for ec in id_ec[sequence_id]:
+                    if ec not in ec_id.keys():
+                        ec_id[ec] = set()
+                        ec_id[ec].add(sequence_id)
+                    else:
+                        ec_id[ec].add(sequence_id)
     return id_ec, ec_id
 
 
@@ -160,6 +161,7 @@ def get_random_nk_dist_map(emb_train, rand_nk_emb_train,
     randomly chosen nk ids from training and all EC cluster centers
     map is of size of (nk, N_EC_train)
     '''
+
     cluster_center_model = get_cluster_center(emb_train, ec_id_dict_train)
     total_ec_n, out_dim = len(ec_id_dict_train.keys()), emb_train.size(1)
     model_lookup = torch.zeros(total_ec_n, out_dim, device=device, dtype=dtype)
@@ -214,14 +216,17 @@ def get_cluster_center(model_emb, ec_id_dict):
 
 def dist_map_helper(keys1, lookup1, keys2, lookup2):
     dist = {}
-    for i, key1 in tqdm(enumerate(keys1)):
+    bar = tqdm(total=len(keys1))
+    for i, key1 in enumerate(keys1):
         current = lookup1[i].unsqueeze(0)
         dist_norm = (current - lookup2).norm(dim=1, p=2)
         dist_norm = dist_norm.detach().cpu().numpy()
         dist[key1] = {}
+        bar.update(1)
         for j, key2 in enumerate(keys2):
             dist[key1][key2] = dist_norm[j]
     return dist
+
 
 
 def get_dist_map(ec_id_dict, esm_emb, device, dtype, model=None, dot=False):

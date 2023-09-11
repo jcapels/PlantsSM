@@ -3,17 +3,20 @@ import time
 
 import numpy as np
 import pandas as pd
+from plants_sm.models.constants import FileConstants
 import torch
 from torch import nn
 from tqdm import tqdm
 
 from plants_sm.data_structures.dataset import Dataset
-from plants_sm.io.pickle import read_pickle
+from plants_sm.io.pickle import read_pickle, write_pickle
 from plants_sm.models.ec_number_prediction._clean_distance_maps import compute_esm_distance, get_dist_map, \
     get_ec_id_dict, model_embedding_test, get_dist_map_test, random_nk_model, get_random_nk_dist_map
 from plants_sm.models.ec_number_prediction._clean_utils import SupConHardLoss, get_dataloader
 from plants_sm.models.model import Model
 from plants_sm.models.ec_number_prediction._clean_distance_maps import divide_labels_by_EC_level
+
+from plants_sm.models._utils import write_model_parameters_to_pickle
 
 
 class LayerNormNet(nn.Module):
@@ -70,7 +73,7 @@ class CLEANSupConH(Model):
         self.device = device
         self.model = LayerNormNet(input_dim, hidden_dim, out_dim, device, dtype, drop_out)
         self.dtype = dtype
-        self._history = {"train_loss": [], "val_loss": []}
+        self._history = {"train_loss": []}
         self.lr = lr
         self.epochs = epochs
         self.n_pos = n_pos
@@ -78,13 +81,16 @@ class CLEANSupConH(Model):
         self.adaptative_rate = adaptative_rate
         self.temp = temp
         self.batch_size = batch_size
-        self.criterion = SupConHardLoss
+        self.loss_function = SupConHardLoss
         self.optimizer = torch.optim.Adam(
             self.model.parameters(), lr=self.lr, betas=(0.9, 0.999))
         self.verbose = verbose
         self.ec_label = ec_label
         self.model_name = model_name
         self.evaluation_class = evaluation_class
+    
+    def __name__(self):
+        return "CLEANSupConH"
 
     def _preprocess_data(self, dataset: Dataset, **kwargs) -> Dataset:
         pass
@@ -141,6 +147,19 @@ class CLEANSupConH(Model):
             print(f'| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | '
                   f'training loss {train_loss:6.4f}')
             print('-' * 75)
+            self._history["loss"].append(train_loss)
+
+            # emb_train = self.model(self._esm_emb_train)
+
+            # self.rand_nk_ids, self.rand_nk_emb_train = random_nk_model(
+            #     self._id_ec_train, self._ec_id_dict_train, emb_train, n=self.evaluation_class.nk_random, weighted=True)
+
+            # self.random_nk_dist_map = get_random_nk_dist_map(
+            #     emb_train, self.rand_nk_emb_train, self._ec_id_dict_train, self.rand_nk_ids, self.device, self.dtype)
+            
+            # predictions = self._predict(validation_dataset)
+            # self._history["validation_loss"] = self.evaluation_class.evaluate(validation_dataset, predictions)
+            
         # remove tmp save weights
         if os.path.exists(os.path.join(self.path_to_save_model, self.model_name + '.pth')):
             os.remove(os.path.join(self.path_to_save_model, self.model_name + '.pth'))
@@ -148,6 +167,14 @@ class CLEANSupConH(Model):
             os.remove(os.path.join(self.path_to_save_model, self.model_name + '_' + str(epoch) + '.pth'))
         # save final weights
         torch.save(self.model.state_dict(), os.path.join(self.path_to_save_model, self.model_name + '.pth'))
+
+        emb_train = self.model(self._esm_emb_train)
+
+        self.rand_nk_ids, self.rand_nk_emb_train = random_nk_model(
+            self._id_ec_train, self._ec_id_dict_train, emb_train, n=self.evaluation_class.nk_random, weighted=True)
+
+        self.random_nk_dist_map = get_random_nk_dist_map(
+            emb_train, self.rand_nk_emb_train, self._ec_id_dict_train, self.rand_nk_ids, self.device, self.dtype)
 
     def _train(self, train_loader, epoch):
         self.model.train()
@@ -157,7 +184,7 @@ class CLEANSupConH(Model):
         for batch, data in enumerate(train_loader):
             self.optimizer.zero_grad()
             model_emb = self.model(data.to(device=self.device, dtype=self.dtype))
-            loss = self.criterion(model_emb, self.temp, self.n_pos)
+            loss = self.loss_function(model_emb, self.temp, self.n_pos)
             loss.backward()
             self.optimizer.step()
 
@@ -173,7 +200,7 @@ class CLEANSupConH(Model):
         return total_loss / (batch + 1)
 
     def _predict_proba(self, dataset: Dataset) -> np.ndarray:
-        pass
+        return self._predict(dataset)
 
     @staticmethod
     def _get_pvalue_choices(df, random_nk_dist_map, p_value=1e-5):
@@ -216,20 +243,18 @@ class CLEANSupConH(Model):
 
     def _predict(self, dataset: Dataset) -> np.ndarray:
         id_ec_test, _ = get_ec_id_dict(dataset, self.ec_label)
-        self.model.eval()
         # load precomputed EC cluster center embeddings if possible
         emb_train = self.model(self._esm_emb_train)
 
         emb_test = model_embedding_test(dataset, id_ec_test, self.model, self.device, self.dtype)
+
         eval_dist = get_dist_map_test(emb_train, emb_test, self._ec_id_dict_train, id_ec_test,
                                       self.device, self.dtype)
-        eval_df = pd.DataFrame.from_dict(eval_dist)
-        rand_nk_ids, rand_nk_emb_train = random_nk_model(
-            self._id_ec_train, self._ec_id_dict_train, emb_train, n=self.evaluation_class.nk_random, weighted=True)
-        random_nk_dist_map = get_random_nk_dist_map(
-            emb_train, rand_nk_emb_train, self._ec_id_dict_train, rand_nk_ids, self.device, self.dtype)
 
-        ecs = self._get_pvalue_choices(eval_df, random_nk_dist_map, p_value=self.evaluation_class.p_value)
+        eval_df = pd.DataFrame.from_dict(eval_dist)
+
+        ecs = self._get_pvalue_choices(eval_df, self.random_nk_dist_map, p_value=self.evaluation_class.p_value)
+        
         pred_label = []
         for row in ecs:
             preds_ec_lst = []
@@ -248,13 +273,57 @@ class CLEANSupConH(Model):
 
         return res
 
+    @staticmethod
+    def _save_pytorch_model(model, path):
+        weights_path = os.path.join(path, FileConstants.PYTORCH_MODEL_WEIGHTS.value)
+        torch.save(model.state_dict(), weights_path)
+        write_pickle(os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value), model)
+
+
     def _save(self, path: str):
-        pass
+        self._save_pytorch_model(self.model, path)
+
+        del self.rand_nk_ids
+        del self.rand_nk_emb_train
+        del self.random_nk_dist_map
+
+        write_pickle(os.path.join(path, "model_class.pkl"), self)
+
+    @staticmethod
+    def _read_model(path):
+        """
+        Read the model from the specified path.
+
+        Parameters
+        ----------
+        path: str
+            Path to read the model from
+
+        Returns
+        -------
+        torch.nn.Module
+        """
+        weights_path = os.path.join(path, FileConstants.PYTORCH_MODEL_WEIGHTS.value)
+        model = read_pickle(os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value))
+        model.load_state_dict(torch.load(weights_path))
+        model.eval()
+        return model
 
     @classmethod
     def _load(cls, path: str):
-        pass
+        new_class = read_pickle(os.path.join(path, "model_class.pkl"))
+        model = cls._read_model(path)
+        new_class.model = model
+
+        emb_train = new_class.model(new_class._esm_emb_train)
+        new_class.rand_nk_ids, new_class.rand_nk_emb_train = random_nk_model(
+            new_class._id_ec_train, new_class._ec_id_dict_train, emb_train, n=new_class.evaluation_class.nk_random, weighted=True)
+
+        new_class.random_nk_dist_map = get_random_nk_dist_map(
+            emb_train, new_class.rand_nk_emb_train, new_class._ec_id_dict_train, new_class.rand_nk_ids, new_class.device, new_class.dtype)
+
+        return new_class
 
     @property
     def history(self):
-        pass
+        return self._history

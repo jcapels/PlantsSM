@@ -457,10 +457,10 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         self._dataframe = self._dataframe[self._dataframe[self.instances_ids_field].isin(ids)]
         self._identifiers = self._dataframe[self.instances_ids_field].values
 
-        for instance_type in self._instances:
-            self._instances[instance_type] = {k: v for k, v in self._instances[instance_type].items() if k in ids}
+        # for instance_type in self._instances:
+        #     self._instances[instance_type] = {k: v for k, v in self._instances[instance_type].items() if k in ids}
 
-            if self._features:
-                self._features[instance_type] = {k: v for k, v in self._features[instance_type].items() if k in ids}
+        #     if self._features:
+        #         self._features[instance_type] = {k: v for k, v in self._features[instance_type].items() if k in ids}
 
         self._clear_cached_properties()
