@@ -18,6 +18,10 @@ from plants_sm.models.ec_number_prediction._clean_distance_maps import divide_la
 
 from plants_sm.models._utils import write_model_parameters_to_pickle
 
+import logging
+import os
+from logging.handlers import TimedRotatingFileHandler
+
 
 class LayerNormNet(nn.Module):
     def __init__(self, input_dim, hidden_dim, out_dim, device, dtype, drop_out=0.1):
@@ -60,7 +64,7 @@ class CLEANSupConH(Model):
                  lr=5e-4, epochs=1500, n_pos=9, n_neg=30, adaptative_rate=10,
                  temp=0.1, batch_size=6000, verbose=True, ec_label="EC",
                  model_name="CLEANSupConH", path_to_save_model="./data/model/",
-                 evaluation_class=PValueInference(p_value=1e-5, nk_random=20)):
+                 evaluation_class=PValueInference(p_value=1e-5, nk_random=20), logger_path="clean_supconh.log"):
         self.distance_map_path = distance_map_path
         parent_folder = os.path.dirname(distance_map_path)
         if not os.path.exists(parent_folder):
@@ -88,6 +92,21 @@ class CLEANSupConH(Model):
         self.ec_label = ec_label
         self.model_name = model_name
         self.evaluation_class = evaluation_class
+
+        formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
+        if logger_path:
+            handler = TimedRotatingFileHandler(logger_path, when='midnight', backupCount=30)
+        else:
+            handler = TimedRotatingFileHandler(f'./{self.model_name}.log', when='midnight', backupCount=20)
+        handler.setFormatter(formatter)
+
+        self.logger = logging.getLogger(__name__)
+        self.logger.addHandler(handler)
+        self.logger.setLevel(logging.DEBUG)
+
+        self.rand_nk_ids = None
+        self.rand_nk_emb_train = None
+        self.random_nk_dist_map = None
     
     def __name__(self):
         return "CLEANSupConH"
@@ -103,11 +122,11 @@ class CLEANSupConH(Model):
 
         best_loss = float('inf')
         # ======================== override args ====================#
-        print('==> device used:', self.device, '| dtype used: ',
-              self.dtype, "\n==> args:")
+        self.logger.info(f'==> device used: {self.device} | dtype used: {self.dtype}\n==> args:')
         # ======================== ESM embedding  ===================#
         # loading ESM embedding for dist map
 
+        self.logger.info(f'==> loading ESM embedding for dist map')
         self._esm_emb_train = read_pickle(self.distance_map_path + '_esm.pkl').to(device=self.device, dtype=self.dtype)
         dist_map = read_pickle(self.distance_map_path + '.pkl')
 
@@ -116,7 +135,9 @@ class CLEANSupConH(Model):
         # ======================== initialize model =================#
         train_loader = get_dataloader(dist_map, self._id_ec_train, ec_id, self.n_pos, self.n_neg, train_dataset,
                                       self.batch_size)
-        print("The number of unique EC numbers: ", len(dist_map.keys()))
+        
+        self.logger.info(f"The number of unique EC numbers: {len(dist_map.keys())}")
+
         # ======================== training =======-=================#
         # training
         for epoch in range(1, self.epochs + 1):
@@ -140,13 +161,15 @@ class CLEANSupConH(Model):
             if train_loss < best_loss and epoch > 0.8 * self.epochs:
                 torch.save(self.model.state_dict(), os.path.join(self.path_to_save_model, self.model_name + '.pth'))
                 best_loss = train_loss
-                print(f'Best from epoch : {epoch:3d}; loss: {train_loss:6.4f}')
+                self.logger.info(f'Best from epoch : {epoch:3d}; loss: {train_loss:6.4f}')
 
             elapsed = time.time() - epoch_start_time
-            print('-' * 75)
-            print(f'| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | '
+            self.logger.info('-' * 75)
+            self.logger.info(f'| end of epoch {epoch:3d} | time: {elapsed:5.2f}s | '
                   f'training loss {train_loss:6.4f}')
-            print('-' * 75)
+            self.logger.info('-' * 75)
+            if "loss" not in self._history:
+                self._history["loss"] = []
             self._history["loss"].append(train_loss)
 
             # emb_train = self.model(self._esm_emb_train)
@@ -168,14 +191,6 @@ class CLEANSupConH(Model):
         # save final weights
         torch.save(self.model.state_dict(), os.path.join(self.path_to_save_model, self.model_name + '.pth'))
 
-        emb_train = self.model(self._esm_emb_train)
-
-        self.rand_nk_ids, self.rand_nk_emb_train = random_nk_model(
-            self._id_ec_train, self._ec_id_dict_train, emb_train, n=self.evaluation_class.nk_random, weighted=True)
-
-        self.random_nk_dist_map = get_random_nk_dist_map(
-            emb_train, self.rand_nk_emb_train, self._ec_id_dict_train, self.rand_nk_ids, self.device, self.dtype)
-
     def _train(self, train_loader, epoch):
         self.model.train()
         total_loss = 0.
@@ -192,10 +207,11 @@ class CLEANSupConH(Model):
             if self.verbose:
                 ms_per_batch = (time.time() - start_time) * 1000
                 cur_loss = total_loss
-                print(f'| epoch {epoch:3d} | {batch:5d}/{len(train_loader):5d} batches | '
+                self.logger.info(f'| epoch {epoch:3d} | {batch:5d}/{len(train_loader):5d} batches | '
                       f'lr {self.lr:02.4f} | ms/batch {ms_per_batch:6.4f} | '
                       f'loss {cur_loss:5.2f}')
                 start_time = time.time()
+            self.logger.info(f"batch {batch} done")
         # record running average training loss
         return total_loss / (batch + 1)
 
@@ -246,6 +262,13 @@ class CLEANSupConH(Model):
         # load precomputed EC cluster center embeddings if possible
         emb_train = self.model(self._esm_emb_train)
 
+        if self.rand_nk_ids is None or self.rand_nk_emb_train is None or self.random_nk_dist_map is None:
+            self.rand_nk_ids, self.rand_nk_emb_train = random_nk_model(
+                self._id_ec_train, self._ec_id_dict_train, emb_train, n=self.evaluation_class.nk_random, weighted=True)
+
+            self.random_nk_dist_map = get_random_nk_dist_map(
+                emb_train, self.rand_nk_emb_train, self._ec_id_dict_train, self.rand_nk_ids, self.device, self.dtype)
+
         emb_test = model_embedding_test(dataset, id_ec_test, self.model, self.device, self.dtype)
 
         eval_dist = get_dist_map_test(emb_train, emb_test, self._ec_id_dict_train, id_ec_test,
@@ -287,6 +310,10 @@ class CLEANSupConH(Model):
         del self.rand_nk_emb_train
         del self.random_nk_dist_map
 
+        self.rand_nk_ids = None
+        self.rand_nk_emb_train = None
+        self.random_nk_dist_map = None
+
         write_pickle(os.path.join(path, "model_class.pkl"), self)
 
     @staticmethod
@@ -314,13 +341,6 @@ class CLEANSupConH(Model):
         new_class = read_pickle(os.path.join(path, "model_class.pkl"))
         model = cls._read_model(path)
         new_class.model = model
-
-        emb_train = new_class.model(new_class._esm_emb_train)
-        new_class.rand_nk_ids, new_class.rand_nk_emb_train = random_nk_model(
-            new_class._id_ec_train, new_class._ec_id_dict_train, emb_train, n=new_class.evaluation_class.nk_random, weighted=True)
-
-        new_class.random_nk_dist_map = get_random_nk_dist_map(
-            emb_train, new_class.rand_nk_emb_train, new_class._ec_id_dict_train, new_class.rand_nk_ids, new_class.device, new_class.dtype)
 
         return new_class
 
