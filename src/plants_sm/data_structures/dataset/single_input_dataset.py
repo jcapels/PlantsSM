@@ -464,3 +464,19 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                 self._features[instance_type] = {k: v for k, v in self._features[instance_type].items() if k in ids}
 
         self._clear_cached_properties()
+
+    def merge(self, dataset: 'SingleInputDataset'):
+
+        self._dataframe = pd.concat((self._dataframe, dataset.dataframe), axis=0)
+        self._identifiers = self._dataframe[self.instances_ids_field].values
+
+        for instance_type in self._instances:
+            self._instances[instance_type].update(dataset._instances[instance_type])
+
+            if self._features:
+                self._features[instance_type].update(dataset._features[instance_type])
+
+        self._clear_cached_properties()
+
+        return self
+

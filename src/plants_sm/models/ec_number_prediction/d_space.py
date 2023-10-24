@@ -68,10 +68,10 @@ class DSPACEModel(nn.Module):
 class DSPACE(PyTorchModel):
 
     def __init__(self, num_columns, input_size, num_classes,
-                loss_function, validation_loss_function,
-                batch_size,
-                optimizer=torch.optim.NAdam, learning_rate=0.001,
-                epochs=30, device="cuda:0", patience=4, **kwargs):
+                 loss_function, validation_loss_function,
+                 batch_size,
+                 optimizer=torch.optim.NAdam, learning_rate=0.001,
+                 epochs=30, device="cuda:0", patience=4, **kwargs):
         model = DSPACEModel(num_columns, input_size, num_classes)
         self.optimizer = optimizer(params=model.parameters(), lr=learning_rate)
 

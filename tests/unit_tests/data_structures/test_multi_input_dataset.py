@@ -57,3 +57,28 @@ class TestMultiInputDataset(TestCase):
 
         self.assertEqual(list(dataset.get_instances('compounds').values()), ['representation5',
                                                                              'representation2'])
+
+    def test_merge(self):
+        dataframe = pd.DataFrame(columns=['ids_interaction', 'ids_a', 'a', 'ids_b', 'b', 'labels'])
+
+        dataframe.loc[0] = ["2", "1", "representation2", "1", "representation5", 1]
+        dataframe.loc[1] = ["3", "4", "representation1", "1", "representation5", 0]
+        dataframe.loc[2] = ["6", "0", "representation", "6", "representation2", 1]
+
+        dataset = MultiInputDataset(dataframe,
+                                    representation_field={"proteins": "a", "compounds": "b"},
+                                    instances_ids_field={"proteins": "ids_a", "compounds": "ids_b",
+                                                         "interaction": "ids_interaction"},
+                                    labels_field='labels')
+
+        dataframe2 = pd.DataFrame(columns=['ids_interaction', 'ids_a', 'a', 'ids_b', 'b', 'labels'])
+
+        dataset2 = MultiInputDataset(dataframe,
+                                     representation_field={"proteins": "a", "compounds": "b"},
+                                     instances_ids_field={"proteins": "ids_a", "compounds": "ids_b",
+                                                          "interaction": "ids_interaction"},
+                                     labels_field='labels')
+
+        dataset.merge(dataset2)
+
+        self.assertEqual(dataset.X["proteins"].shape[0], 6)

@@ -72,3 +72,34 @@ class TestDataset(TestCase):
 
         # remove the file
         os.remove("test.csv")
+
+    def test_merge(self):
+        """
+        Test the merge method.
+        """
+        dataframe = pd.DataFrame(columns=['a', 'b', 'c'])
+
+        dataframe.loc[0] = ["representation2", 2, 3]
+        dataframe.loc[1] = ["representation1", 5, 6]
+        dataframe.loc[2] = ["representation", 8, 9]
+
+        dataset = SingleInputDataset(dataframe, representation_field='a', labels_field='c', features_fields='b')
+
+        dataframe2 = pd.DataFrame(columns=['a', 'b', 'c'])
+
+        dataframe2.loc[0] = ["representation2", 754, 3]
+        dataframe2.loc[1] = ["representation1", 53224, 6]
+        dataframe2.loc[2] = ["representation", 65437, 9]
+
+        dataset2 = SingleInputDataset(dataframe2, representation_field='a', labels_field='c', features_fields='b')
+
+        dataset.merge(dataset2)
+
+        self.assertTrue(dataset.X.shape == (6, 1))
+        self.assertTrue(dataset.y.shape == (6, 1))
+        self.assertTrue(dataset.X[0] == 2)
+        self.assertTrue(dataset.X[1] == 5)
+        self.assertTrue(dataset.X[2] == 8)
+        self.assertTrue(dataset.X[3] == 754)
+        self.assertTrue(dataset.X[4] == 53224)
+        self.assertTrue(dataset.X[5] == 65437)
