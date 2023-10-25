@@ -39,10 +39,10 @@ class TestDataset(TestCase):
         self.assertTrue(dataset._features_fields[PLACEHOLDER_FIELD] == ["b"])
         self.assertEqual(dataset.X.shape[1], 1)
 
-        dataset.select([0, 1])
+        dataset.select(["0", "1"])
         self.assertTrue(dataset.X.shape[0] == 2)
         self.assertTrue(dataset.y.shape[0] == 2)
-        self.assertEqual(list(dataset.identifiers), [0, 1])
+        self.assertEqual(list(dataset.identifiers), ["0", "1"])
 
     def test_slice_as_features_field(self):
         dataframe = pd.DataFrame(columns=['a', 'b', 'c'])

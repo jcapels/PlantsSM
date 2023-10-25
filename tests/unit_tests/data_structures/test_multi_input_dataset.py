@@ -72,8 +72,11 @@ class TestMultiInputDataset(TestCase):
                                     labels_field='labels')
 
         dataframe2 = pd.DataFrame(columns=['ids_interaction', 'ids_a', 'a', 'ids_b', 'b', 'labels'])
+        dataframe2.loc[0] = ["2", "1", "representation2", "1", "representation5", 1]
+        dataframe2.loc[1] = ["3", "4", "representation1", "1", "representation5", 0]
+        dataframe2.loc[2] = ["6", "0", "representation", "6", "representation2", 1]
 
-        dataset2 = MultiInputDataset(dataframe,
+        dataset2 = MultiInputDataset(dataframe2,
                                      representation_field={"proteins": "a", "compounds": "b"},
                                      instances_ids_field={"proteins": "ids_a", "compounds": "ids_b",
                                                           "interaction": "ids_interaction"},
@@ -81,4 +84,10 @@ class TestMultiInputDataset(TestCase):
 
         dataset.merge(dataset2)
 
-        self.assertEqual(dataset.X["proteins"].shape[0], 6)
+        self.assertEqual(dataset.y.shape[0], 6)
+        self.assertEqual(dataset.y[0], 1)
+        self.assertEqual(dataset.y[1], 0)
+        self.assertEqual(dataset.y[2], 1)
+        self.assertEqual(dataset.y[3], 1)
+        self.assertEqual(dataset.y[4], 0)
+        self.assertEqual(dataset.y[5], 1)
