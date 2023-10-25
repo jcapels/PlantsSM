@@ -381,3 +381,24 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
 
         self._identifiers = self.dataframe.loc[:, _identifiers_ids].values
         self._clear_cached_properties()
+
+    def merge(self, dataset: 'MultiInputDataset'):
+        """
+        Merges the dataset with another dataset
+
+        Parameters
+        ----------
+        dataset: MultiInputDataset
+            the dataset to merge
+        """
+        self._dataframe = pd.concat([self._dataframe, dataset.dataframe], ignore_index=True)
+        self._instances.update(dataset.instances)
+        for instance_type in self._instances:
+            self._instances[instance_type].update(dataset._instances[instance_type])
+
+            if self._features:
+                self._features[instance_type].update(dataset._features[instance_type])
+        self._identifiers = self.dataframe.loc[:, self.instances_ids_field.values()].values
+        self._clear_cached_properties()
+
+        return self
