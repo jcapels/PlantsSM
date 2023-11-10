@@ -486,8 +486,8 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             dataset._dataframe[self.instances_ids_field] = (
                 dataset._dataframe[self.instances_ids_field].apply(lambda x: x + "_"))
 
-        elif set(self._identifiers).intersection(set(dataset._identifiers)):
-            raise ValueError("The datasets have common identifiers")
+        # elif set(self._identifiers).intersection(set(dataset._identifiers)):
+        #     raise ValueError("The datasets have common identifiers")
 
         self._dataframe = pd.concat((self._dataframe, dataset.dataframe), axis=0)
 

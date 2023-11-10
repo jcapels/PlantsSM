@@ -1,8 +1,8 @@
 from torch import nn
 
-class DenseNet(nn.Module):
+class DNN(nn.Module):
     def __init__(self, input_size, hidden_sizes, output_size, batch_norm=False, last_sigmoid=True, dropout=None):
-        super(DenseNet, self).__init__()
+        super(DNN, self).__init__()
 
         self.batch_norm = batch_norm
 

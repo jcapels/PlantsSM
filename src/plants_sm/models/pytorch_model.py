@@ -292,8 +292,12 @@ class PyTorchModel(Model):
         else:
             tensor = torch.tensor(dataset.X, dtype=torch.float)
             tensors.append(tensor)
-        if dataset.y is not None:
-            tensors.append(torch.tensor(dataset.y, dtype=torch.float))
+        
+        try:
+            if dataset.y is not None:
+                tensors.append(torch.tensor(dataset.y, dtype=torch.float))
+        except ValueError:
+            pass
         dataset = TensorDataset(
             *tensors
         )
@@ -583,11 +587,14 @@ class PyTorchModel(Model):
 
         loss = loss_total / len_train_dataset
 
-        predictions = self.predict(train_dataset)
+        if self.validation_metric:
+            predictions = self.predict(train_dataset)
+            validation_metric_result = self._calculate_metric_result(actuals, predictions)
 
-        validation_metric_result = self._calculate_metric_result(actuals, predictions)
-        if validation_metric_result is not None:
-            self.logger.info(f'[{epoch}/{self.epochs}] metric result: {validation_metric_result:.8}')
+            if validation_metric_result is not None:
+                self.logger.info(f'[{epoch}/{self.epochs}] metric result: {validation_metric_result:.8}')
+        else:
+            validation_metric_result = None
 
         self.logger.info(
             f'[{epoch}/{self.epochs}] Training loss: {loss:.8}')
@@ -797,7 +804,7 @@ class PyTorchModel(Model):
         y_pred = array_reshape(y_pred)
         return y_pred
 
-    def _predict_proba_batch(self, dataset: Dataset, predictions: np.ndarray) -> np.ndarray:
+    def _predict_proba_batch(self, dataset: Dataset, predictions: np.ndarray=None) -> np.ndarray:
         """
         Predicts the probability of each class for each sample in the dataset.
 
@@ -822,7 +829,10 @@ class PyTorchModel(Model):
             yhat = array_from_tensor(yhat)
             yhat = array_reshape(yhat)
 
-            predictions = np.concatenate((predictions, yhat))
+            if i == 0 and predictions is None:
+                predictions = yhat
+            else:
+                predictions = np.concatenate((predictions, yhat))
 
         return predictions
 
@@ -847,16 +857,16 @@ class PyTorchModel(Model):
 
         self.model.eval()
 
-        second_shape = dataset.y.shape[1]
-        predictions, _ = np.empty(shape=(0, second_shape)), np.empty(shape=(0, second_shape))
+        # second_shape = dataset.y.shape[1]
+        # predictions, _ = np.empty(shape=(0, second_shape)), np.empty(shape=(0, second_shape))
 
-        predictions = array_reshape(predictions)
+        # predictions = array_reshape(predictions)
 
         # the "shuffle" argument always has to be False in predicting probabilities in an evaluation context
         with torch.no_grad():
 
             if dataset.batch_size is None:
-                predictions = self._predict_proba_batch(dataset, predictions)
+                predictions = self._predict_proba_batch(dataset)
             else:
                 while dataset.next_batch():
                     predictions = self._predict_proba_batch(dataset, predictions)
