@@ -473,8 +473,6 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
 
     def merge(self, dataset: 'SingleInputDataset'):
 
-        # self._dataframe = pd.concat((self._dataframe, dataset.dataframe), axis=0)
-
         if self._automatically_generated_identifiers and dataset._automatically_generated_identifiers:
             dataset._identifiers = [f"{i}_" for i in dataset._identifiers]
             # change the identifiers in the dataset instances and features
