@@ -119,25 +119,26 @@ class ESMEncoder(Transformer):
             Whether to use DDP or not.
         """
 
-        fsdp_params = dict(
-            mixed_precision=True,
-            flatten_parameters=True,
-            state_dict_device=torch.device("cpu"),  # reduce GPU mem usage
-            cpu_offload=False,  # enable cpu offloading
-        )
+        if is_ddf:
+            fsdp_params = dict(
+                mixed_precision=True,
+                flatten_parameters=True,
+                state_dict_device=torch.device("cpu"),  # reduce GPU mem usage
+                cpu_offload=False,  # enable cpu offloading
+            )
 
-        with enable_wrap(wrapper_cls=FSDP, **fsdp_params):
-            model.eval()
+            with enable_wrap(wrapper_cls=FSDP, **fsdp_params):
+                model.eval()
 
-            # Wrap each layer in FSDP separately
-            for name, child in model.named_children():
+                # Wrap each layer in FSDP separately
+                for name, child in model.named_children():
 
-                if name == "layers":
-                    for layer_name, layer in child.named_children():
-                        wrapped_layer = wrap(layer)
-                        setattr(child, layer_name, wrapped_layer)
+                    if name == "layers":
+                        for layer_name, layer in child.named_children():
+                            wrapped_layer = wrap(layer)
+                            setattr(child, layer_name, wrapped_layer)
 
-            model = wrap(model)
+                model = wrap(model)
 
         res = []
         batch = []
@@ -169,8 +170,8 @@ class ESMEncoder(Transformer):
                         else:
                             res.append((batch_instance_id,
                                         representations['representations'][i, 1: len(batch[i][1]) + 1]))
-
-                    torch.cuda.empty_cache()
+                    if is_ddf:
+                        torch.cuda.empty_cache()
                     batch = []
                     batch_ids = []
                     pbar.update(batch_size)

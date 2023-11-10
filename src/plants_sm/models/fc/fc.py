@@ -1,9 +1,8 @@
 from torch import nn
 
-
-class DenseNet(nn.Module):
+class DNN(nn.Module):
     def __init__(self, input_size, hidden_sizes, output_size, batch_norm=False, last_sigmoid=True, dropout=None):
-        super(DenseNet, self).__init__()
+        super(DNN, self).__init__()
 
         self.batch_norm = batch_norm
 
@@ -19,9 +18,10 @@ class DenseNet(nn.Module):
                 self.dropout = None
 
             for i in range(1, len(hidden_sizes)):
-                setattr(self, f"fc{i}", nn.Linear(hidden_sizes[i - 1], hidden_sizes[i]))
+                setattr(self, f"fc{i}", nn.Linear(hidden_sizes[i-1], hidden_sizes[i]))
                 setattr(self, f"relu{i}", nn.ReLU())
                 setattr(self, f"batch_norm_layer{i}", nn.BatchNorm1d(hidden_sizes[i]))
+        
 
             self.fc_final = nn.Linear(hidden_sizes[-1], output_size)
         else:
@@ -56,11 +56,11 @@ class DenseNet(nn.Module):
                 out = getattr(self, f"relu{i}")(out)
                 if self.dropout is not None:
                     out = self.dropout(out)
-
+            
             out = self.fc_final(out)
         else:
             out = self.fc_final(x)
-
+        
         if self.last_sigmoid:
             out = nn.Sigmoid()(out)
         return out
