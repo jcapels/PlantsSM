@@ -15,12 +15,11 @@ class EC_ESM1b(nn.Module):
 
         model, self.alphabet = esm_callable()
 
-        self.model = model.to(self.device)
         self.batch_converter = self.alphabet.get_batch_converter()
-        self.esm_model = ESM1Model(self.model.args, alphabet=self.alphabet,
+        self.esm_model = ESM1Model(model.args, alphabet=self.alphabet,
                                    is_ddf=self.is_ddf, num_gpus=self.num_gpus)
 
-        self.esm_model.load_state_dict(self.model.state_dict())
+        self.esm_model.load_state_dict(model.state_dict())
 
         self.dnn = DNN(1280, hidden_layers, num_classes, batch_norm=True, last_sigmoid=True)
 
