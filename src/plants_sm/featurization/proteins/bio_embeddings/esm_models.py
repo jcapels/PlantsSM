@@ -146,7 +146,6 @@ class ESM1Model(ProteinBertModel):
             # Check if parameter dtype is  Half (float16)
             if param.dtype == torch.float16:
                 param.data = param.data.to(torch.float32)
-        
 
     def forward(self, tokens, repr_layers=[], need_head_weights=False, return_contacts=False):
         if return_contacts:
@@ -181,7 +180,7 @@ class ESM1Model(ProteinBertModel):
                     gpu = gpus[i % len(gpus)]
                     x.to(gpu)
                     self.emb_layer_norm_before.to(gpu)
-                    i+=1
+                    i += 1
                 else:
                     x = x.to("cpu")
                     self.emb_layer_norm_before.to("cpu")
@@ -211,7 +210,7 @@ class ESM1Model(ProteinBertModel):
                 gpu = gpus[i % len(gpus)]
                 x.to(gpu)
                 layer.to(gpu)
-                i+=1
+                i += 1
             else:
                 x.to("cpu")
                 layer.to("cpu")
@@ -232,11 +231,11 @@ class ESM1Model(ProteinBertModel):
                 gpu = gpus[i % len(gpus)]
                 x.to(gpu)
                 self.emb_layer_norm_after.to(gpu)
-                i+=1
+                i += 1
             else:
                 x.to("cpu")
                 self.emb_layer_norm_after.to("cpu")
-            
+
             self.emb_layer_norm_after.weight = self.emb_layer_norm_after.weight.float()
             self.emb_layer_norm_after.bias = self.emb_layer_norm_after.bias.float()
             x = self.emb_layer_norm_after(x)
@@ -245,12 +244,12 @@ class ESM1Model(ProteinBertModel):
             # last hidden representation should have layer norm applied
             if (layer_idx + 1) in repr_layers:
                 hidden_representations[layer_idx + 1] = x
-            
+
             if self.is_ddf:
                 gpu = gpus[i % len(gpus)]
                 x.to(gpu)
                 self.lm_head.to(gpu)
-                i+=1
+                i += 1
             else:
                 x.to("cpu")
                 self.lm_head.to("cpu")

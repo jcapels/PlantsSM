@@ -88,12 +88,12 @@ class ESMEncoder(Transformer):
 
     @staticmethod
     def _generate_esm2_model(model: nn.Module,
-                            layers: int,
-                            instances: dict,
-                            batch_size: int,
-                            batch_converter: callable,
-                            output_dim: int,
-                            is_ddf: bool):
+                             layers: int,
+                             instances: dict,
+                             batch_size: int,
+                             batch_converter: callable,
+                             output_dim: int,
+                             is_ddf: bool):
         """
         Generate the ESM model.
 
@@ -111,10 +111,6 @@ class ESMEncoder(Transformer):
             The batch converter to be used in the encoding process.
         output_dim: int
             The output dimension of the ESM model.
-        num_gpus: int
-            The number of GPUs to be used in the encoding process.
-        alphabet: Alphabet
-            The alphabet of the ESM model.
         is_ddf: bool
             Whether to use DDP or not.
         """
@@ -226,33 +222,33 @@ class ESMEncoder(Transformer):
         # initialize the model with FSDP wrapper
         if "esm2" in self.esm_function:
             model = ESM2Model(alphabet=self.alphabet, num_layers=self.model.num_layers, embed_dim=self.model.embed_dim,
-                                    attention_heads=self.model.attention_heads, token_dropout=self.model.token_dropout,
-                                    is_ddf=self.is_ddf, num_gpus=self.num_gpus)
+                              attention_heads=self.model.attention_heads, token_dropout=self.model.token_dropout,
+                              is_ddf=self.is_ddf, num_gpus=self.num_gpus)
             model.load_state_dict(self.model.state_dict())
-        
+
         else:
-            model = ESM1Model(self.model.args, alphabet=self.alphabet, 
+            model = ESM1Model(self.model.args, alphabet=self.alphabet,
                               is_ddf=self.is_ddf, num_gpus=self.num_gpus)
             model.load_state_dict(self.model.state_dict())
 
         if self.is_ddf:
             res = TorchSpawner().run(self._generate_esm2_model,
-                                    model=model,
-                                    layers=self.layers,
-                                    instances=instances,
-                                    batch_size=self.batch_size,
-                                    batch_converter=self.batch_converter,
-                                    output_dim=self.output_dim,
-                                    is_ddf=self.is_ddf)
+                                     model=model,
+                                     layers=self.layers,
+                                     instances=instances,
+                                     batch_size=self.batch_size,
+                                     batch_converter=self.batch_converter,
+                                     output_dim=self.output_dim,
+                                     is_ddf=self.is_ddf)
 
         else:
             res = self._generate_esm2_model(model,
-                                           layers=self.layers,
-                                           instances=instances,
-                                           batch_size=self.batch_size,
-                                           batch_converter=self.batch_converter,
-                                           output_dim=self.output_dim,
-                                           is_ddf=self.is_ddf)
+                                            layers=self.layers,
+                                            instances=instances,
+                                            batch_size=self.batch_size,
+                                            batch_converter=self.batch_converter,
+                                            output_dim=self.output_dim,
+                                            is_ddf=self.is_ddf)
 
         dataset.add_features(instance_type, dict(res))
 

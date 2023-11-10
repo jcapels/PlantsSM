@@ -1,26 +1,38 @@
-import torch
 from torch import nn
 
+from plants_sm.featurization.proteins.bio_embeddings.constants import ESM_FUNCTIONS, ESM_LAYERS
+from plants_sm.featurization.proteins.bio_embeddings.esm_models import ESM1Model
+from plants_sm.models.fc.fc import DNN
 
-class EC_ESM1b(nn.Module, hidden_layers, num_classes):
-    def __init__(self, in_dim, model):
+
+class EC_ESM1b(nn.Module):
+    def __init__(self, hidden_layers, num_classes, is_ddf, num_gpus):
         super(EC_ESM1b, self).__init__()
-        self.model = model
-        self.fc1 = nn.Linear(in_dim, 256)
-        self.fc2 = nn.Linear(256, 32)
-        self.fc3 = nn.Linear(32, 1)
+        esm_callable = ESM_FUNCTIONS["esm1b_t33_650M_UR50S"]
+        self.layers = ESM_LAYERS["esm1b_t33_650M_UR50S"]
+        self.is_ddf = is_ddf
+        self.num_gpus = num_gpus
 
-    def forward(self, data, subs, rep_layer, gpu, use_cuda):
-        output = self.model(data, repr_layers=[rep_layer])
-        output = output["representations"][rep_layer]
-        if use_cuda:
-            output = output.cuda(gpu, non_blocking=True)
+        model, self.alphabet = esm_callable()
+
+        self.model = model.to(self.device)
+        self.batch_converter = self.alphabet.get_batch_converter()
+        self.esm_model = ESM1Model(self.model.args, alphabet=self.alphabet,
+                                   is_ddf=self.is_ddf, num_gpus=self.num_gpus)
+
+        self.esm_model.load_state_dict(self.model.state_dict())
+
+        self.dnn = DNN(1280, hidden_layers, num_classes, batch_norm=True, last_sigmoid=True)
+
+    def forward(self, data):
+
+        output = self.esm_model(data, repr_layers=[self.layers])
+        output = output["representations"][self.layers]
+        # if use_cuda:
+        #     output = output.cuda(gpu, non_blocking=True)
         output = output[:, 0, :]
-        x = torch.cat((output, subs), dim=1)
-        if use_cuda:
-            x = x.cuda(gpu, non_blocking=True)
+        # if use_cuda:
+        #     x = x.cuda(gpu, non_blocking=True)
 
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        x = torch.sigmoid(self.fc3(x))
+        x = self.dnn(output)
         return x
