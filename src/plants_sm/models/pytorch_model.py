@@ -21,7 +21,6 @@ from plants_sm.models.constants import REGRESSION, QUANTILE, BINARY, FileConstan
 from plants_sm.models.model import Model
 import torch
 
-
 class PyTorchModel(Model):
 
     def __init__(self, model: nn.Module, loss_function: _Loss, validation_loss_function: _Loss = None, model_name=None,
@@ -29,7 +28,7 @@ class PyTorchModel(Model):
                  scheduler: ReduceLROnPlateau = None, epochs: int = 32, batch_size: int = 32,
                  patience: int = 4, validation_metric: Callable = None,
                  problem_type: str = BINARY,
-                 device: Union[str, torch.device] = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
+                 device: Union[str, torch.device, List[str]] = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
                  trigger_times: int = 0,
                  last_loss: int = None,
                  progress: int = 100,
@@ -106,8 +105,15 @@ class PyTorchModel(Model):
         self.logger.addHandler(handler)
         self.logger.setLevel(logging.DEBUG)
 
-        self.device = device
-        self.model = model.to(self.device)
+        if isinstance(device, list):
+            self.ddp = True
+            self.model = model
+            self.device = device
+
+        else:
+            self.ddp = False
+            self.device = device
+            self.model = model.to(self.device)
 
         self.loss_function = loss_function
 
@@ -397,7 +403,51 @@ class PyTorchModel(Model):
             validation_metric_result = self.validation_metric(actuals, predictions)
 
         return loss_total / len_valid_dataset, validation_metric_result
+    
+    @staticmethod
+    def _train_ddp(inputs_targets: Tensor, model, loss_function, optimizer,
+                    l2_regularization_lambda, l1_regularization_lambda, device):
+        
+        inputs, targets = inputs_targets[:-1], inputs_targets[-1]
+        for j, inputs_elem in enumerate(inputs):
+            inputs[j] = inputs_elem.to(device[0])
 
+        targets = targets.to(device[0])
+
+        optimizer.zero_grad()
+
+        output = model(inputs)
+        output = output.to(device[0])
+
+        # Forward and backward propagation
+        loss = loss_function(output, targets)
+
+        if l2_regularization_lambda:
+            l2_lambda = l2_regularization_lambda
+            l2_norm = sum(p.pow(2.0).sum()
+                          for p in model.parameters())
+
+            loss = loss + l2_lambda * l2_norm
+
+        if l1_regularization_lambda:
+            l1_lambda = l1_regularization_lambda
+            l1_norm = sum(p.abs().sum()
+                          for p in model.parameters())
+
+            loss = loss + l1_lambda * l1_norm
+
+        # model.to(device[0])
+        loss.backward()
+        optimizer.step()
+
+        actual = array_from_tensor(targets)
+        actual = array_reshape(actual)
+
+        yhat = array_from_tensor(output)
+        yhat = array_reshape(yhat)
+
+        return actual, yhat, loss, model, optimizer
+    
     def _train(self, inputs_targets: Tensor) -> Tuple[np.ndarray, np.ndarray, Tensor]:
         """
         Train the model
@@ -575,6 +625,12 @@ class PyTorchModel(Model):
         len_train_dataset = len(train_dataset_preprocessed)
 
         for i, inputs_targets in enumerate(train_dataset_preprocessed):
+            # if self.ddp:
+            #     actual, yhat, loss, self.model, self.optimizer = \
+            #         TorchSpawner().run(self._train_ddp, inputs_targets=inputs_targets, model=self.model, loss_function=self.loss_function, 
+            #                            optimizer=self.optimizer, l2_regularization_lambda=self.l2_regularization_lambda, 
+            #                            l1_regularization_lambda=self.l1_regularization_lambda, device=self.device)
+            # else:
             actual, yhat, loss = self._train(inputs_targets)
 
             predictions = np.concatenate((predictions, yhat))

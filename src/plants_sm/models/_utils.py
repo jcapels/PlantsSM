@@ -3,11 +3,10 @@ import warnings
 from typing import Iterable
 
 import numpy as np
-from tensorflow import Tensor
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.io.pickle import write_pickle, is_pickable
-from plants_sm.models.constants import REGRESSION, BINARY, FileConstants
+from plants_sm.models.constants import QUANTILE, REGRESSION, BINARY, FileConstants
 
 
 def _convert_proba_to_unified_form(problem_type, y_pred_proba: np.ndarray) -> np.ndarray:
@@ -44,6 +43,36 @@ def _convert_proba_to_unified_form(problem_type, y_pred_proba: np.ndarray) -> np
     else:  # Unknown problem type
         raise AssertionError(f'Unknown y_pred_proba format for `problem_type="{problem_type}"`.')
 
+def _get_pred_from_proba(problem_type, y_pred_proba: np.ndarray) -> np.ndarray:
+    """
+    Get the prediction from the probability
+
+    Parameters
+    ----------
+    y_pred_proba: list
+        List of probabilities
+    Returns
+    -------
+    np.ndarray
+        Array of predictions
+    """
+    if problem_type == BINARY:
+        if y_pred_proba.shape[1] == 1:
+            y_pred = np.array([1 if pred >= 0.5 else 0 for pred in y_pred_proba])
+        else:
+            y_pred = multi_label_binarize(y_pred_proba)
+    elif problem_type == REGRESSION:
+        y_pred = y_pred_proba
+    elif problem_type == QUANTILE:
+        y_pred = y_pred_proba
+    else:
+        y_pred = []
+        if not len(y_pred_proba) == 0:
+            y_pred = np.argmax(y_pred_proba, axis=1)
+            return y_pred
+
+    y_pred = array_reshape(y_pred)
+    return y_pred
 
 def write_model_parameters_to_pickle(model_parameters: dict, path: str) -> None:
     """
@@ -66,7 +95,7 @@ def write_model_parameters_to_pickle(model_parameters: dict, path: str) -> None:
     write_pickle(os.path.join(path, FileConstants.MODEL_PARAMETERS_PKL.value), parameters)
 
 
-def array_from_tensor(tensor: Tensor) -> np.ndarray:
+def array_from_tensor(tensor) -> np.ndarray:
     """
     Converts a tensor to a numpy array.
 

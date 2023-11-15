@@ -44,14 +44,14 @@ class DNN(nn.Module):
 
         if len(self.hidden_sizes) != 0:
             out = self.fc_initial(x)
-            if self.batch_norm:
+            if self.batch_norm and x.shape[0] > 1:
                 out = self.batch_norm_initial(out)
             out = self.relu_initial(out)
             if self.dropout is not None:
                 out = self.dropout(out)
             for i in range(1, len(self.hidden_sizes)):
                 out = getattr(self, f"fc{i}")(out)
-                if self.batch_norm:
+                if self.batch_norm and x.shape[0] > 1:
                     out = getattr(self, f"batch_norm_layer{i}")(out)
                 out = getattr(self, f"relu{i}")(out)
                 if self.dropout is not None:
