@@ -52,7 +52,7 @@ class Model(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def _fit_data(self, train_dataset: Dataset, validation_dataset: Dataset):
+    def _fit_data(self, train_dataset: Dataset, validation_dataset: Dataset, **kwargs):
         """
         Fits the model to the data.
 
@@ -137,7 +137,7 @@ class Model(metaclass=ABCMeta):
         Returns the underlying model.
         """
 
-    def fit(self, train_dataset: Dataset, validation_dataset: Dataset = None) -> 'Model':
+    def fit(self, train_dataset: Dataset, validation_dataset: Dataset = None, **kwargs) -> 'Model':
         """
         Fits the model to the data.
 
@@ -152,7 +152,7 @@ class Model(metaclass=ABCMeta):
         -------
         self
         """
-        return self._fit_data(train_dataset, validation_dataset)
+        return self._fit_data(train_dataset, validation_dataset, **kwargs)
 
     def predict_proba(self, dataset: Dataset, **kwargs) -> np.ndarray:
         """

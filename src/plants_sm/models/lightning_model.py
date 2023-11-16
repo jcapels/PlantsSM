@@ -1,7 +1,7 @@
 from abc import abstractmethod
 import copy
 import os
-from typing import Dict
+from typing import Dict, Union
 from plants_sm.models.model import Model
 from plants_sm.data_structures.dataset.dataset import Dataset
 from plants_sm.parallelisation.torch_spawner import TorchSpawner
@@ -36,6 +36,9 @@ class LightningModelModule(L.LightningModule, Model):
         self.problem_type = problem_type
         self._contructor_parameters = {"problem_type": problem_type, 
                                        "batch_size": batch_size}
+        for name, parameter in self.named_parameters():
+            if name in self.no_grad:
+                parameter.requires_grad = False
 
         if isinstance(devices, list):
             self.ddp = True
@@ -62,7 +65,7 @@ class LightningModelModule(L.LightningModule, Model):
         x, y = batch
         logits = self(x)
         loss = self.compute_loss(logits, y)
-        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("train_loss", loss, on_epoch=True, prog_bar=True, logger=True)
         if self.metric is not None:
             predictions = _convert_proba_to_unified_form(self.problem_type, logits.detach().cpu().numpy())
             predictions = _get_pred_from_proba(self.problem_type, predictions)
@@ -74,7 +77,7 @@ class LightningModelModule(L.LightningModule, Model):
         inputs, target = batch
         output = self(inputs)
         loss = self.compute_loss(output, target)
-        self.log("val_loss", loss)
+        self.log("val_loss", loss, on_epoch=True, prog_bar=True, logger=True)
         if self.metric is not None:
             predictions = _convert_proba_to_unified_form(self.problem_type, output.detach().cpu().numpy())
             predictions = _get_pred_from_proba(self.problem_type, predictions)
@@ -128,7 +131,8 @@ class LightningModelModule(L.LightningModule, Model):
         return data_loader
 
 
-    def _fit_data(self, train_dataset: Dataset, validation_dataset: Dataset):
+    def _fit_data(self, train_dataset: Union[Dataset, TensorDataset], 
+                  validation_dataset: Union[Dataset, TensorDataset]):
         """
         Fits the model to the data.
 
@@ -139,15 +143,22 @@ class LightningModelModule(L.LightningModule, Model):
         validation_dataset: Dataset
             The dataset to validate the model on.
         """
-        train_dataset_loader = self._preprocess_data(train_dataset)
+        if isinstance(train_dataset, Dataset):
+            train_dataset_loader = self._preprocess_data(train_dataset)
+        else:
+            train_dataset_loader = train_dataset
+
         if validation_dataset is not None:
-            validation_dataloader = self._preprocess_data(validation_dataset, shuffle=False)
+            if isinstance(train_dataset, Dataset):
+                validation_dataloader = self._preprocess_data(validation_dataset, shuffle=False)
+            else:
+                validation_dataloader = validation_dataset
         if validation_dataset:
             self.trainer.fit(model=self, train_dataloaders=train_dataset_loader, val_dataloaders=validation_dataloader)
         else:
             self.trainer.fit(model=self, train_dataloaders=train_dataset_loader)
 
-    def _predict_proba(self, dataset: Dataset, trainer = L.Trainer(accelerator="cpu")) -> np.ndarray:
+    def _predict_proba(self, dataset: Union[Dataset, TensorDataset], trainer = L.Trainer(accelerator="cpu")) -> np.ndarray:
         """
         Predicts the probabilities of the classes.
 
@@ -161,14 +172,17 @@ class LightningModelModule(L.LightningModule, Model):
         np.ndarray
             The predicted probabilities.
         """
-        predict_dataloader = self._preprocess_data(dataset, shuffle=False)
+        if isinstance(dataset, Dataset):
+            predict_dataloader = self._preprocess_data(dataset, shuffle=False)
+        else:
+            predict_dataloader = dataset
 
         predictions = trainer.predict(self, predict_dataloader)
         predictions = torch.cat(predictions)
         return predictions
 
 
-    def _predict(self, dataset: Dataset, trainer = L.Trainer(accelerator="cpu")) -> np.ndarray:
+    def _predict(self, dataset: Union[Dataset, TensorDataset], trainer = L.Trainer(accelerator="cpu")) -> np.ndarray:
         """
         Predicts the classes.
 
