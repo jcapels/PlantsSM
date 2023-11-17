@@ -247,10 +247,6 @@ class EC_ESM_Lightning(LightningModelModule):
 
     def forward(self, data):
 
-        for name, parameter in self.named_parameters():
-            if not parameter.requires_grad:
-                print(name)
-
         output = self.esm_model(data, repr_layers=[self.layers])
         output = output["representations"][self.layers]
         output = output[:, 0, :]

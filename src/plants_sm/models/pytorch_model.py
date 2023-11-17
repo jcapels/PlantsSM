@@ -201,7 +201,7 @@ class PyTorchModel(Model):
         """
         weights_path = os.path.join(path, FileConstants.PYTORCH_MODEL_WEIGHTS.value)
         model = read_pickle(os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value))
-        model.load_state_dict(torch.load(weights_path))
+        model.load_state_dict(torch.load(weights_path, map_location=torch.device('cpu')))
         model.eval()
         return model
 
