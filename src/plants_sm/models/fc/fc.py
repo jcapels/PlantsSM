@@ -7,6 +7,7 @@ class DNN(nn.Module):
         self.batch_norm = batch_norm
 
         self.hidden_sizes = hidden_sizes
+        
         if len(hidden_sizes) != 0:
             self.fc_initial = nn.Linear(input_size, hidden_sizes[0])
             self.batch_norm_initial = nn.BatchNorm1d(hidden_sizes[0])

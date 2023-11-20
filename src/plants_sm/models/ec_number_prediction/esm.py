@@ -6,7 +6,7 @@ from tqdm import tqdm
 from plants_sm.featurization.proteins.bio_embeddings.constants import ESM_FUNCTIONS, ESM_LAYERS
 from plants_sm.models.fc.fc import DNN
 import lightning as L
-from plants_sm.models.lightning_model import LightningModelModule
+from plants_sm.models.lightning_model import InternalLightningModule
 
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -121,10 +121,10 @@ class ESM1Model(ProteinBertModel):
 
     def __init__(self, args, alphabet):
         super().__init__(args, alphabet)
-        # for param in self.parameters():
-        #     # Check if parameter dtype is  Half (float16)
-        #     if param.dtype == torch.float16:
-        #         param.data = param.data.to(torch.float32)
+        for param in self.parameters():
+            # Check if parameter dtype is  Half (float16)
+            if param.dtype == torch.float16:
+                param.data = param.data.to(torch.float32)
 
     def forward(self, tokens, repr_layers=[], need_head_weights=True, return_contacts=False):
         if return_contacts:
@@ -135,7 +135,6 @@ class ESM1Model(ProteinBertModel):
         padding_mask = tokens.eq(self.padding_idx)  # B, T
 
         x = self.embed_scale * self.embed_tokens(tokens)
-        x = x.float()
 
         if getattr(self.args, "token_dropout", False):
             x.masked_fill_((tokens == self.mask_idx).unsqueeze(-1), 0.0)
@@ -149,8 +148,6 @@ class ESM1Model(ProteinBertModel):
 
         if self.model_version == "ESM-1b":
             if self.emb_layer_norm_before:
-                self.emb_layer_norm_before.weight = self.emb_layer_norm_before.weight.float()
-                self.emb_layer_norm_before.bias = self.emb_layer_norm_before.bias.float()
                 x = self.emb_layer_norm_before(x)
             if padding_mask is not None:
                 x = x * (1 - padding_mask.unsqueeze(-1).type_as(x))
@@ -170,9 +167,6 @@ class ESM1Model(ProteinBertModel):
             padding_mask = None
 
         for layer_idx, layer in enumerate(self.layers):
-
-            layer.buffer_dtype = torch.float32
-            layer.compute_dtype = torch.float32
             x, attn = layer(
                 x, self_attn_padding_mask=padding_mask, need_head_weights=need_head_weights
             )
@@ -183,22 +177,12 @@ class ESM1Model(ProteinBertModel):
                 attn_weights.append(attn.transpose(1, 0))
 
         if self.model_version == "ESM-1b":
-            self.emb_layer_norm_after.weight = self.emb_layer_norm_after.weight.float()
-            self.emb_layer_norm_after.bias = self.emb_layer_norm_after.bias.float()
-            if x.shape[0] > 1:
-                x = self.emb_layer_norm_after(x)
+            x = self.emb_layer_norm_after(x)
             x = x.transpose(0, 1)  # (T, B, E) => (B, T, E)
 
             # last hidden representation should have layer norm applied
             if (layer_idx + 1) in repr_layers:
                 hidden_representations[layer_idx + 1] = x
-
-            self.lm_head.weight = self.lm_head.weight.float()
-            self.lm_head.bias = self.lm_head.bias.float()
-            self.lm_head.dense.weight = self.lm_head.dense.weight.float()
-            self.lm_head.dense.bias = self.lm_head.dense.bias.float()
-            self.lm_head.layer_norm.weight = self.lm_head.layer_norm.weight.float()
-            self.lm_head.layer_norm.bias = self.lm_head.layer_norm.bias.float()
             x = self.lm_head(x)
         else:
             x = F.linear(x, self.embed_out, bias=self.embed_out_bias)
@@ -212,7 +196,7 @@ class ESM1Model(ProteinBertModel):
                 # ESM-1 models have an additional null-token for attention, which we remove
                 attentions = attentions[..., :-1]
             if padding_mask is not None:
-                attention_mask = 1 - padding_mask(attentions)
+                attention_mask = 1 - padding_mask.type_as(attentions)
                 attention_mask = attention_mask.unsqueeze(1) * attention_mask.unsqueeze(2)
                 attentions = attentions * attention_mask[:, None, None, :, :]
             result["attentions"] = attentions
@@ -222,32 +206,33 @@ class ESM1Model(ProteinBertModel):
 
         return result
 
-class EC_ESM_Lightning(LightningModelModule):
+class EC_ESM_Lightning(InternalLightningModule):
 
-    def __init__(self, model_name, hidden_layers, num_classes, no_grad = [], **kwargs):
+    def __init__(self, model_name, hidden_layers, num_classes, **kwargs):
         super(EC_ESM_Lightning, self).__init__(**kwargs)
         self.model_name = model_name
         
-        self._contructor_parameters.update({"model_name": model_name, 
-                                      "hidden_layers": hidden_layers, 
-                                      "num_classes": num_classes})
+        # self._contructor_parameters.update({"model_name": model_name, 
+        #                               "hidden_layers": hidden_layers, 
+        #                               "num_classes": num_classes})
         esm_callable = ESM_FUNCTIONS[model_name]
         self.layers = ESM_LAYERS[model_name]
-        self.no_grad = no_grad
 
         model, self.alphabet = esm_callable()
 
         self.batch_converter = self.alphabet.get_batch_converter()
-        self.esm_model = ESM2Model(alphabet=self.alphabet, num_layers=model.num_layers, embed_dim=model.embed_dim,
-                              attention_heads=model.attention_heads, token_dropout=model.token_dropout)
+        # self.esm_model = ESM2Model(alphabet=self.alphabet, num_layers=model.num_layers, embed_dim=model.embed_dim,
+        #                       attention_heads=model.attention_heads, token_dropout=model.token_dropout)
+        
+        self.esm_model = model
 
-        self.esm_model.load_state_dict(model.state_dict())
+        # self.esm_model.load_state_dict(model.state_dict())
 
         self.dnn = DNN(model.embed_dim, hidden_layers, num_classes, batch_norm=True, last_sigmoid=True)
 
     def forward(self, data):
 
-        output = self.esm_model(data, repr_layers=[self.layers])
+        output = self.esm_model(data, repr_layers=[self.layers], need_head_weights=True)
         output = output["representations"][self.layers]
         output = output[:, 0, :]
         x = self.dnn([output])
@@ -264,6 +249,34 @@ class EC_ESM_Lightning(LightningModelModule):
     def contructor_parameters(self):
         return self._contructor_parameters
     
+class EC_ESM1b_Lightning(InternalLightningModule):
+    def __init__(self, hidden_layers, num_classes, **kwargs):
+        super(EC_ESM1b_Lightning, self).__init__(**kwargs)
+        esm_callable = ESM_FUNCTIONS["esm1b_t33_650M_UR50S"]
+        self.layers = ESM_LAYERS["esm1b_t33_650M_UR50S"]
+
+        model, self.alphabet = esm_callable()
+
+        self.batch_converter = self.alphabet.get_batch_converter()
+        self.esm_model = ESM1Model(model.args, alphabet=self.alphabet)
+
+        self.esm_model.load_state_dict(model.state_dict())
+
+        self.dnn = DNN(1280, hidden_layers, num_classes, batch_norm=False, last_sigmoid=True)
+
+    def forward(self, data):
+        output = self.esm_model(data, repr_layers=[self.layers])
+        output = output["representations"][self.layers]
+        output = output[:, 0, :]
+        x = self.dnn([output])
+        return x
+    
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.trainer.model.parameters(), lr=1e-3)
+    
+    def compute_loss(self, logits, targets):
+        return nn.BCELoss()(logits, targets)
+
     def _preprocess_data(self, dataset: Dataset, shuffle: bool = True) -> DataLoader:
         tensors = []
         sequences = [(sequence_id, dataset.instances[PLACEHOLDER_FIELD][sequence_id]) for sequence_id in
@@ -316,33 +329,4 @@ class EC_ESM_Lightning(LightningModelModule):
             batch_size=self.batch_size
         )
         return data_loader
-    
-    
-class EC_ESM1b_Lightning(LightningModelModule):
-    def __init__(self, hidden_layers, num_classes):
-        super(EC_ESM1b_Lightning, self).__init__()
-        esm_callable = ESM_FUNCTIONS["esm1b_t33_650M_UR50S"]
-        self.layers = ESM_LAYERS["esm1b_t33_650M_UR50S"]
-
-        model, self.alphabet = esm_callable()
-
-        self.batch_converter = self.alphabet.get_batch_converter()
-        self.esm_model = ESM1Model(model.args, alphabet=self.alphabet)
-
-        self.esm_model.load_state_dict(model.state_dict())
-
-        self.dnn = DNN(1280, hidden_layers, num_classes, batch_norm=True, last_sigmoid=True)
-
-    def forward(self, data):
-        output = self.esm_model(data, repr_layers=[self.layers])
-        output = output["representations"][self.layers]
-        output = output[:, 0, :]
-        x = self.dnn([output])
-        return x
-    
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.trainer.model.parameters(), lr=1e-3)
-    
-    def compute_loss(self, logits, targets):
-        return nn.BCELoss()(logits, targets)
     

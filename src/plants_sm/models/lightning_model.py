@@ -18,76 +18,24 @@ from plants_sm.models._utils import _convert_proba_to_unified_form, \
 
 import numpy as np
 
-class LightningModelModule(L.LightningModule, Model):
+class InternalLightningModel(Model):
 
-    def __init__(self, metric: callable = None, problem_type = BINARY, 
-                 batch_size: int = 32, devices="cpu", **trainer_kwargs):
-        """
-        Initializes the model.
-
-        Parameters
-        ----------
-        batch_size: int
-            The batch size to use.
-        """
+    def __init__(self, module, batch_size: int = 32, devices="cpu", **trainer_kwargs) -> None:
         super().__init__()
-        self.metric = metric
-        self.batch_size = batch_size
-        self.problem_type = problem_type
-        self._contructor_parameters = {"problem_type": problem_type, 
-                                       "batch_size": batch_size}
-        for name, parameter in self.named_parameters():
-            if name in self.no_grad:
-                parameter.requires_grad = False
 
+        self.module = module
+        self.batch_size = batch_size
+        # self._contructor_parameters = {"problem_type": problem_type, 
+        #                                "batch_size": batch_size}
         if isinstance(devices, list):
             self.ddp = True
-            self.trainer = L.Trainer(devices=devices, **trainer_kwargs)
+            self.user_trainer = L.Trainer(devices=devices, **trainer_kwargs)
         else:
             self.ddp = False
-            self.trainer = L.Trainer(**trainer_kwargs)
+            self.user_trainer = L.Trainer(**trainer_kwargs)
 
         self.devices = devices
 
-    @abstractmethod
-    def forward(self, x):
-        pass
-
-    @abstractmethod
-    def configure_optimizers(self):
-        pass
-
-    @abstractmethod
-    def compute_loss(self, batch, stage=None):
-        pass
-
-    def training_step(self, batch, batch_idx):
-        x, y = batch
-        logits = self(x)
-        loss = self.compute_loss(logits, y)
-        self.log("train_loss", loss, on_epoch=True, prog_bar=True, logger=True)
-        if self.metric is not None:
-            predictions = _convert_proba_to_unified_form(self.problem_type, logits.detach().cpu().numpy())
-            predictions = _get_pred_from_proba(self.problem_type, predictions)
-            self.log("train_metric", self.metric(predictions, y.detach().cpu().numpy()), 
-                     on_epoch=True, prog_bar=True, logger=True)
-        return loss
-    
-    def validation_step(self, batch, batch_idx):
-        inputs, target = batch
-        output = self(inputs)
-        loss = self.compute_loss(output, target)
-        self.log("val_loss", loss, on_epoch=True, prog_bar=True, logger=True)
-        if self.metric is not None:
-            predictions = _convert_proba_to_unified_form(self.problem_type, output.detach().cpu().numpy())
-            predictions = _get_pred_from_proba(self.problem_type, predictions)
-            self.log("val_metric", self.metric(predictions, target.detach().cpu().numpy()),
-                     on_epoch=True, prog_bar=True, logger=True)
-
-    def predict_step(self, batch):
-        inputs, target = batch
-        return self(inputs)
-    
     def _preprocess_data(self, dataset: Dataset, shuffle: bool = True) -> Dataset:
         """
         Preprocesses the data.
@@ -154,9 +102,9 @@ class LightningModelModule(L.LightningModule, Model):
             else:
                 validation_dataloader = validation_dataset
         if validation_dataset:
-            self.trainer.fit(model=self, train_dataloaders=train_dataset_loader, val_dataloaders=validation_dataloader)
+            self.user_trainer.fit(model=self.module, train_dataloaders=train_dataset_loader, val_dataloaders=validation_dataloader)
         else:
-            self.trainer.fit(model=self, train_dataloaders=train_dataset_loader)
+            self.user_trainer.fit(model=self.module, train_dataloaders=train_dataset_loader)
 
     def _predict_proba(self, dataset: Union[Dataset, TensorDataset], trainer = L.Trainer(accelerator="cpu")) -> np.ndarray:
         """
@@ -177,7 +125,7 @@ class LightningModelModule(L.LightningModule, Model):
         else:
             predict_dataloader = dataset
 
-        predictions = trainer.predict(self, predict_dataloader)
+        predictions = trainer.predict(self.module, predict_dataloader)
         predictions = torch.cat(predictions)
         return predictions
 
@@ -237,3 +185,48 @@ class LightningModelModule(L.LightningModule, Model):
         """
         Returns the underlying model.
         """
+
+
+class InternalLightningModule(L.LightningModule):
+
+    def __init__(self, problem_type: str = BINARY, metric = None):
+        """
+        Initializes the model.
+
+        Parameters
+        ----------
+        batch_size: int
+            The batch size to use.
+        """
+        super().__init__()
+        self.problem_type = problem_type
+        self.metric = metric
+        
+
+    def training_step(self, batch, batch_idx):
+        x, y = batch
+        logits = self(x)
+        loss = self.compute_loss(logits, y)
+        self.log("train_loss", loss, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        if self.metric is not None:
+            predictions = _convert_proba_to_unified_form(self.problem_type, logits.detach().cpu().numpy())
+            predictions = _get_pred_from_proba(self.problem_type, predictions)
+            self.log("train_metric", self.metric(y.detach().cpu().numpy(), predictions), 
+                     on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        return loss
+    
+    def validation_step(self, batch, batch_idx):
+        inputs, target = batch
+        output = self(inputs)
+        loss = self.compute_loss(output, target)
+        self.log("val_loss", loss, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        if self.metric is not None:
+            predictions = _convert_proba_to_unified_form(self.problem_type, output.detach().cpu().numpy())
+            predictions = _get_pred_from_proba(self.problem_type, predictions)
+            self.log("val_metric", self.metric(target.detach().cpu().numpy(), predictions),
+                     on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+
+    def predict_step(self, batch):
+        inputs, target = batch
+        return self(inputs)
+    
