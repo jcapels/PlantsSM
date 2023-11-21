@@ -78,6 +78,7 @@ class ESMEncoder(Transformer):
             
             if self.num_gpus is not None and self.device == "cpu":
                 self.device = "cuda"
+                
             self.model = model
             self.batch_converter = self.alphabet.get_batch_converter()
 
