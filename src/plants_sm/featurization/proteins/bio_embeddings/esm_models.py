@@ -17,8 +17,8 @@ class ESM2Model(ESM2):
                  devices=None) -> None:
         self.is_ddf = is_ddf
         self.num_gpus = num_gpus
-        if devices is None:
-            self.devices = [torch.cuda.device(i) for i in range(num_gpus)]
+        if devices is None and num_gpus is not None:
+            self.devices = [f"cuda:{i}" for i in range(num_gpus)]
         else:
             self.devices = devices
         super().__init__(num_layers, embed_dim, attention_heads, alphabet, token_dropout)
@@ -33,6 +33,7 @@ class ESM2Model(ESM2):
         assert tokens.ndim == 2
         padding_mask = tokens.eq(self.padding_idx)  # B, T
 
+        self.embed_tokens = self.embed_tokens.to(tokens.device)
         x = self.embed_scale * self.embed_tokens(tokens)
 
         if self.token_dropout:
@@ -66,11 +67,14 @@ class ESM2Model(ESM2):
         for layer_idx, layer in enumerate(self.layers):
             if self.is_ddf:
                 gpu = gpus[i % len(gpus)]
-                x.to(gpu)
+                x.to(gpu, dtype=torch.float32)
                 layer.to(gpu)
-            else:
+            elif self.num_gpus == 0:
                 x = x.to("cpu")
                 layer = layer.to("cpu")
+            else:
+                x = x.to("cuda")
+                layer = layer.to("cuda")
 
             x, attn = layer(
                 x,
@@ -89,9 +93,12 @@ class ESM2Model(ESM2):
             gpu = gpus[i % len(gpus)]
             x.to(gpu)
             self.emb_layer_norm_after.to(gpu)
-        else:
+        elif self.num_gpus == 0:
             x = x.to("cpu")
             self.emb_layer_norm_after = self.emb_layer_norm_after.to("cpu")
+        else:
+            x = x.to("cuda")
+            self.emb_layer_norm_after = self.emb_layer_norm_after.to("cuda")
 
         i += 1
         x = self.emb_layer_norm_after(x)
@@ -105,9 +112,12 @@ class ESM2Model(ESM2):
             gpu = gpus[i % len(gpus)]
             x.to(gpu)
             self.lm_head.to(gpu)
-        else:
+        elif self.num_gpus == 0:
             x = x.to("cpu")
             self.lm_head = self.lm_head.to("cpu")
+        else:
+            x = x.to("cuda")
+            self.lm_head = self.lm_head.to("cuda")
         i += 1
         x = self.lm_head(x)
 

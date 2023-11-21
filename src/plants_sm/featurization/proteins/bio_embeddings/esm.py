@@ -13,6 +13,8 @@ from fairscale.nn.wrap import enable_wrap, wrap
 
 import torch
 
+from esm.pretrained import load_model_and_alphabet_local
+
 
 class ESMEncoder(Transformer):
     """
@@ -40,6 +42,7 @@ class ESMEncoder(Transformer):
     num_gpus: int = None
     output_dim: int = 2
     return_contacts: bool = False
+    model_path: str = None
 
     def set_features_names(self):
         """
@@ -68,11 +71,17 @@ class ESMEncoder(Transformer):
             esm_callable = ESM_FUNCTIONS[self.esm_function]
             self.layers = ESM_LAYERS[self.esm_function]
 
-            model, self.alphabet = esm_callable()
+            if self.model_path is not None:
+                model, self.alphabet = load_model_and_alphabet_local(self.model_path)
+            else:
+                model, self.alphabet = esm_callable()
+            
+            if self.num_gpus is not None and self.device == "cpu":
+                self.device = "cuda"
             self.model = model.to(self.device)
             self.batch_converter = self.alphabet.get_batch_converter()
 
-            if self.num_gpus is not None:
+            if self.num_gpus is not None and self.num_gpus > 1:
                 self.is_ddf = True
             else:
                 self.num_gpus = 0
@@ -93,7 +102,8 @@ class ESMEncoder(Transformer):
                              batch_size: int,
                              batch_converter: callable,
                              output_dim: int,
-                             is_ddf: bool):
+                             is_ddf: bool,
+                             device: str = "cpu"):
         """
         Generate the ESM model.
 
@@ -151,7 +161,7 @@ class ESMEncoder(Transformer):
                 if is_ddf:
                     batch_tokens = batch_tokens.cuda()
                 else:
-                    batch_tokens = batch_tokens.to("cpu")
+                    batch_tokens = batch_tokens.to(device)
 
                 with torch.no_grad():
                     results = model(batch_tokens, repr_layers=[layers], return_contacts=False)
@@ -180,7 +190,7 @@ class ESMEncoder(Transformer):
             if is_ddf:
                 batch_tokens = batch_tokens.cuda()
             else:
-                batch_tokens = batch_tokens.to("cpu")
+                batch_tokens = batch_tokens.to(device)
 
             results = model(batch_tokens, repr_layers=[layers], return_contacts=False)
             results["representations"][layers] = results["representations"][layers].cpu().detach().numpy()
@@ -239,7 +249,8 @@ class ESMEncoder(Transformer):
                                      batch_size=self.batch_size,
                                      batch_converter=self.batch_converter,
                                      output_dim=self.output_dim,
-                                     is_ddf=self.is_ddf)
+                                     is_ddf=self.is_ddf,
+                                     device=self.device)
 
         else:
             res = self._generate_esm2_model(model,
@@ -248,7 +259,8 @@ class ESMEncoder(Transformer):
                                             batch_size=self.batch_size,
                                             batch_converter=self.batch_converter,
                                             output_dim=self.output_dim,
-                                            is_ddf=self.is_ddf)
+                                            is_ddf=self.is_ddf,
+                                            device=self.device)
 
         dataset.add_features(instance_type, dict(res))
 

@@ -240,10 +240,11 @@ class EC_ESM_Lightning(InternalLightningModule):
         return x
     
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-5)
         return optimizer
     
     def compute_loss(self, logits, targets):
+        targets = targets.unsqueeze(0)
         return nn.BCELoss()(logits, targets)
     
     def contructor_parameters(self):
