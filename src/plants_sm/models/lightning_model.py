@@ -25,8 +25,6 @@ class InternalLightningModel(Model):
 
         self.module = module
         self.batch_size = batch_size
-        # self._contructor_parameters = {"problem_type": problem_type, 
-        #                                "batch_size": batch_size}
         if isinstance(devices, list):
             self.ddp = True
             self.user_trainer = L.Trainer(devices=devices, **trainer_kwargs)
@@ -145,8 +143,8 @@ class InternalLightningModel(Model):
             The predicted classes.
         """
         predictions = self._predict_proba(dataset, trainer)
-        predictions = _convert_proba_to_unified_form(self.problem_type, np.array(predictions))
-        predictions = _get_pred_from_proba(self.problem_type, predictions)
+        predictions = _convert_proba_to_unified_form(self.module.problem_type, np.array(predictions))
+        predictions = _get_pred_from_proba(self.module.problem_type, predictions)
         return predictions
     
     @classmethod
@@ -163,7 +161,7 @@ class InternalLightningModel(Model):
         model = read_pickle(os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value))
         model_parameters = read_pickle(os.path.join(path, FileConstants.MODEL_PARAMETERS_PKL.value))
         model = model.load_from_checkpoint(weights_path,**model_parameters)
-        model = cls(**model_parameters)
+        model = cls(module=model)
         return model
 
     def _save(self, path: str):
@@ -176,9 +174,9 @@ class InternalLightningModel(Model):
             The path to save the model to.
         """
         weights_path = os.path.join(path, "pytorch_model_weights.ckpt")
-        self.trainer.save_checkpoint(weights_path)
-        write_pickle(os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value), self.__class__)
-        write_model_parameters_to_pickle(self._contructor_parameters, path)
+        self.user_trainer.save_checkpoint(weights_path)
+        write_pickle(os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value), self.module.__class__)
+        write_model_parameters_to_pickle(self.module._contructor_parameters, path)
 
     @property
     def history(self):
@@ -201,31 +199,70 @@ class InternalLightningModule(L.LightningModule):
         super().__init__()
         self.problem_type = problem_type
         self.metric = metric
-        
 
+        self._contructor_parameters = { "problem_type": problem_type }
+
+        self.training_step_outputs = []
+        self.validation_step_outputs = []
+        self.training_step_y_true = []
+        self.validation_step_y_true = []
+        self.epoch_losses = []
+
+    @abstractmethod
+    def compute_loss(self, logits, y):
+        pass
+        
     def training_step(self, batch, batch_idx):
         x, y = batch
         logits = self(x)
         loss = self.compute_loss(logits, y)
-        self.log("train_loss", loss, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
-        if self.metric is not None:
-            predictions = _convert_proba_to_unified_form(self.problem_type, logits.detach().cpu().numpy())
-            predictions = _get_pred_from_proba(self.problem_type, predictions)
-            self.log("train_metric", self.metric(y.detach().cpu().numpy(), predictions), 
-                     on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        
+        self.training_step_outputs.append(logits)
+        self.training_step_y_true.append(y)
+        self.epoch_losses.append(loss.item())
+        self.log("train_loss", np.average(np.array(self.epoch_losses)), on_epoch=True, 
+                 prog_bar=True, logger=True, sync_dist=True)
         return loss
     
     def validation_step(self, batch, batch_idx):
         inputs, target = batch
         output = self(inputs)
-        loss = self.compute_loss(output, target)
-        self.log("val_loss", loss, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
-        if self.metric is not None:
-            predictions = _convert_proba_to_unified_form(self.problem_type, output.detach().cpu().numpy())
-            predictions = _get_pred_from_proba(self.problem_type, predictions)
-            self.log("val_metric", self.metric(target.detach().cpu().numpy(), predictions),
-                     on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        self.validation_step_outputs.append(output)
+        self.validation_step_y_true.append(target)
 
+    def on_train_epoch_end(self) -> None:
+
+        if self.metric is not None:
+
+            predictions = _convert_proba_to_unified_form(self.problem_type, torch.cat(self.training_step_outputs).detach().cpu().numpy())
+            predictions = _get_pred_from_proba(self.problem_type, predictions)
+            self.log("train_metric", self.metric(torch.cat(self.training_step_y_true).detach().cpu().numpy(), predictions), 
+                     on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+        
+        self.training_step_outputs = []
+        self.training_step_y_true = []
+        self.epoch_losses = []
+
+        return super().on_train_epoch_end()
+    
+    def on_validation_epoch_end(self) -> None:
+
+        loss = self.compute_loss(torch.cat(self.validation_step_outputs), 
+                                 torch.cat(self.validation_step_y_true))
+        self.log("val_loss", loss, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+
+        if self.metric is not None:
+            predictions = _convert_proba_to_unified_form(self.problem_type, torch.cat(self.validation_step_outputs).detach().cpu().numpy())
+            predictions = _get_pred_from_proba(self.problem_type, predictions)
+            self.log("val_metric", self.metric(torch.cat(self.validation_step_y_true).detach().cpu().numpy(), predictions),
+                    on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
+
+        self.validation_step_outputs = []
+        self.validation_step_y_true = []
+
+        return super().on_validation_epoch_end()
+
+    
     def predict_step(self, batch):
         inputs, target = batch
         return self(inputs)

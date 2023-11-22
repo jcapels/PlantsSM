@@ -11,6 +11,12 @@ from torch.utils.data import TensorDataset
 
 class ESM(InternalLightningModel):
 
+    def __init__(self, module, batch_size: int = 32, devices="cpu", **trainer_kwargs) -> None:
+
+        self.model_name = module.model_name
+
+        super().__init__(module, batch_size, devices, **trainer_kwargs)
+
     def _preprocess_data(self, dataset: Dataset, shuffle: bool = True) -> DataLoader:
 
         tensors = []

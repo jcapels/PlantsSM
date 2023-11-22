@@ -97,7 +97,7 @@ class FreezeUnfreezeModules(BaseFinetuning):
         pass
 
 if __name__=="__main__":
-    # train_dataset = SingleInputDataset.from_csv("../../final_data/train.csv", representation_field="sequence", instances_ids_field="accession", labels_field=slice(8, 2779))
+    # train_dataset = SingleInputDataset.from_csv("/home/jcapela/final_data/train_shuffle.csv", representation_field="sequence", instances_ids_field="accession", labels_field=slice(8, 2779))
     # train_dataset = Truncator(max_length=884).fit_transform(train_dataset)
 
     # validation_dataset = SingleInputDataset.from_csv("../../final_data/validation.csv", representation_field="sequence", instances_ids_field="accession", labels_field=slice(8, 2779))
@@ -108,12 +108,12 @@ if __name__=="__main__":
     # validation_dataset = _preprocess_data(validation_dataset, "esm2_t6_8M_UR50D")
     # torch.save(validation_dataset, '/home/jcapela/PlantsSM/examples/tensor_validation_dataset.pt')
 
-    sharding_strategy="FULL_SHARD"
-    limit_all_gathers=True
-    cpu_offload=True
+    # sharding_strategy="FULL_SHARD"
+    # limit_all_gathers=True
+    # cpu_offload=True
     callbacks = EarlyStopping("val_metric", patience=5, mode="max")
 
-    strategy = FSDPStrategy(sharding_strategy=sharding_strategy, limit_all_gathers=limit_all_gathers, cpu_offload=cpu_offload)
+    # strategy = FSDPStrategy(sharding_strategy=sharding_strategy, limit_all_gathers=limit_all_gathers, cpu_offload=cpu_offload)
     
 
     tensor_train_dataset = torch.load('/home/jcapela/PlantsSM/examples/tensor_train_dataset.pt', map_location=torch.device('cpu'))
@@ -122,12 +122,14 @@ if __name__=="__main__":
     tensor_train_dataset = DataLoader(
             tensor_train_dataset,
             shuffle=True,
-            batch_size=6
+            batch_size=6,
+            num_workers=9
         )
     tensor_validation_dataset = DataLoader(
             tensor_validation_dataset,
             shuffle=False,
-            batch_size=6
+            batch_size=6,
+            num_workers=9
         )
 
     # model = EC_ESM_Lightning("esm2_t12_35M_UR50D", [2560, 5120], 2771, batch_size=2)
@@ -139,21 +141,21 @@ if __name__=="__main__":
     #         no_grad.add(parameter[0])
 
     model = EC_ESM_Lightning("esm2_t6_8M_UR50D",[2560, 5120], 2771, metric=f1_score_macro)
-    model_ = ESM(module=model, 
-                    max_epochs=30,
+    model_ = ESM(module=model,
+                    max_epochs=10,
                     batch_size=1,
-                    devices=[1,2, 4, 5, 6, 7],
+                    devices=[0, 1, 2, 3, 4, 5, 6, 7],
                     accelerator="gpu",
-                    strategy=strategy,
+                    strategy="fsdp",
                     callbacks=[callbacks])
     model_.fit(tensor_train_dataset, validation_dataset=tensor_validation_dataset)
+    # model_.fit(train_dataset, validation_dataset=train_dataset)
     
-    # model.fit(train_dataset, validation_dataset=validation_dataset)
-    # model.save("test_model")
+    model_.save("test_model")
 
     # model = EC_ESM_Lightning.load_from_checkpoint("/home/jcapela/PlantsSM/examples/test_model/pytorch_model_weights.ckpt",
     #                                             model_name="esm2_t12_35M_UR50D", hidden_layers=[2560, 5120], num_classes=2771, 
     #                                             batch_size=16)
-    # model = EC_ESM_Lightning.load("/home/jcapela/PlantsSM/examples/test_model/")
-    # print(model.predict(dataset, trainer = L.Trainer(accelerator="cuda")))
+    # model = ESM.load("/home/jcapela/PlantsSM/test_model/")
+    # print(model.predict(train_dataset, trainer = L.Trainer(accelerator="cpu")))
 
