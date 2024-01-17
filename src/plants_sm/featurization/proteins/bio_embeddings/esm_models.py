@@ -154,7 +154,7 @@ class ESM1Model(ProteinBertModel):
         self.is_ddf = is_ddf
         self.num_gpus = num_gpus
         if devices is None:
-            self.devices = [torch.cuda.device(i) for i in range(num_gpus)]
+            self.devices = [f"cuda:{i}" for i in range(num_gpus)]
         else:
             self.devices = devices
         for param in self.parameters():
@@ -169,6 +169,8 @@ class ESM1Model(ProteinBertModel):
         assert tokens.ndim == 2
         padding_mask = tokens.eq(self.padding_idx)  # B, T
 
+        self.embed_tokens = self.embed_tokens.to(tokens.device)
+
         x = self.embed_scale * self.embed_tokens(tokens)
         x = x.float()
 
@@ -180,6 +182,7 @@ class ESM1Model(ProteinBertModel):
             mask_ratio_observed = (tokens == self.mask_idx).sum(-1).float() / src_lengths
             x = x * (1 - mask_ratio_train) / (1 - mask_ratio_observed)[:, None, None]
 
+        self.embed_positions = self.embed_positions.to(tokens.device)
         x = x + self.embed_positions(tokens)
 
         if self.is_ddf:
@@ -193,9 +196,12 @@ class ESM1Model(ProteinBertModel):
                     x = x.to(gpu)
                     self.emb_layer_norm_before.to(gpu)
                     i += 1
-                else:
+                elif self.num_gpus == 0:
                     x = x.to("cpu")
-                    self.emb_layer_norm_before.to("cpu")
+                    self.emb_layer_norm_before = self.emb_layer_norm_before.to("cpu")
+                else:
+                    x = x.to("cuda")
+                    self.emb_layer_norm_before = self.emb_layer_norm_before.to("cuda")
                 self.emb_layer_norm_before.weight = self.emb_layer_norm_before.weight.float()
                 self.emb_layer_norm_before.bias = self.emb_layer_norm_before.bias.float()
                 x = self.emb_layer_norm_before(x)
@@ -221,19 +227,23 @@ class ESM1Model(ProteinBertModel):
             if self.is_ddf:
                 gpu = gpus[i % len(gpus)]
                 x = x.to(gpu)
-                layer = layer.to(gpu)
-                padding_mask = padding_mask.to(gpu)
+                layer.to(gpu)
+                if padding_mask is not None:
+                    padding_mask = padding_mask.to(gpu)
                 i += 1
-            else:
-                x.to("cpu")
+            elif self.num_gpus == 0:
+                x = x.to("cpu")
                 layer.to("cpu")
-                padding_mask.to("cpu")
+                if padding_mask is not None:
+                    padding_mask = padding_mask.to("cpu")
+            else:
+                x = x.to("cuda")
+                layer.to("cuda")
+                if padding_mask is not None:
+                    padding_mask = padding_mask.to("cuda")
 
             layer.buffer_dtype = torch.float32
             layer.compute_dtype = torch.float32
-            # print(x.device)
-            # print(next(layer.parameters()).device)
-            # print(padding_mask.device)
             x, attn = layer(
                 x, self_attn_padding_mask=padding_mask, need_head_weights=need_head_weights
             )
@@ -249,9 +259,12 @@ class ESM1Model(ProteinBertModel):
                 x = x.to(gpu)
                 self.emb_layer_norm_after.to(gpu)
                 i += 1
+            elif self.num_gpus == 0:
+                x = x.to("cpu")
+                self.emb_layer_norm_after = self.emb_layer_norm_after.to("cpu")
             else:
-                x.to("cpu")
-                self.emb_layer_norm_after.to("cpu")
+                x = x.to("cuda")
+                self.emb_layer_norm_after = self.emb_layer_norm_after.to("cuda")
 
             self.emb_layer_norm_after.weight = self.emb_layer_norm_after.weight.float()
             self.emb_layer_norm_after.bias = self.emb_layer_norm_after.bias.float()
@@ -267,9 +280,12 @@ class ESM1Model(ProteinBertModel):
                 x = x.to(gpu)
                 self.lm_head.to(gpu)
                 i += 1
+            elif self.num_gpus == 0:
+                x = x.to("cpu")
+                self.lm_head = self.lm_head.to("cpu")
             else:
-                x.to("cpu")
-                self.lm_head.to("cpu")
+                x = x.to("cuda")
+                self.lm_head = self.lm_head.to("cuda")
 
             self.lm_head.weight = self.lm_head.weight.float()
             self.lm_head.bias = self.lm_head.bias.float()

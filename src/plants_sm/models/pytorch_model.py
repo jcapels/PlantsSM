@@ -1,6 +1,8 @@
+import io
 import logging
 import os
 from logging.handlers import TimedRotatingFileHandler
+import pickle
 from typing import Callable, Union, Tuple, List, Dict
 
 import numpy as np
@@ -200,7 +202,16 @@ class PyTorchModel(Model):
         torch.nn.Module
         """
         weights_path = os.path.join(path, FileConstants.PYTORCH_MODEL_WEIGHTS.value)
-        model = read_pickle(os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value))
+        try:
+            model = read_pickle(os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value))
+        except RuntimeError:
+            class CPU_Unpickler(pickle.Unpickler):
+                def find_class(self, module, name):
+                    if module == 'torch.storage' and name == '_load_from_bytes':
+                        return lambda b: torch.load(io.BytesIO(b), map_location='cpu')
+                    else: return super().find_class(module, name)
+            with open(os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value), "rb") as f:
+                model = CPU_Unpickler(f).load()
         model.load_state_dict(torch.load(weights_path, map_location=torch.device('cpu')))
         model.eval()
         return model

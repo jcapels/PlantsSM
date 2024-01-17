@@ -81,7 +81,8 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             # the dataframe setter will derive the instance ids field if it is None
             # and also will try to set the features names
             self.dataframe = dataframe
-
+            self._identifiers = self.dataframe[self.instances_ids_field].values
+            self.dataframe.index = self.identifiers
             if labels_field is not None:
 
                 if isinstance(labels_field, slice):
@@ -113,6 +114,9 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             else:
                 self._features = {}
 
+            # set the index of the dataframe to the instances ids field
+            # self._dataframe.set_index(self.instances_ids_field, inplace=True)
+
             self.dataframe.drop(self.representation_field, axis=1, inplace=True)
             if self.batch_size is not None:
                 while next(self):
@@ -121,6 +125,12 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                 self.next_batch()
 
         # in the case that the dataframe is None and the features field is not None, the features names will be set
+    
+    def __len__(self):
+        return len(self.instances[PLACEHOLDER_FIELD])
+
+    def __getitem__(self, idx):
+        return self.instances[PLACEHOLDER_FIELD][idx], self.dataframe.loc[idx, self._labels_names].values
 
     @classmethod
     def from_csv(cls, file_path: FilePathOrBuffer, representation_field: Union[str, None] = None,

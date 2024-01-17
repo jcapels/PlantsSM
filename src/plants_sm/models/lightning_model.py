@@ -27,10 +27,10 @@ class InternalLightningModel(Model):
         self.batch_size = batch_size
         if isinstance(devices, list):
             self.ddp = True
-            self.user_trainer = L.Trainer(devices=devices, **trainer_kwargs)
+            self.trainer = L.Trainer(devices=devices, **trainer_kwargs)
         else:
             self.ddp = False
-            self.user_trainer = L.Trainer(**trainer_kwargs)
+            self.trainer = L.Trainer(**trainer_kwargs)
 
         self.devices = devices
 
@@ -100,9 +100,9 @@ class InternalLightningModel(Model):
             else:
                 validation_dataloader = validation_dataset
         if validation_dataset:
-            self.user_trainer.fit(model=self.module, train_dataloaders=train_dataset_loader, val_dataloaders=validation_dataloader)
+            self.trainer.fit(model=self.module, train_dataloaders=train_dataset_loader, val_dataloaders=validation_dataloader)
         else:
-            self.user_trainer.fit(model=self.module, train_dataloaders=train_dataset_loader)
+            self.trainer.fit(model=self.module, train_dataloaders=train_dataset_loader)
 
     def _predict_proba(self, dataset: Union[Dataset, TensorDataset], trainer = L.Trainer(accelerator="cpu")) -> np.ndarray:
         """
@@ -174,7 +174,7 @@ class InternalLightningModel(Model):
             The path to save the model to.
         """
         weights_path = os.path.join(path, "pytorch_model_weights.ckpt")
-        self.user_trainer.save_checkpoint(weights_path)
+        self.trainer.save_checkpoint(weights_path)
         write_pickle(os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value), self.module.__class__)
         write_model_parameters_to_pickle(self.module._contructor_parameters, path)
 
@@ -216,17 +216,23 @@ class InternalLightningModule(L.LightningModule):
         x, y = batch
         logits = self(x)
         loss = self.compute_loss(logits, y)
+
+        print(type(y))
+        print(type(logits))
         
         self.training_step_outputs.append(logits)
         self.training_step_y_true.append(y)
-        self.epoch_losses.append(loss.item())
-        self.log("train_loss", np.average(np.array(self.epoch_losses)), on_epoch=True, 
+        self.log("train_loss", loss.item(), on_epoch=True, 
                  prog_bar=True, logger=True, sync_dist=True)
         return loss
     
     def validation_step(self, batch, batch_idx):
         inputs, target = batch
         output = self(inputs)
+
+        print(type(output))
+        print(type(target))
+
         self.validation_step_outputs.append(output)
         self.validation_step_y_true.append(target)
 
@@ -241,9 +247,6 @@ class InternalLightningModule(L.LightningModule):
         
         self.training_step_outputs = []
         self.training_step_y_true = []
-        self.epoch_losses = []
-
-        return super().on_train_epoch_end()
     
     def on_validation_epoch_end(self) -> None:
 
@@ -259,8 +262,6 @@ class InternalLightningModule(L.LightningModule):
 
         self.validation_step_outputs = []
         self.validation_step_y_true = []
-
-        return super().on_validation_epoch_end()
 
     
     def predict_step(self, batch):
