@@ -23,7 +23,6 @@ SmilesPE==0.0.3
 fair-esm==1.0.3
 cached-property==1.5.2
 deepmol[all]==1.1.1
-plotly==5.11.0
 seaborn==0.12.0
 tensorboard==2.14.0
 tensorflow==2.14.0
