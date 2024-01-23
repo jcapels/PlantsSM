@@ -1,7 +1,8 @@
 import torch
-from tensorflow.python.keras import Input
-from tensorflow.python.keras.layers import Dense
-from tensorflow.python.keras.models import Model
+
+from tensorflow.keras import Input
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.models import Model
 from torch import nn
 
 

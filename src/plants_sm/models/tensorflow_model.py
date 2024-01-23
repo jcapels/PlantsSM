@@ -1,8 +1,7 @@
 import os
-from typing import Union, Iterable
+from typing import Union
 
 import numpy as np
-from keras.callbacks import History
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.io.pickle import read_pickle
@@ -187,7 +186,7 @@ class TensorflowModel(Model):
         return cls(model, **parameters)
 
     @property
-    def history(self) -> Union[dict, History, None]:
+    def history(self) -> Union[dict, any, None]:
         """
         Get the history of the model.
 

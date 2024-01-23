@@ -12,7 +12,7 @@ class TestDatasetDeepMol(TestDataset):
 
         self.assertEqual(dataset.dataframe.shape[0], 2)
         self.assertEqual(dataset.X.shape[1], 2048)
-        self.assertEqual(dataset.features_fields[PLACEHOLDER_FIELD][0], "morgan_fingerprints_1")
+        self.assertEqual(dataset.features_fields[PLACEHOLDER_FIELD][0], "morgan_0")
         self.assertEqual(dataset.instances_ids_field, "identifier")
 
     def test_create_dataset_deep_mol_2d_descriptors(self):
@@ -21,6 +21,6 @@ class TestDatasetDeepMol(TestDataset):
         deepmol_wrapper.fit_transform(dataset)
 
         self.assertEqual(dataset.dataframe.shape[0], 2)
-        self.assertEqual(dataset.X.shape[1], 208)
-        self.assertEqual(dataset.features_fields[PLACEHOLDER_FIELD][0], "MaxEStateIndex")
+        self.assertEqual(dataset.X.shape[1], 210)
+        self.assertEqual(dataset.features_fields[PLACEHOLDER_FIELD][0], "MaxAbsEStateIndex")
         self.assertEqual(dataset.instances_ids_field, "identifier")

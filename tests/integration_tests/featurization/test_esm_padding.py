@@ -9,9 +9,9 @@ class TestESMPadding(TestDataset):
         ESMEncoder(batch_size=1, output_dim=3).fit_transform(self.single_input_dataset)
         self.assertEqual(self.single_input_dataset.X.shape[0], 3)
 
-        XPadder(padding_dimensions=(300, 0)).fit_transform(self.single_input_dataset)
+        XPadder(padding_dimensions=(382, 0)).fit_transform(self.single_input_dataset)
 
         self.assertEqual(self.single_input_dataset.X.shape[0], 3)
-        self.assertEqual(self.single_input_dataset.X[1].shape[0], 300)
-        self.assertTrue(all(self.single_input_dataset.X[1][300:] == 0))
+        self.assertEqual(self.single_input_dataset.X[1].shape[0], 382)
+        self.assertTrue(all(self.single_input_dataset.X[1][382:] == 0))
         self.assertEqual(self.single_input_dataset.X[1].shape[1], 320)

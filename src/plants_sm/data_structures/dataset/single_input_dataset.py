@@ -345,7 +345,12 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             raise ValueError('Features are not defined')
         features = [self.features["place_holder"][sequence_id] for sequence_id in
                     self.dataframe[self.instances_ids_field]]
-        return np.array(features, dtype=np.float32)
+        try:
+            return np.array(features, dtype=np.float32)
+        except ValueError:
+            warnings.warn("The features are not 2D and different dimensions in one of the shapes, "
+                          "returning a list of arrays")
+            return np.array(features)
 
     @cached_property
     def y(self) -> np.ndarray:
@@ -473,11 +478,11 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         self._dataframe = self._dataframe[self._dataframe[self.instances_ids_field].isin(ids)]
         self._identifiers = self._dataframe[self.instances_ids_field].values
 
-        # for instance_type in self._instances:
-        #     self._instances[instance_type] = {k: v for k, v in self._instances[instance_type].items() if k in ids}
+        for instance_type in self._instances:
+            self._instances[instance_type] = {k: v for k, v in self._instances[instance_type].items() if k in ids}
 
-        #     if self._features:
-        #         self._features[instance_type] = {k: v for k, v in self._features[instance_type].items() if k in ids}
+            if self._features:
+                self._features[instance_type] = {k: v for k, v in self._features[instance_type].items() if k in ids}
 
         self._clear_cached_properties()
 

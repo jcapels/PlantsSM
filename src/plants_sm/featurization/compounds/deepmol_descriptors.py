@@ -1,8 +1,7 @@
 from typing import Dict
 
 import numpy as np
-from rdkit.Chem import Descriptors, MolFromSmiles
-from rdkit.ML.Descriptors import MoleculeDescriptors
+from rdkit.Chem import MolFromSmiles
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.featurization.compounds._presets import DEEPMOL_PRESETS
@@ -18,12 +17,7 @@ class DeepMolDescriptors(FeaturesGenerator):
         """
         Method to set the names of the features
         """
-        if self.preset == "2d_descriptors":
-            calc = MoleculeDescriptors.MolecularDescriptorCalculator([x[0] for x in Descriptors._descList])
-            header = calc.GetDescriptorNames()
-            self.features_names = header
-        else:
-            self.features_names = []
+        self.features_names = self.descriptor.feature_names
 
     def _fit(self, dataset: Dataset, instance_type: str) -> 'DeepMolDescriptors':
         """

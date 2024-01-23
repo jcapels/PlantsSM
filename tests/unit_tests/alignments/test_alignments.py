@@ -6,7 +6,7 @@ from plants_sm.alignments.alignment import BLAST, Diamond
 from tests import TEST_DIR
 
 
-#@skip("BLAST and diamond not being installed in CI")
+@skip("BLAST and diamond not being installed in CI")
 class TestAlignments(unittest.TestCase):
 
     def test_blast_create_database(self):
