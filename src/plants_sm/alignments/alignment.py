@@ -22,7 +22,7 @@ class Alignment(ABC):
 
         output_options_str = " ".join(output_options)
         self._run(query_file, output_file, evalue, num_hits, output_options_str, outfmt)
-        if outfmt > 6:
+        if outfmt >= 6:
             self.results = pd.read_csv(output_file, sep="\t", header=None, names=output_options)
             self.results.to_csv(output_file, sep="\t", index=False)
 

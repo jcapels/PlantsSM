@@ -1,5 +1,4 @@
 import torch
-from keras.metrics import accuracy
 from tensorflow.python.keras import Input
 from tensorflow.python.keras.layers import Dense
 from tensorflow.python.keras.models import Model
@@ -62,5 +61,5 @@ class ToyTensorflowModel:
 
         model = Model(inputs=inputs, outputs=[predictions])
 
-        model.compile(optimizer='adam', loss='binary_crossentropy', metrics=[accuracy])
+        model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
         return model

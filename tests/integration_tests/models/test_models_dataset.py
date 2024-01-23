@@ -7,7 +7,7 @@ from torch.optim import Adam
 
 from plants_sm.data_standardization.proteins.standardization import ProteinStandardizer
 from plants_sm.data_structures.dataset import SingleInputDataset
-from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
+from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
 from plants_sm.models.constants import BINARY
 from plants_sm.models.pytorch_model import PyTorchModel
 from plants_sm.models.tensorflow_model import TensorflowModel
@@ -54,9 +54,9 @@ class TestDatasetModel(TestCase):
                                                                    labels_field=slice(8, -1))
 
     def test_multi_label_dataset(self):
-        steps = [ProteinStandardizer(), Word2Vec()]
+        steps = [ProteinStandardizer(), PropythiaWrapper(preset='performance')]
 
-        model = DenseNet(512, 256, 2895)
+        model = DenseNet(8677, 256, 2895)
 
         def precision_average(y_true, y_pred):
             return precision_score(y_true, y_pred, average="macro")
@@ -78,9 +78,9 @@ class TestDatasetModel(TestCase):
         self.assertTrue(probs.shape[1] == 2895)
 
     def test_pytorch_model_early_stopping_with_metric(self):
-        steps = [ProteinStandardizer(), Word2Vec()]
+        steps = [ProteinStandardizer(), PropythiaWrapper(preset='performance')]
 
-        model = DenseNet(512, 256, 2895)
+        model = DenseNet(8677, 256, 2895)
 
         def precision_average(y_true, y_pred):
             return precision_score(y_true, y_pred, average="macro")
@@ -105,8 +105,8 @@ class TestDatasetModel(TestCase):
         print(precision_score(self.multi_label_dataset_val.y, probs, average="macro"))
 
     def test_pytorch_model(self):
-        steps = [ProteinStandardizer(), Word2Vec()]
-        model = TestPytorchBaselineModel(512, 50)
+        steps = [ProteinStandardizer(), PropythiaWrapper(preset='performance')]
+        model = TestPytorchBaselineModel(8677, 50)
         pytorch_model = PyTorchModel(
             model=model,
             loss_function=nn.BCELoss(),
@@ -145,8 +145,8 @@ class TestDatasetModel(TestCase):
                                               representation_field="sequence",
                                               labels_field=slice(8, 2779))
 
-        steps = [ProteinStandardizer(), Word2Vec()]
-        model = DenseNet(512, 256, 2771)
+        steps = [ProteinStandardizer(), PropythiaWrapper(preset='performance')]
+        model = DenseNet(8677, 256, 2771)
         pytorch_model = PyTorchModel(
             model=model,
             loss_function=nn.BCELoss(),
@@ -167,8 +167,8 @@ class TestDatasetModel(TestCase):
         print(precision_average(dataset.y, probs))
 
     def test_tensorflow_model(self):
-        steps = [ProteinStandardizer(), Word2Vec()]
-        model = ToyTensorflowModel(512)
+        steps = [ProteinStandardizer(), PropythiaWrapper(preset='performance')]
+        model = ToyTensorflowModel(8677)
         model = TensorflowModel(model.model, problem_type=BINARY, epochs=1, batch_size=10)
 
         for step in steps:

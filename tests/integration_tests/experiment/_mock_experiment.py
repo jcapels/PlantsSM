@@ -7,6 +7,7 @@ from torch.optim import Adam
 
 from plants_sm.data_standardization.proteins.standardization import ProteinStandardizer
 from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
+from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
 from plants_sm.hyperparameter_optimization.experiment import Experiment
 from plants_sm.models.constants import BINARY
 from plants_sm.models.pytorch_model import PyTorchModel
@@ -25,8 +26,8 @@ class MockExperiment(Experiment):
         return accuracy_score(self.validation_dataset.y, predictions)
 
     def pipeline_runner(self, lr: float, intermediate_dim: int):
-        steps = [ProteinStandardizer(), Word2Vec()]
-        model = TestPytorchBaselineModel(512, 50, intermediate_dim=intermediate_dim)
+        steps = [ProteinStandardizer(), PropythiaWrapper(preset='performance')]
+        model = TestPytorchBaselineModel(8677, 50, intermediate_dim=intermediate_dim)
         pytorch_model = PyTorchModel(model=model,
                                      loss_function=nn.BCELoss(),
                                      device="cpu",

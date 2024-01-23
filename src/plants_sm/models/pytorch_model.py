@@ -927,7 +927,7 @@ class PyTorchModel(Model):
         # second_shape = dataset.y.shape[1]
         # predictions, _ = np.empty(shape=(0, second_shape)), np.empty(shape=(0, second_shape))
 
-        # predictions = array_reshape(predictions)
+        predictions = None
 
         # the "shuffle" argument always has to be False in predicting probabilities in an evaluation context
         with torch.no_grad():
