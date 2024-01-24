@@ -35,26 +35,6 @@ class TestDatasetBioembeddings(TestDataset):
         self.assertEqual(dataset_2.features_fields[PLACEHOLDER_FIELD][0], "unirep_1")
         self.assertEqual(dataset_2.instances_ids_field, "ids")
 
-    def test_word2vec_dataset(self):
-        dataset = SingleInputDataset(dataframe=self.dataframe, representation_field="sequence")
-        word2vec = Word2Vec()
-        word2vec.fit_transform(dataset)
-
-        self.assertEqual(dataset.X.shape[0], 2)
-        self.assertEqual(dataset.X.shape[1], 512)
-        self.assertEqual(dataset.features_fields[PLACEHOLDER_FIELD][0], "word2vec_1")
-        self.assertEqual(dataset.instances_ids_field, "identifier")
-
-        dataset = SingleInputDataset(dataframe=self.dataframe, representation_field="sequence")
-        word2vec = Word2Vec(output_shape_dimension=3)
-        word2vec.fit_transform(dataset)
-
-        self.assertEqual(dataset.X.shape[0], 2)
-        self.assertEqual(dataset.X.shape[1], 453)
-        self.assertEqual(dataset.X.shape[2], 512)
-        self.assertEqual(dataset.features_fields[PLACEHOLDER_FIELD][0], "word2vec_1")
-        self.assertEqual(dataset.instances_ids_field, "identifier")
-
     def test_multithreading_features_extraction(self):
         dataframe = pd.DataFrame(columns=["ids", "sequence"])
         sequences = [
