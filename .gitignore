@@ -13,6 +13,7 @@ compound_protein_interaction
 tests/aaindex[0-9]
 
 examples/rhea_case_study
+examples/*.csv
 .vscode
 
 # Distribution / packaging
@@ -144,4 +145,4 @@ tests/performance_datasets
 
 #large datasets
 examples/data/*
-examples/*.ipynb
+#examples/*.ipynb

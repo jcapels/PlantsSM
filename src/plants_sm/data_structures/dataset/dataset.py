@@ -1,7 +1,7 @@
 import os
 import shutil
 from abc import abstractmethod
-from typing import Any, Dict, Union, Iterable
+from typing import Any, Dict, Union, Iterable, List
 
 import numpy as np
 import pandas as pd
@@ -19,7 +19,7 @@ class Dataset(ConcreteSubject, PickleMixin):
     _dataframe_generator: Iterable = None
     _batch_state: bool = True
     variables_to_save = [
-        ("_dataframe", "csv"),
+        ("_dataframe", "pkl"),
         ("_instances", "pkl"),
         ("_identifiers", "pkl"),
         ("features", "pkl"),
@@ -36,6 +36,7 @@ class Dataset(ConcreteSubject, PickleMixin):
         """
         self.batch_size = batch_size
         if self.batch_size is not None:
+            self._folder_to_load_features = None
             if self.batch_size <= 0:
                 raise ValueError("Batch size must be a positive integer.")
             else:
@@ -87,9 +88,10 @@ class Dataset(ConcreteSubject, PickleMixin):
             The path to the file where the features are saved.
         """
         if self.batch_size is not None:
+            self._folder_to_load_features = folder_path
             i = 0
             self.features = read_pickle(os.path.join(folder_path, f"features_{i}.pkl"))
-            i+=1
+            i += 1
             while self.next_batch():
                 self.features = read_pickle(os.path.join(folder_path, f"features_{i}.pkl"))
                 i += 1
@@ -188,6 +190,19 @@ class Dataset(ConcreteSubject, PickleMixin):
                 return None
         else:
             raise ValueError("The dataset is not iterable.")
+
+    @abstractmethod
+    def select(self, ids: Union[List[str], List[int]], instance_type: str):
+        """
+        Method to select a subset of the dataset.
+
+        Parameters
+        ----------
+        ids: List[str]
+            The identifiers of the instances to select.
+        instance_type: str
+            The type of the instances to select.
+        """
 
     @property
     @abstractmethod

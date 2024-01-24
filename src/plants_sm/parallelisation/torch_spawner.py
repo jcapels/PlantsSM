@@ -1,125 +1,129 @@
-import esm
+import os
+import pickle
+import torch.distributed as dist
+import torch.multiprocessing as mp
+from datetime import timedelta
 
-from typing import Union
 import torch
-from esm.model.esm2 import ESM2
+
+import tempfile
+
+DEFAULT_TIMEOUT = timedelta(seconds=10)
 
 
-class ESMModel(ESM2):
+class TorchSpawner:
 
-    def __init__(self, num_layers: int = 33,
-                 embed_dim: int = 1280,
-                 attention_heads: int = 20,
-                 alphabet: Union[esm.data.Alphabet, str] = "ESM-1b",
-                 token_dropout: bool = True, is_ddp=False,
-                 num_gpus=1) -> None:
-        self.is_ddp = is_ddp
-        self.num_gpus = num_gpus
-        super().__init__(num_layers, embed_dim, attention_heads, alphabet, token_dropout)
+    def __init__(self, backend: str = "NCCL", num_machines: int = 1, machine_rank: int = 0,
+                 dist_url: str = "tcp://127.0.0.1:1234") -> None:
+        """
+        TorchSpawner is a class that allows to spawn a torch process in a distributed way.
 
-    def forward(self, tokens, repr_layers=None, need_head_weights=False, return_contacts=False):
+        Parameters
+        ----------
+        backend: str
+            The backend to be used in the distributed process.
+        num_machines: int
+            The number of machines to be used in the distributed process.
+        machine_rank: int
+            The rank of the machine to be used in the distributed process.
+        dist_url: str
+            The url to be used in the distributed process.
+        """
+        self.backend = backend
+        # self.num_gpus = num_gpus
+        self.num_machines = num_machines
+        self.machine_rank = machine_rank
+        self.dist_url = dist_url
 
-        if repr_layers is None:
-            repr_layers = []
-        if return_contacts:
-            need_head_weights = True
+    def run(self, main_func, **kwargs):
+        """
+        Run the distributed process.
 
-        assert tokens.ndim == 2
-        padding_mask = tokens.eq(self.padding_idx)  # B, T
+        Parameters
+        ----------
+        main_func: callable
+            The function to be run in the distributed process.
+        kwargs: dict
+            The arguments to be passed to the main function.
+        """
+        torch.set_num_threads(1)
+        os.environ["OMP_NUM_THREADS"] = "1"
+        os.environ["NCCL_DEBUG"] = "ERROR"
 
-        x = self.embed_scale * self.embed_tokens(tokens)
+        world_size = 1
 
-        if self.token_dropout:
-            x.masked_fill_((tokens == self.mask_idx).unsqueeze(-1), 0.0)
-            # x: B x T x C
-            mask_ratio_train = 0.15 * 0.8
-            src_lengths = (~padding_mask).sum(-1)
-            mask_ratio_observed = (tokens == self.mask_idx).sum(-1).to(x.dtype) / src_lengths
-            x = x * (1 - mask_ratio_train) / (1 - mask_ratio_observed)[:, None, None]
+        results_file = tempfile.NamedTemporaryFile(delete=True)
 
-        if padding_mask is not None:
-            x = x * (1 - padding_mask.unsqueeze(-1).type_as(x))
+        mp.spawn(
+            TorchSpawner.distributed_worker,
+            nprocs=1,
+            args=(
+                main_func,
+                self.backend,
+                world_size,
+                1,
+                self.machine_rank,
+                self.dist_url,
+                results_file.name,
+                kwargs
+            ),
+            daemon=False,
+        )
 
-        repr_layers = set(repr_layers)
-        hidden_representations = {}
-        if 0 in repr_layers:
-            hidden_representations[0] = x
+        results = pickle.load(results_file)
+        results_file.close()
+        return results
 
-        if need_head_weights:
-            attn_weights = []
+    @staticmethod
+    def distributed_worker(
+            local_rank,
+            main_func,
+            backend,
+            world_size,
+            num_gpus_per_machine,
+            machine_rank,
+            dist_url,
+            results_file,
+            kwargs
+    ):
+        """
+        Run the distributed process.
+        """
+        LOCAL_PROCESS_GROUP = None
 
-        # (B, T, E) => (T, B, E)
-        x = x.transpose(0, 1)
+        if not torch.cuda.is_available():
+            raise RuntimeError("CUDA is not available. Please check your installation.")
 
-        if not padding_mask.any():
-            padding_mask = None
-
-        if self.is_ddp:
-            gpus = list(range(torch.cuda.device_count()))
-            if len(gpus) >= self.num_gpus:
-                gpus = gpus[:self.num_gpus]
-            gpus = [f"cuda:{i}" for i in range(len(gpus))]
-
-        i = 0
-        for layer_idx, layer in enumerate(self.layers):
-            if self.is_ddp:
-                gpu = gpus[i % len(gpus)]
-                x.to(gpu)
-                layer.to(gpu)
-            else:
-                x = x.to("cpu")
-                layer = layer.to("cpu")
-
-            x, attn = layer(
-                x,
-                self_attn_padding_mask=padding_mask,
-                need_head_weights=need_head_weights,
+        global_rank = machine_rank * num_gpus_per_machine + local_rank
+        try:
+            dist.init_process_group(
+                backend=backend,
+                init_method=dist_url,
+                world_size=world_size,
+                rank=global_rank,
+                timeout=DEFAULT_TIMEOUT,
             )
+        except Exception as e:
+            raise e
 
-            if (layer_idx + 1) in repr_layers:
-                hidden_representations[layer_idx + 1] = x.transpose(0, 1)
-            if need_head_weights:
-                # (H, B, T, T) => (B, H, T, T)
-                attn_weights.append(attn.transpose(1, 0))
-            i += 1
+        dist.barrier()
 
-        if self.is_ddp:
-            gpu = gpus[i % len(gpus)]
-            x.to(gpu)
-            self.emb_layer_norm_after.to(gpu)
-        else:
-            x = x.to("cpu")
-            self.emb_layer_norm_after = self.emb_layer_norm_after.to("cpu")
+        if num_gpus_per_machine > torch.cuda.device_count():
+            raise RuntimeError
+        torch.cuda.set_device(local_rank)
 
-        i += 1
-        x = self.emb_layer_norm_after(x)
-        x = x.transpose(0, 1)  # (T, B, E) => (B, T, E)
+        # Setup the local process group (which contains ranks within the same machine)
+        if LOCAL_PROCESS_GROUP is not None:
+            raise RuntimeError
 
-        # last hidden representation should have layer norm applied
-        if (layer_idx + 1) in repr_layers:
-            hidden_representations[layer_idx + 1] = x
+        num_machines = world_size // num_gpus_per_machine
 
-        if self.is_ddp:
-            gpu = gpus[i % len(gpus)]
-            x.to(gpu)
-            self.lm_head.to(gpu)
-        else:
-            x = x.to("cpu")
-            self.lm_head = self.lm_head.to("cpu")
-        i += 1
-        x = self.lm_head(x)
+        for idx in range(num_machines):
+            ranks_on_i = list(range(idx * num_gpus_per_machine, (idx + 1) * num_gpus_per_machine))
+            pg = dist.new_group(ranks_on_i)
+            if idx == machine_rank:
+                LOCAL_PROCESS_GROUP = pg
 
-        result = {"logits": x, "representations": hidden_representations}
-        if need_head_weights:
-            # attentions: B x L x H x T x T
-            attentions = torch.stack(attn_weights, 1)
-            if padding_mask is not None:
-                attention_mask = 1 - padding_mask.type_as(attentions)
-                attention_mask = attention_mask.unsqueeze(1) * attention_mask.unsqueeze(2)
-                attentions = attentions * attention_mask[:, None, None, :, :]
-            result["attentions"] = attentions
-            if return_contacts:
-                contacts = self.contact_head(tokens, attentions)
-                result["contacts"] = contacts
-
-        return result
+        results = main_func(**kwargs)
+        with open(results_file, "wb") as results_file:
+            pickle.dump(results, results_file)

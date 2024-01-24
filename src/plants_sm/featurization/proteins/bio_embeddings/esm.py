@@ -1,10 +1,10 @@
-from esm import Alphabet
+from plants_sm.featurization.proteins.bio_embeddings.esm_models import ESM1Model, ESM2Model
+from plants_sm.parallelisation import TorchSpawner
 from torch import nn
 from tqdm import tqdm
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.featurization._utils import call_set_features_names
-from plants_sm.featurization.proteins.bio_embeddings._esm_utils import TorchSpawner
 from plants_sm.featurization.proteins.bio_embeddings.constants import ESM_DIMENSIONS, ESM_FUNCTIONS, ESM_LAYERS
 from plants_sm.transformation.transformer import Transformer
 
@@ -12,13 +12,14 @@ from fairscale.nn.data_parallel import FullyShardedDataParallel as FSDP
 from fairscale.nn.wrap import enable_wrap, wrap
 
 import torch
-from plants_sm.parallelisation.torch_spawner import ESMModel
+
+from esm.pretrained import load_model_and_alphabet_local
 
 
 class ESMEncoder(Transformer):
     """
     It encodes protein sequences with the embedding layer of the pre-trained model ESM-1B.
-    The Esm1bEncoder operates only over pandas DataFrame.
+    The EsmEncoder operates only over pandas DataFrame.
 
     Parameters
     ----------
@@ -41,6 +42,7 @@ class ESMEncoder(Transformer):
     num_gpus: int = None
     output_dim: int = 2
     return_contacts: bool = False
+    model_path: str = None
 
     def set_features_names(self):
         """
@@ -69,12 +71,21 @@ class ESMEncoder(Transformer):
             esm_callable = ESM_FUNCTIONS[self.esm_function]
             self.layers = ESM_LAYERS[self.esm_function]
 
-            model, self.alphabet = esm_callable()
-            self.model = model.to(self.device)
+            if self.model_path is not None:
+                model, self.alphabet = load_model_and_alphabet_local(self.model_path)
+            else:
+                model, self.alphabet = esm_callable()
+            
+            if self.num_gpus is not None and self.device == "cpu":
+                self.device = "cuda"
+                
+            self.model = model
             self.batch_converter = self.alphabet.get_batch_converter()
 
-            if self.num_gpus is not None:
+            if self.num_gpus is not None and self.num_gpus > 1:
                 self.is_ddf = True
+            elif self.num_gpus is not None and self.num_gpus == 1:
+                self.is_ddf = False
             else:
                 self.num_gpus = 0
                 self.is_ddf = False
@@ -88,15 +99,14 @@ class ESMEncoder(Transformer):
         return self._fit(dataset, instance_type)
 
     @staticmethod
-    def _generate_esm_model(model: nn.Module,
-                            layers: int,
-                            instances: dict,
-                            batch_size: int,
-                            batch_converter: callable,
-                            output_dim: int,
-                            num_gpus: int,
-                            alphabet: Alphabet,
-                            is_ddf: bool):
+    def _generate_esm2_model(model: nn.Module,
+                             layers: int,
+                             instances: dict,
+                             batch_size: int,
+                             batch_converter: callable,
+                             output_dim: int,
+                             is_ddf: bool,
+                             device: str = "cpu"):
         """
         Generate the ESM model.
 
@@ -114,10 +124,6 @@ class ESMEncoder(Transformer):
             The batch converter to be used in the encoding process.
         output_dim: int
             The output dimension of the ESM model.
-        num_gpus: int
-            The number of GPUs to be used in the encoding process.
-        alphabet: Alphabet
-            The alphabet of the ESM model.
         is_ddf: bool
             Whether to use DDP or not.
         """
@@ -132,12 +138,6 @@ class ESMEncoder(Transformer):
 
             with enable_wrap(wrapper_cls=FSDP, **fsdp_params):
                 model.eval()
-
-                ddp_model = ESMModel(alphabet=alphabet, num_layers=model.num_layers, embed_dim=model.embed_dim,
-                                     attention_heads=model.attention_heads, token_dropout=model.token_dropout,
-                                     is_ddp=True, num_gpus=num_gpus)
-                ddp_model.load_state_dict(model.state_dict())
-                model = ddp_model
 
                 # Wrap each layer in FSDP separately
                 for name, child in model.named_children():
@@ -164,7 +164,7 @@ class ESMEncoder(Transformer):
                 if is_ddf:
                     batch_tokens = batch_tokens.cuda()
                 else:
-                    batch_tokens = batch_tokens.to("cpu")
+                    batch_tokens = batch_tokens.to(device)
 
                 with torch.no_grad():
                     results = model(batch_tokens, repr_layers=[layers], return_contacts=False)
@@ -172,18 +172,18 @@ class ESMEncoder(Transformer):
                     representations['representations'] = results["representations"][layers]
 
                     for i, batch_instance_id in enumerate(batch_ids):
+
                         if output_dim == 2:
                             res.append((batch_instance_id,
                                         representations['representations'][i, 1: len(batch[i][1]) + 1].mean(0)))
                         else:
                             res.append((batch_instance_id,
                                         representations['representations'][i, 1: len(batch[i][1]) + 1]))
-
-                    torch.cuda.empty_cache()
+                    if is_ddf:
+                        torch.cuda.empty_cache()
                     batch = []
                     batch_ids = []
                     pbar.update(batch_size)
-
 
         if len(batch) != 0:
 
@@ -193,7 +193,7 @@ class ESMEncoder(Transformer):
             if is_ddf:
                 batch_tokens = batch_tokens.cuda()
             else:
-                batch_tokens = batch_tokens.to("cpu")
+                batch_tokens = batch_tokens.to(device)
 
             results = model(batch_tokens, repr_layers=[layers], return_contacts=False)
             results["representations"][layers] = results["representations"][layers].cpu().detach().numpy()
@@ -229,36 +229,43 @@ class ESMEncoder(Transformer):
         encoded_sequence: np.ndarray
             The encoded protein sequence.
         """
-        # it has to run in batch of 16, otherwise can lead to OOM issues
 
         instances = dataset.get_instances(instance_type)
 
         # initialize the model with FSDP wrapper
+        if "esm2" in self.esm_function:
+            model = ESM2Model(alphabet=self.alphabet, num_layers=self.model.num_layers, embed_dim=self.model.embed_dim,
+                              attention_heads=self.model.attention_heads, token_dropout=self.model.token_dropout,
+                              is_ddf=self.is_ddf, num_gpus=self.num_gpus)
+            model.load_state_dict(self.model.state_dict())
+
+        else:
+            model = ESM1Model(self.model.args, alphabet=self.alphabet,
+                              is_ddf=self.is_ddf, num_gpus=self.num_gpus)
+            model.load_state_dict(self.model.state_dict())
 
         if self.is_ddf:
-            res = TorchSpawner().run(self._generate_esm_model,
-                                     model=self.model,
+            res = TorchSpawner().run(self._generate_esm2_model,
+                                     model=model,
                                      layers=self.layers,
                                      instances=instances,
                                      batch_size=self.batch_size,
                                      batch_converter=self.batch_converter,
                                      output_dim=self.output_dim,
-                                     num_gpus=self.num_gpus,
-                                     alphabet=self.alphabet,
-                                     is_ddf=self.is_ddf)
+                                     is_ddf=self.is_ddf,
+                                     device=self.device)
 
         else:
-            res = self._generate_esm_model(self.model,
-                                           layers=self.layers,
-                                           instances=instances,
-                                           batch_size=self.batch_size,
-                                           batch_converter=self.batch_converter,
-                                           output_dim=self.output_dim,
-                                           num_gpus=self.num_gpus,
-                                           alphabet=self.alphabet,
-                                           is_ddf=self.is_ddf)
+            res = self._generate_esm2_model(model,
+                                            layers=self.layers,
+                                            instances=instances,
+                                            batch_size=self.batch_size,
+                                            batch_converter=self.batch_converter,
+                                            output_dim=self.output_dim,
+                                            is_ddf=self.is_ddf,
+                                            device=self.device)
 
-        dataset.features[instance_type] = dict(res)
+        dataset.add_features(instance_type, dict(res))
 
         dataset.features_fields[instance_type] = self.features_names
 

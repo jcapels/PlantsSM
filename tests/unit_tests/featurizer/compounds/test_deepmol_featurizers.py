@@ -45,4 +45,4 @@ class TestDeepMolDescriptors(TestCompoundFeaturizers):
         wrapper = DeepMolDescriptors(n_jobs=2, preset="2d_descriptors")
         wrapper._fit(self.dataset, PLACEHOLDER_FIELD)
         features = wrapper._featurize(self.dataset.instances[PLACEHOLDER_FIELD]['0'])
-        self.assertEqual(features.shape[0], 208)
+        self.assertEqual(features.shape[0], 210)

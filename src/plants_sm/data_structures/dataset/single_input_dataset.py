@@ -1,5 +1,5 @@
+import time
 import warnings
-from typing import Any, List, Union, Dict, Iterable
 from typing import Any, Iterable, List, Union, Dict
 
 import numpy as np
@@ -25,6 +25,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
     _instances: Dict[str, dict]
     _features_fields: Dict[str, Union[str, List[Union[str, int]], slice]]
     _identifiers: Union[List[Union[str, int]], None] = None
+    _automatically_generated_identifiers: bool = False
 
     def __init__(self, dataframe: Any = None, representation_field: Union[str, None] = None,
                  features_fields: Union[str, List[Union[str, int]], slice, None] = None,
@@ -56,7 +57,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         if dataframe is not None:
             if not isinstance(features_fields, List) and not isinstance(features_fields, slice) and \
                     features_fields is not None:
-                
+
                 self._features_fields = {PLACEHOLDER_FIELD: [features_fields]}
 
             elif isinstance(features_fields, slice):
@@ -80,7 +81,8 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             # the dataframe setter will derive the instance ids field if it is None
             # and also will try to set the features names
             self.dataframe = dataframe
-
+            self._identifiers = self.dataframe[self.instances_ids_field].values
+            self.dataframe.index = self.identifiers
             if labels_field is not None:
 
                 if isinstance(labels_field, slice):
@@ -96,18 +98,26 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                 else:
                     self._labels_names = [labels_field]
 
-                self._labels = self.dataframe.loc[:, self._labels_names].T.to_dict('list')
+                self._labels = None
+                # self._labels = self.dataframe.loc[:, self._labels_names].T.to_dict('list')
             else:
                 self._labels = None
 
             if self._features_fields:
 
-                self._features = \
-                    {PLACEHOLDER_FIELD:
-                         self.dataframe.loc[:, self._features_fields[PLACEHOLDER_FIELD]].T.to_dict('list')}
+                features = self.dataframe.loc[:, self._features_fields[PLACEHOLDER_FIELD]]
+
+                self._features = {PLACEHOLDER_FIELD: {k: features.iloc[i, :].values
+                                                      for i, k in enumerate(self._identifiers)}}
+
+
             else:
                 self._features = {}
 
+            # set the index of the dataframe to the instances ids field
+            # self._dataframe.set_index(self.instances_ids_field, inplace=True)
+
+            self.dataframe.drop(self.representation_field, axis=1, inplace=True)
             if self.batch_size is not None:
                 while next(self):
                     pass
@@ -115,6 +125,12 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                 self.next_batch()
 
         # in the case that the dataframe is None and the features field is not None, the features names will be set
+    
+    def __len__(self):
+        return len(self.instances[PLACEHOLDER_FIELD])
+
+    def __getitem__(self, idx):
+        return self.instances[PLACEHOLDER_FIELD][idx], self.dataframe.loc[idx, self._labels_names].values
 
     @classmethod
     def from_csv(cls, file_path: FilePathOrBuffer, representation_field: Union[str, None] = None,
@@ -176,7 +192,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
 
         new_dataframe = self.dataframe.copy()
         data = list(self.instances[PLACEHOLDER_FIELD].items())
-        data = pd.DataFrame(data, columns = [self.instances_ids_field, self.representation_field])
+        data = pd.DataFrame(data, columns=[self.instances_ids_field, self.representation_field])
 
         new_dataframe = pd.merge(new_dataframe, data, on=self.instances_ids_field, how='left')
 
@@ -186,15 +202,14 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
             if features.ndim > 1:
                 warnings.warn(f"The features are not 2D, writing to pickle file")
                 write_pkl = True
-            
+
             if not write_pkl:
-                #convert a dictionary into a list of tuples
+                # convert a dictionary into a list of tuples
                 data = [(k, *v.tolist()) for k, v in self.features[PLACEHOLDER_FIELD].items()]
-                data = pd.DataFrame(data, columns = [self.instances_ids_field] + 
-                                                        self.features_fields[PLACEHOLDER_FIELD])
+                data = pd.DataFrame(data, columns=[self.instances_ids_field] +
+                                                  self.features_fields[PLACEHOLDER_FIELD])
 
                 new_dataframe = pd.merge(new_dataframe, data, on=self.instances_ids_field, how='left')
-
 
             else:
                 write_pickle(file_path.replace("csv", "pkl"), self.features)
@@ -203,10 +218,10 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
 
     @classmethod
     def from_excel(cls, file_path: FilePathOrBuffer, representation_field: Union[str, None] = None,
-                 features_fields: Union[str, List[Union[str, int]], slice, None] = None,
-                 labels_field: Union[str, List[Union[str, int]], slice, None] = None,
-                 instances_ids_field: Union[str, None] = None,
-                 batch_size: Union[int, None] = None, **kwargs) \
+                   features_fields: Union[str, List[Union[str, int]], slice, None] = None,
+                   labels_field: Union[str, List[Union[str, int]], slice, None] = None,
+                   instances_ids_field: Union[str, None] = None,
+                   batch_size: Union[int, None] = None, **kwargs) \
             -> 'SingleInputDataset':
         """
         Method to create a dataset from an excel file.
@@ -328,7 +343,14 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         """
         if self.features == {}:
             raise ValueError('Features are not defined')
-        return np.array(list(self.features[PLACEHOLDER_FIELD].values()))
+        features = [self.features["place_holder"][sequence_id] for sequence_id in
+                    self.dataframe[self.instances_ids_field]]
+        try:
+            return np.array(features, dtype=np.float32)
+        except ValueError:
+            warnings.warn("The features are not 2D and different dimensions in one of the shapes, "
+                          "returning a list of arrays")
+            return np.array(features)
 
     @cached_property
     def y(self) -> np.ndarray:
@@ -337,7 +359,8 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         """
         if not self._labels_names:
             raise ValueError('Labels are not defined')
-        return np.array(list(self.labels.values()))
+        # return np.array(list(self.labels.values()))
+        return self.dataframe.loc[:, self._labels_names].to_numpy()
 
     @property
     def instances(self) -> Dict[str, dict]:
@@ -389,7 +412,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                 identifiers = self._dataframe.loc[:, self.instances_ids_field].values
                 instances = self.dataframe.loc[:, self.representation_field].values
                 self._instances = {PLACEHOLDER_FIELD: dict(zip(identifiers, instances))}
-                self.dataframe.drop(self.representation_field, axis=1, inplace=True)
+                # self.dataframe.drop(self.representation_field, axis=1, inplace=True)
 
     @dataframe.setter
     def dataframe(self, value: Any):
@@ -411,7 +434,7 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
         """
         if self.instances_ids_field is None:
             self.instances_ids_field = "identifier"
-            identifiers_series = Series(list(range(self.dataframe.shape[0])), name="identifier")
+            identifiers_series = Series(list(map(str, range(self.dataframe.shape[0]))), name="identifier", dtype=str)
 
             if self._features_fields:
                 if isinstance(self._features_fields[PLACEHOLDER_FIELD], slice):
@@ -425,12 +448,68 @@ class SingleInputDataset(Dataset, CSVMixin, ExcelMixin):
                     self._features_fields[PLACEHOLDER_FIELD] = [self._dataframe.columns[i] for i in
                                                                 self._features_fields[PLACEHOLDER_FIELD]]
 
+            self._automatically_generated_identifiers = True
+
             self._dataframe = pd.concat((identifiers_series, self._dataframe), axis=1)
-            self._dataframe["identifier"] = self._dataframe["identifier"].astype(str)
+            self._dataframe["identifier"] = self._dataframe["identifier"]
             self._identifiers = self._dataframe["identifier"].values
 
             instances = self.dataframe.loc[:, self.representation_field].values
             self._instances = {PLACEHOLDER_FIELD: dict(zip(identifiers_series.values, instances))}
-            self.dataframe.drop(self.representation_field, axis=1, inplace=True)
+            # self.dataframe.drop(self.representation_field, axis=1, inplace=True)
         else:
             self._identifiers = self._dataframe[self.instances_ids_field].values
+
+    def select(self, ids: Union[List[str], List[int]], instance_type: str = PLACEHOLDER_FIELD):
+        """
+        Select a subset of the dataset based on the identifiers.
+
+        Parameters
+        ----------
+        ids : Union[List[str], List[int]]
+            list of identifiers to be selected
+        instance_type : str
+            type of the instances to be selected
+        """
+
+        if self.instances_ids_field is None:
+            raise ValueError("Instances ids field is not defined")
+
+        self._dataframe = self._dataframe[self._dataframe[self.instances_ids_field].isin(ids)]
+        self._identifiers = self._dataframe[self.instances_ids_field].values
+
+        for instance_type in self._instances:
+            self._instances[instance_type] = {k: v for k, v in self._instances[instance_type].items() if k in ids}
+
+            if self._features:
+                self._features[instance_type] = {k: v for k, v in self._features[instance_type].items() if k in ids}
+
+        self._clear_cached_properties()
+
+    def merge(self, dataset: 'SingleInputDataset'):
+
+        if self._automatically_generated_identifiers and dataset._automatically_generated_identifiers:
+            dataset._identifiers = [f"{i}_" for i in dataset._identifiers]
+            # change the identifiers in the dataset instances and features
+            dataset._instances[PLACEHOLDER_FIELD] = {k + "_": v for k, v in dataset._instances[PLACEHOLDER_FIELD].items()}
+
+            if self._features:
+                dataset._features[PLACEHOLDER_FIELD] = {k + "_": v for k, v in dataset._features[PLACEHOLDER_FIELD].items()}
+
+            dataset._dataframe[self.instances_ids_field] = (
+                dataset._dataframe[self.instances_ids_field].apply(lambda x: x + "_"))
+
+        # elif set(self._identifiers).intersection(set(dataset._identifiers)):
+        #     raise ValueError("The datasets have common identifiers")
+
+        self._dataframe = pd.concat((self._dataframe, dataset.dataframe), axis=0)
+
+        for instance_type in self._instances:
+            self._instances[instance_type].update(dataset._instances[instance_type])
+
+            if self._features:
+                self._features[instance_type].update(dataset._features[instance_type])
+
+        self._clear_cached_properties()
+
+        return self

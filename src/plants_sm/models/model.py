@@ -52,7 +52,7 @@ class Model(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def _fit_data(self, train_dataset: Dataset, validation_dataset: Dataset):
+    def _fit_data(self, train_dataset: Dataset, validation_dataset: Dataset, **kwargs):
         """
         Fits the model to the data.
 
@@ -65,7 +65,7 @@ class Model(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def _predict_proba(self, dataset: Dataset) -> np.ndarray:
+    def _predict_proba(self, dataset: Dataset, **kwargs) -> np.ndarray:
         """
         Predicts the probabilities of the classes.
 
@@ -81,7 +81,7 @@ class Model(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def _predict(self, dataset: Dataset) -> np.ndarray:
+    def _predict(self, dataset: Dataset, **kwargs) -> np.ndarray:
         """
         Predicts the classes.
 
@@ -137,7 +137,7 @@ class Model(metaclass=ABCMeta):
         Returns the underlying model.
         """
 
-    def fit(self, train_dataset: Dataset, validation_dataset: Dataset = None) -> 'Model':
+    def fit(self, train_dataset: Dataset, validation_dataset: Dataset = None, **kwargs) -> 'Model':
         """
         Fits the model to the data.
 
@@ -152,9 +152,9 @@ class Model(metaclass=ABCMeta):
         -------
         self
         """
-        return self._fit_data(train_dataset, validation_dataset)
+        return self._fit_data(train_dataset, validation_dataset, **kwargs)
 
-    def predict_proba(self, dataset: Dataset) -> np.ndarray:
+    def predict_proba(self, dataset: Dataset, **kwargs) -> np.ndarray:
         """
         Predicts the probabilities of the classes.
 
@@ -168,9 +168,9 @@ class Model(metaclass=ABCMeta):
             The predicted probabilities.
         """
 
-        return self._predict_proba(dataset)
+        return self._predict_proba(dataset, **kwargs)
 
-    def predict(self, dataset: Dataset) -> np.ndarray:
+    def predict(self, dataset: Dataset, **kwargs) -> np.ndarray:
         """
         Predicts the classes.
 
@@ -184,7 +184,7 @@ class Model(metaclass=ABCMeta):
         np.ndarray
             The predicted classes.
         """
-        return self._predict(dataset)
+        return self._predict(dataset, **kwargs)
 
     def preprocess(self, dataset: Dataset, **kwargs):
         """

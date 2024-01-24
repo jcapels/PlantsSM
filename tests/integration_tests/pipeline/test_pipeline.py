@@ -5,7 +5,7 @@ from torch.optim import Adam
 
 from plants_sm.data_standardization.proteins.standardization import ProteinStandardizer
 from plants_sm.data_structures.dataset import PLACEHOLDER_FIELD
-from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
+from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
 from plants_sm.models.constants import BINARY
 from plants_sm.models.pytorch_model import PyTorchModel
 from plants_sm.pipeline.pipeline import Pipeline
@@ -17,7 +17,7 @@ class TestPipeline(TestModels):
 
     def test_fit_predict(self):
 
-        steps = [ProteinStandardizer(), Word2Vec()]
+        steps = [ProteinStandardizer(), PropythiaWrapper(preset='performance')]
         model = TestPytorchBaselineModel(100, 50)
         pytorch_model = PyTorchModel(model=model,
                                      loss_function=nn.BCELoss(),
@@ -46,7 +46,7 @@ class TestPipeline(TestModels):
 
     def test_load_save(self):
 
-        steps = [ProteinStandardizer(), Word2Vec()]
+        steps = [ProteinStandardizer(), PropythiaWrapper(preset='performance')]
         model = TestPytorchBaselineModel(100, 50)
         pytorch_model = PyTorchModel(model=model,
                                      loss_function=nn.BCELoss(),

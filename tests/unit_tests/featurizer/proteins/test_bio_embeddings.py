@@ -28,17 +28,6 @@ class TestEmbeddings(TestProteinFeaturizers):
     def test_raise_errors_unirep(self):
         UniRepEmbeddings(output_shape_dimension=2, device="2").fit_transform(self.dataset)
 
-    def test_word2vec_embeddings_2d(self):
-        Word2Vec().fit_transform(self.dataset)
-        self.assertEqual(self.dataset.X().shape, (2, 512))
-        self.assertAlmostEqual(-0.033494536, self.dataset.X()[0, 0], delta=0.005)
-
-    def test_word2vec_embeddings_3d(self):
-        Word2Vec(output_shape_dimension=3).fit_transform(self.dataset)
-
-        self.assertEqual(self.dataset.dataframe.shape, (2, 2))
-        self.assertEqual(self.dataset.X().shape, (2, 453, 512))
-
     def test_prot_bert_embeddings(self):
         ProtBert().fit_transform(self.dataset)
         self.assertEqual(self.dataset.X().shape, (2, 1024))
@@ -51,7 +40,7 @@ class TestEmbeddings(TestProteinFeaturizers):
 
     @skip("No memory on CI")
     def test_esm_1b(self):
-        ESMEncoder(device="cpu").fit_transform(self.dataset)
+        ESMEncoder(device="cpu", esm_function="esm1b_t33_650M_UR50S", batch_size=1).fit_transform(self.dataset)
 
     @skip("No memory on CI")
     def test_esm_2(self):

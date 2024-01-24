@@ -1,8 +1,8 @@
 import torch
-from keras.metrics import accuracy
-from tensorflow.python.keras import Input
-from tensorflow.python.keras.layers import Dense
-from tensorflow.python.keras.models import Model
+
+from tensorflow.keras import Input
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.models import Model
 from torch import nn
 
 
@@ -29,11 +29,11 @@ class DenseNet(nn.Module):
 
 class TestPytorchBaselineModel(nn.Module):
 
-    def __init__(self, input_dim, output_dim):
+    def __init__(self, input_dim, output_dim, intermediate_dim=128):
         super(TestPytorchBaselineModel, self).__init__()
         self.input_dim = input_dim
-        self.fc1 = nn.Linear(input_dim, 128)
-        self.fc2 = nn.Linear(128, output_dim)
+        self.fc1 = nn.Linear(input_dim, intermediate_dim)
+        self.fc2 = nn.Linear(intermediate_dim, output_dim)
         self.final_layer = nn.Linear(output_dim, 1)
 
     def forward(self, x):
@@ -62,5 +62,5 @@ class ToyTensorflowModel:
 
         model = Model(inputs=inputs, outputs=[predictions])
 
-        model.compile(optimizer='adam', loss='binary_crossentropy', metrics=[accuracy])
+        model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
         return model
