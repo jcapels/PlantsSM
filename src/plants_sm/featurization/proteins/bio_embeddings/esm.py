@@ -241,7 +241,7 @@ class ESMEncoder(Transformer):
 
         else:
             model = ESM1Model(self.model.args, alphabet=self.alphabet,
-                              is_ddf=self.is_ddf, num_gpus=self.num_gpus)
+                               device=self.device)
             model.load_state_dict(self.model.state_dict())
 
         if self.is_ddf:
