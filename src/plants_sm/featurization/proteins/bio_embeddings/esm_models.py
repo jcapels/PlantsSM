@@ -180,9 +180,6 @@ class ESM1Model(ProteinBertModel):
         self.embed_positions = self.embed_positions.to(tokens.device)
         x = x + self.embed_positions(tokens)
 
-        if self.is_ddf:
-            gpus = self.devices
-        i = 0
 
         if self.model_version == "ESM-1b":
             if self.emb_layer_norm_before:
