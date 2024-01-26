@@ -73,8 +73,8 @@ class ESM2Model(ESM2):
                 x = x.to("cpu")
                 layer = layer.to("cpu")
             else:
-                x = x.to("cuda")
-                layer = layer.to("cuda")
+                x = x.to(self.devices[0])
+                layer = layer.to(self.devices[0])
 
             x, attn = layer(
                 x,
@@ -97,8 +97,8 @@ class ESM2Model(ESM2):
             x = x.to("cpu")
             self.emb_layer_norm_after = self.emb_layer_norm_after.to("cpu")
         else:
-            x = x.to("cuda")
-            self.emb_layer_norm_after = self.emb_layer_norm_after.to("cuda")
+            x = x.to(self.devices[0])
+            self.emb_layer_norm_after = self.emb_layer_norm_after.to(self.devices[0])
 
         i += 1
         x = self.emb_layer_norm_after(x)
@@ -116,8 +116,8 @@ class ESM2Model(ESM2):
             x = x.to("cpu")
             self.lm_head = self.lm_head.to("cpu")
         else:
-            x = x.to("cuda")
-            self.lm_head = self.lm_head.to("cuda")
+            x = x.to(self.devices[0])
+            self.lm_head = self.lm_head.to(self.devices[0])
         i += 1
         x = self.lm_head(x)
 
