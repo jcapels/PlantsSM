@@ -234,9 +234,14 @@ class ESMEncoder(Transformer):
 
         # initialize the model with FSDP wrapper
         if "esm2" in self.esm_function:
+            if self.num_gpus == 1 and self.device != "cpu":
+                devices = [self.device]
+            else:
+                devices = None
+
             model = ESM2Model(alphabet=self.alphabet, num_layers=self.model.num_layers, embed_dim=self.model.embed_dim,
                               attention_heads=self.model.attention_heads, token_dropout=self.model.token_dropout,
-                              is_ddf=self.is_ddf, num_gpus=self.num_gpus)
+                              is_ddf=self.is_ddf, num_gpus=self.num_gpus, devices=devices)
             model.load_state_dict(self.model.state_dict())
 
         else:
