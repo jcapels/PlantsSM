@@ -134,7 +134,6 @@ class ESMEncoder(Transformer):
                 flatten_parameters=True,
                 state_dict_device=torch.device("cpu"),  # reduce GPU mem usage
                 cpu_offload=False,  # enable cpu offloading
-                compute_device=torch.device(device)
             )
 
             with enable_wrap(wrapper_cls=FSDP, **fsdp_params):
