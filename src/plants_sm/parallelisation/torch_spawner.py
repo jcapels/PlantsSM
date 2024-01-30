@@ -50,7 +50,7 @@ class TorchSpawner:
         os.environ["OMP_NUM_THREADS"] = "1"
         os.environ["NCCL_DEBUG"] = "ERROR"
 
-        world_size = 1
+        world_size = torch.cuda.device_count() * self.num_machines
 
         results_file = tempfile.NamedTemporaryFile(delete=True)
 
