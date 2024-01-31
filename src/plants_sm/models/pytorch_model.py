@@ -23,6 +23,7 @@ from plants_sm.models.constants import REGRESSION, QUANTILE, BINARY, FileConstan
 from plants_sm.models.model import Model
 import torch
 
+
 class PyTorchModel(Model):
 
     def __init__(self, model: nn.Module, loss_function: _Loss, validation_loss_function: _Loss = None, model_name=None,
@@ -30,7 +31,8 @@ class PyTorchModel(Model):
                  scheduler: ReduceLROnPlateau = None, epochs: int = 32, batch_size: int = 32,
                  patience: int = 4, validation_metric: Callable = None,
                  problem_type: str = BINARY,
-                 device: Union[str, torch.device, List[str]] = torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
+                 device: Union[str, torch.device, List[str]] = torch.device(
+                     'cuda' if torch.cuda.is_available() else 'cpu'),
                  trigger_times: int = 0,
                  last_loss: int = None,
                  progress: int = 100,
@@ -96,26 +98,19 @@ class PyTorchModel(Model):
         else:
             self.model_name = model.__class__.__name__
 
-        formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
-        if logger_path:
-            handler = TimedRotatingFileHandler(logger_path, when='midnight', backupCount=30)
-        else:
-            handler = TimedRotatingFileHandler(f'./{self.model_name}.log', when='midnight', backupCount=20)
-        handler.setFormatter(formatter)
-
-        self.logger = logging.getLogger(__name__)
-        self.logger.addHandler(handler)
-        self.logger.setLevel(logging.DEBUG)
-
         if isinstance(device, list):
-            self.ddp = True
             self.model = model
             self.device = device
 
         else:
-            self.ddp = False
             self.device = device
             self.model = model.to(self.device)
+
+        self.logger_path = logger_path
+        if tensorboard_file_path is None:
+            self.tensorboard_file_path = "./runs"
+        else:
+            self.tensorboard_file_path = tensorboard_file_path
 
         self.loss_function = loss_function
 
@@ -144,16 +139,8 @@ class PyTorchModel(Model):
         self._history = {'loss': loss_dataframe,
                          'metric_results': metric_dataframe}
 
-        if tensorboard_file_path is None:
-            tensorboard_file_path = "./runs"
-
-        self.writer = SummaryWriter(log_dir=tensorboard_file_path, comment=self.model_name,
-                                    filename_suffix=self.model_name)
-
         if not self.optimizer:
             self.optimizer = Adam(self.model.parameters())
-        # if not self.scheduler:
-        #     self.scheduler = ReduceLROnPlateau(self.optimizer, 'min')
 
         self.losses = {}
         self.metrics = {}
@@ -209,7 +196,9 @@ class PyTorchModel(Model):
                 def find_class(self, module, name):
                     if module == 'torch.storage' and name == '_load_from_bytes':
                         return lambda b: torch.load(io.BytesIO(b), map_location='cpu')
-                    else: return super().find_class(module, name)
+                    else:
+                        return super().find_class(module, name)
+
             with open(os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value), "rb") as f:
                 model = CPU_Unpickler(f).load()
         model.load_state_dict(torch.load(weights_path, map_location=torch.device('cpu')))
@@ -309,7 +298,7 @@ class PyTorchModel(Model):
         else:
             tensor = torch.tensor(dataset.X, dtype=torch.float)
             tensors.append(tensor)
-        
+
         try:
             if dataset.y is not None:
                 tensors.append(torch.tensor(dataset.y, dtype=torch.float))
@@ -414,11 +403,11 @@ class PyTorchModel(Model):
             validation_metric_result = self.validation_metric(actuals, predictions)
 
         return loss_total / len_valid_dataset, validation_metric_result
-    
+
     @staticmethod
     def _train_ddp(inputs_targets: Tensor, model, loss_function, optimizer,
-                    l2_regularization_lambda, l1_regularization_lambda, device):
-        
+                   l2_regularization_lambda, l1_regularization_lambda, device):
+
         inputs, targets = inputs_targets[:-1], inputs_targets[-1]
         for j, inputs_elem in enumerate(inputs):
             inputs[j] = inputs_elem.to(device[0])
@@ -458,7 +447,7 @@ class PyTorchModel(Model):
         yhat = array_reshape(yhat)
 
         return actual, yhat, loss, model, optimizer
-    
+
     def _train(self, inputs_targets: Tensor) -> Tuple[np.ndarray, np.ndarray, Tensor]:
         """
         Train the model
@@ -636,12 +625,6 @@ class PyTorchModel(Model):
         len_train_dataset = len(train_dataset_preprocessed)
 
         for i, inputs_targets in enumerate(train_dataset_preprocessed):
-            # if self.ddp:
-            #     actual, yhat, loss, self.model, self.optimizer = \
-            #         TorchSpawner().run(self._train_ddp, inputs_targets=inputs_targets, model=self.model, loss_function=self.loss_function, 
-            #                            optimizer=self.optimizer, l2_regularization_lambda=self.l2_regularization_lambda, 
-            #                            l1_regularization_lambda=self.l1_regularization_lambda, device=self.device)
-            # else:
             actual, yhat, loss = self._train(inputs_targets)
 
             predictions = np.concatenate((predictions, yhat))
@@ -736,6 +719,20 @@ class PyTorchModel(Model):
         nn.Module
             Trained model
         """
+
+        self.writer = SummaryWriter(log_dir=self.tensorboard_file_path, comment=self.model_name,
+                                    filename_suffix=self.model_name)
+
+        formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
+        if self.logger_path:
+            handler = TimedRotatingFileHandler(self.logger_path, when='midnight', backupCount=30)
+        else:
+            handler = TimedRotatingFileHandler(f'./{self.model_name}.log', when='midnight', backupCount=20)
+        handler.setFormatter(formatter)
+
+        self.logger = logging.getLogger(__name__)
+        self.logger.addHandler(handler)
+        self.logger.setLevel(logging.DEBUG)
 
         self.last_loss = 100
         self.trigger_times = 0
@@ -871,7 +868,7 @@ class PyTorchModel(Model):
         y_pred = array_reshape(y_pred)
         return y_pred
 
-    def _predict_proba_batch(self, dataset: Dataset, predictions: np.ndarray=None) -> np.ndarray:
+    def _predict_proba_batch(self, dataset: Dataset, predictions: np.ndarray = None) -> np.ndarray:
         """
         Predicts the probability of each class for each sample in the dataset.
 
@@ -923,9 +920,6 @@ class PyTorchModel(Model):
             return y_pred
 
         self.model.eval()
-
-        # second_shape = dataset.y.shape[1]
-        # predictions, _ = np.empty(shape=(0, second_shape)), np.empty(shape=(0, second_shape))
 
         predictions = None
 
