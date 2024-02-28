@@ -22,9 +22,9 @@ from sklearn.metrics import f1_score, \
 from plants_sm.tokenisation.compounds.smilespe import AtomLevelTokenizer
 from tests import TEST_DIR
 
-environment_name = sys.executable.split('/')[-3]
-print('Environment:', environment_name)
-os.environ[environment_name] = str(123)
+# environment_name = sys.executable.split('/')[-3]
+# print('Environment:', environment_name)
+# os.environ[environment_name] = str(123)
 os.environ['PYTHONHASHSEED'] = str(123)
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 torch.manual_seed(123)
