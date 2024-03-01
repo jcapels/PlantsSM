@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from collections.abc import Iterable
 import copy
 import os
 from typing import Dict, Union
@@ -58,13 +59,13 @@ class InternalLightningModel(Model):
         else:
             tensor = torch.tensor(dataset.X, dtype=torch.float)
             tensors.append(tensor)
-        
+
         try:
             if dataset.y is not None:
                 tensors.append(torch.tensor(dataset.y, dtype=torch.float))
         except ValueError:
             pass
-        
+
         dataset = TensorDataset(
             *tensors
         )
@@ -75,7 +76,7 @@ class InternalLightningModel(Model):
             batch_size=self.batch_size
         )
         return data_loader
-
+    
 
     def _fit_data(self, train_dataset: Union[Dataset, TensorDataset], 
                   validation_dataset: Union[Dataset, TensorDataset]):
@@ -214,11 +215,10 @@ class InternalLightningModule(L.LightningModule):
         
     def training_step(self, batch, batch_idx):
         x, y = batch
+        if not isinstance(x, list):
+            x = [x]
         logits = self(x)
         loss = self.compute_loss(logits, y)
-
-        print(type(y))
-        print(type(logits))
         
         self.training_step_outputs.append(logits)
         self.training_step_y_true.append(y)
@@ -228,10 +228,9 @@ class InternalLightningModule(L.LightningModule):
     
     def validation_step(self, batch, batch_idx):
         inputs, target = batch
+        if not isinstance(inputs, list):
+            inputs = [inputs]
         output = self(inputs)
-
-        print(type(output))
-        print(type(target))
 
         self.validation_step_outputs.append(output)
         self.validation_step_y_true.append(target)
@@ -266,5 +265,7 @@ class InternalLightningModule(L.LightningModule):
     
     def predict_step(self, batch):
         inputs, target = batch
+        if not isinstance(inputs, list):
+            inputs = [inputs]
         return self(inputs)
     
