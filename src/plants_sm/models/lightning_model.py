@@ -219,6 +219,8 @@ class InternalLightningModule(L.LightningModule):
             x = [x]
         logits = self(x)
         loss = self.compute_loss(logits, y)
+        logits = logits.detach().cpu()
+        y = y.detach().cpu()
         
         self.training_step_outputs.append(logits)
         self.training_step_y_true.append(y)
@@ -231,6 +233,9 @@ class InternalLightningModule(L.LightningModule):
         if not isinstance(inputs, list):
             inputs = [inputs]
         output = self(inputs)
+
+        output = output.detach().cpu()
+        target = target.detach().cpu()
 
         self.validation_step_outputs.append(output)
         self.validation_step_y_true.append(target)
