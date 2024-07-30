@@ -7,12 +7,17 @@ from plants_sm.models.model import Model
 from plants_sm.models.pytorch_model import PyTorchModel
 from plants_sm.models.tensorflow_model import TensorflowModel
 
+from plants_sm.models.lightning_model import InternalLightningModel
+
 
 class ModelFilesClasses(Enum):
     """Enumeration of model types."""
 
     PYTORCH_MODEL_WEIGHTS = PyTorchModel
     PYTORCH_MODEL_PKL = PyTorchModel
+
+    LIGHTNING_WEIGHTS = InternalLightningModel
+    LIGHTNING_MODEL_PKL = InternalLightningModel
 
     TENSORFLOW_MODEL = TensorflowModel
 

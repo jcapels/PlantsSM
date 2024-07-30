@@ -18,7 +18,7 @@ class Pipeline:
     metrics: List[callable]
 
     def __init__(self, steps: Union[List[Transformer], Dict[str, List[Transformer]]] = None,
-                 models: List[Model] = None,
+                 models: List[Model] = [],
                  metrics: List[callable] = None):
         """
         Constructor
@@ -90,6 +90,24 @@ class Pipeline:
         for instance_type in self.steps.keys():
             for step in self.steps[instance_type]:
                 step.transform(dataset, instance_type=instance_type)
+
+    def transform(self, dataset: Dataset) -> Dataset:
+        """
+        Transform the dataset according to the pipeline
+
+        Parameters
+        ----------
+        dataset: Dataset
+            dataset to transform
+
+        Returns
+        -------
+        transformed_dataset: Dataset
+            transformed dataset
+        """
+
+        self._transform_dataset(dataset)
+        return dataset
 
     def predict(self, test_dataset: Dataset, model_name: str = None) -> np.ndarray:
         """

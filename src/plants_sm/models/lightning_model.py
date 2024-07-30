@@ -1,11 +1,8 @@
 from abc import abstractmethod
-from collections.abc import Iterable
-import copy
 import os
 from typing import Dict, Union
 from plants_sm.models.model import Model
 from plants_sm.data_structures.dataset.dataset import Dataset
-from plants_sm.parallelisation.torch_spawner import TorchSpawner
 from plants_sm.models.constants import FileConstants
 from plants_sm.io.pickle import read_pickle, write_pickle
 from torch.utils.data import TensorDataset, DataLoader
@@ -15,7 +12,7 @@ from plants_sm.models._utils import _get_pred_from_proba, _convert_proba_to_unif
 from plants_sm.models.constants import BINARY, FileConstants
 
 from plants_sm.models._utils import _convert_proba_to_unified_form, \
-    write_model_parameters_to_pickle, array_from_tensor, array_reshape, multi_label_binarize
+    write_model_parameters_to_pickle
 
 import numpy as np
 
@@ -158,11 +155,12 @@ class InternalLightningModel(Model):
         path: str
             The path to load the model from.
         """
-        weights_path = os.path.join(path, "pytorch_model_weights.ckpt")
-        model = read_pickle(os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value))
+        weights_path = os.path.join(path, FileConstants.LIGHTNING_WEIGHTS.value)
+        model = read_pickle(os.path.join(path, FileConstants.LIGHTNING_MODEL_PKL.value))
         model_parameters = read_pickle(os.path.join(path, FileConstants.MODEL_PARAMETERS_PKL.value))
         model = model.load_from_checkpoint(weights_path,**model_parameters)
         model = cls(module=model)
+        model.trainer = read_pickle(os.path.join(path, "trainer.pk"))
         return model
 
     def _save(self, path: str):
@@ -174,9 +172,10 @@ class InternalLightningModel(Model):
         path: str
             The path to save the model to.
         """
-        weights_path = os.path.join(path, "pytorch_model_weights.ckpt")
+        weights_path = os.path.join(path, FileConstants.LIGHTNING_WEIGHTS.value)
         self.trainer.save_checkpoint(weights_path)
-        write_pickle(os.path.join(path, FileConstants.PYTORCH_MODEL_PKL.value), self.module.__class__)
+        write_pickle(os.path.join(path, "trainer.pk"), self.trainer)
+        write_pickle(os.path.join(path, FileConstants.LIGHTNING_MODEL_PKL.value), self.module.__class__)
         write_model_parameters_to_pickle(self.module._contructor_parameters, path)
 
     @property
@@ -208,6 +207,11 @@ class InternalLightningModule(L.LightningModule):
         self.training_step_y_true = []
         self.validation_step_y_true = []
         self.epoch_losses = []
+        self._update_constructor_parameters()
+
+    @abstractmethod
+    def _update_constructor_parameters():
+        pass
 
     @abstractmethod
     def compute_loss(self, logits, y):
@@ -269,7 +273,10 @@ class InternalLightningModule(L.LightningModule):
 
     
     def predict_step(self, batch):
-        inputs, target = batch
+        if len(batch) == 2:
+            inputs, target = batch
+        else:
+            inputs = batch
         if not isinstance(inputs, list):
             inputs = [inputs]
         return self(inputs)
