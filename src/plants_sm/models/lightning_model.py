@@ -32,6 +32,21 @@ class InternalLightningModel(Model):
 
         self.devices = devices
 
+    def get_embedding(self, dataset):
+        if isinstance(dataset, Dataset):
+            predict_dataloader = self._preprocess_data(dataset, shuffle=False)
+        else:
+            predict_dataloader = dataset
+
+        # the module has to have the return_embedding attribute
+        self.module.return_embedding = True 
+        embeddings = self.trainer.predict(self.module, predict_dataloader)
+        # get a list of embeddings from the list of tuples
+        embeddings = [embedding[1] for embedding in embeddings]
+        embeddings = torch.cat(embeddings)
+        return np.array(embeddings)
+
+
     def _preprocess_data(self, dataset: Dataset, shuffle: bool = True) -> Dataset:
         """
         Preprocesses the data.

@@ -1,5 +1,5 @@
 from deepmol.compound_featurization import MorganFingerprint, MACCSkeysFingerprint, LayeredFingerprint, RDKFingerprint, \
-    AtomPairFingerprint, TwoDimensionDescriptors
+    AtomPairFingerprint, TwoDimensionDescriptors, NPClassifierFP
 
 DEEPMOL_PRESETS = {
     "morgan_fingerprints": MorganFingerprint,
@@ -8,4 +8,5 @@ DEEPMOL_PRESETS = {
     "rdk_fingerprints": RDKFingerprint,
     "atompair_fingerprints": AtomPairFingerprint,
     "2d_descriptors": TwoDimensionDescriptors,
+    "np_classifier_fp": NPClassifierFP
 }
