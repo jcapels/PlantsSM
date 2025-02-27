@@ -39,7 +39,9 @@ class DSPACEModel(nn.Module):
         self.classification_layer = nn.Linear(256, num_classes)
 
     def forward(self, x):
-        x = x[0]
+        if type(x) == list:
+            x = x[0]
+        
         x = x.permute(0, 2, 1)
         x = F.elu(self.bn0(self.conv0(x)))
         x = F.elu(self.bn1(self.conv1(x)))

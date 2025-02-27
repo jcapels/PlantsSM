@@ -41,7 +41,9 @@ class DNN(nn.Module):
         self.final_batch_norm = nn.BatchNorm1d(output_size)
 
     def forward(self, x):
-        x = x[0]
+
+        if type(x) == list:
+            x = x[0]
 
         if len(self.hidden_sizes) != 0:
             out = self.fc_initial(x)
