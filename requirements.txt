@@ -24,4 +24,5 @@ optuna==3.1.1
 lightning==2.1.2
 mol2vec @ git+https://github.com/samoturk/mol2vec#egg=mol2vec
 map4 @ git+https://github.com/reymond-group/map4@v1.0
+scipy==1.10.1
 
