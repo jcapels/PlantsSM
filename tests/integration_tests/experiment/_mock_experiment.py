@@ -6,7 +6,6 @@ from torch import nn
 from torch.optim import Adam
 
 from plants_sm.data_standardization.proteins.standardization import ProteinStandardizer
-from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
 from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
 from plants_sm.hyperparameter_optimization.experiment import Experiment
 from plants_sm.models.constants import BINARY

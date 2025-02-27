@@ -97,10 +97,10 @@ class FreezeUnfreezeModules(BaseFinetuning):
         pass
 
 if __name__=="__main__":
-    # train_dataset = SingleInputDataset.from_csv("/home/jcapela/final_data/train_shuffle.csv", representation_field="sequence", instances_ids_field="accession", labels_field=slice(8, 2779))
+    # train_dataset = SingleInputDataset.from_csv("/home/jcapela/ec_numbers_prediction/required_data_ec_number_paper/data/train.csv", representation_field="sequence", instances_ids_field="accession", labels_field=slice(8, 2779))
     # train_dataset = Truncator(max_length=884).fit_transform(train_dataset)
 
-    # validation_dataset = SingleInputDataset.from_csv("../../final_data/validation.csv", representation_field="sequence", instances_ids_field="accession", labels_field=slice(8, 2779))
+    # validation_dataset = SingleInputDataset.from_csv("/home/jcapela/ec_numbers_prediction/required_data_ec_number_paper/data/validation.csv", representation_field="sequence", instances_ids_field="accession", labels_field=slice(8, 2779))
     # validation_dataset = Truncator(max_length=884).fit_transform(validation_dataset)
 
     # train_dataset = _preprocess_data(train_dataset, "esm2_t6_8M_UR50D")
@@ -118,17 +118,17 @@ if __name__=="__main__":
 
     tensor_train_dataset = torch.load('/home/jcapela/PlantsSM/examples/tensor_train_dataset.pt', map_location=torch.device('cpu'))
     tensor_validation_dataset = torch.load('/home/jcapela/PlantsSM/examples/tensor_validation_dataset.pt', map_location=torch.device('cpu'))
-
+    batch_size = 4
     tensor_train_dataset = DataLoader(
             tensor_train_dataset,
             shuffle=True,
-            batch_size=6,
+            batch_size=batch_size,
             num_workers=9
         )
     tensor_validation_dataset = DataLoader(
             tensor_validation_dataset,
             shuffle=False,
-            batch_size=6,
+            batch_size=batch_size,
             num_workers=9
         )
 
@@ -140,18 +140,18 @@ if __name__=="__main__":
     #     if "layers" in parameter[0] and str(layers_1) not in parameter[0] and str(layer_2) not in parameter[0]:
     #         no_grad.add(parameter[0])
 
-    model = EC_ESM_Lightning("esm2_t6_8M_UR50D",[2560, 5120], 2771, metric=f1_score_macro)
+    model = EC_ESM_Lightning("esm2_t6_8M_UR50D",[2560, 5120], 2771, metric=f1_score_macro, freeze_layers=False)
     model_ = ESM(module=model,
                     max_epochs=10,
-                    batch_size=1,
-                    devices=[0, 1, 2, 3, 4, 5, 6, 7],
+                    batch_size=batch_size,
+                    devices=[1],
                     accelerator="gpu",
-                    strategy="fsdp",
-                    callbacks=[callbacks])
+                    callbacks=[callbacks],
+                    num_nodes=1)
     model_.fit(tensor_train_dataset, validation_dataset=tensor_validation_dataset)
     # model_.fit(train_dataset, validation_dataset=train_dataset)
     
-    model_.save("test_model")
+    model_.save("test_model_esm8")
 
     # model = EC_ESM_Lightning.load_from_checkpoint("/home/jcapela/PlantsSM/examples/test_model/pytorch_model_weights.ckpt",
     #                                             model_name="esm2_t12_35M_UR50D", hidden_layers=[2560, 5120], num_classes=2771, 

@@ -6,7 +6,6 @@ from integration_tests.dataset.test_dataset import TestDataset
 from plants_sm.data_structures.dataset import SingleInputDataset, PLACEHOLDER_FIELD
 from plants_sm.featurization.proteins.bio_embeddings.prot_bert import ProtBert
 from plants_sm.featurization.proteins.bio_embeddings.unirep import UniRepEmbeddings
-from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
 
 
 class TestDatasetBioembeddings(TestDataset):
