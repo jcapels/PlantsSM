@@ -1,6 +1,6 @@
-from plants_sm.featurization.proteins.encodings.blosum import BLOSSUMEncoder
-from plants_sm.featurization.proteins.encodings.nlf import NLFEncoder
-from plants_sm.featurization.proteins.encodings.z_scale import ZScaleEncoder
+from plants_sm.ml.featurization.proteins.encodings.blosum import BLOSSUMEncoder
+from plants_sm.ml.featurization.proteins.encodings.nlf import NLFEncoder
+from plants_sm.ml.featurization.proteins.encodings.z_scale import ZScaleEncoder
 from unit_tests.featurizer.proteins.test_protein_featurizers import TestProteinFeaturizers
 
 

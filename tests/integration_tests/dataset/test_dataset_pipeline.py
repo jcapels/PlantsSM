@@ -4,12 +4,12 @@ from sklearn.metrics import accuracy_score
 from torch import nn
 from torch.optim import Adam
 
-from plants_sm.data_standardization.proteins.standardization import ProteinStandardizer
-from plants_sm.data_structures.dataset import PLACEHOLDER_FIELD, SingleInputDataset
-from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
-from plants_sm.models.constants import BINARY
-from plants_sm.models.pytorch_model import PyTorchModel
-from plants_sm.pipeline.pipeline import Pipeline
+from plants_sm.ml.data_standardization.proteins.standardization import ProteinStandardizer
+from plants_sm.ml.data_structures.dataset import PLACEHOLDER_FIELD, SingleInputDataset
+from plants_sm.ml.featurization.proteins.propythia.propythia import PropythiaWrapper
+from plants_sm.ml.models.constants import BINARY
+from plants_sm.ml.models.pytorch_model import PyTorchModel
+from plants_sm.ml.pipeline.pipeline import Pipeline
 from unit_tests.models._utils import TestPytorchBaselineModel
 
 
@@ -17,7 +17,7 @@ class TestDatasetPipeline(TestDataset):
 
     def test_dataset_pipeline(self):
         steps = [ProteinStandardizer(), PropythiaWrapper(preset='performance')]
-        model = TestPytorchBaselineModel(8677, 50)
+        model = TestPytorchBaselineModel(8676, 50)
         pytorch_model = PyTorchModel(model=model,
                                      loss_function=nn.BCELoss(),
                                      device="cpu",
@@ -61,7 +61,7 @@ class TestDatasetPipeline(TestDataset):
                                                                     batch_size=1)
 
         steps = [ProteinStandardizer(), PropythiaWrapper(preset='performance')]
-        model = TestPytorchBaselineModel(8677, 50)
+        model = TestPytorchBaselineModel(8676, 50)
         pytorch_model = PyTorchModel(model=model,
                                      loss_function=nn.BCELoss(),
                                      device="cpu",

@@ -1,7 +1,7 @@
 import torch
 from torch.nn import BCELoss
-from plants_sm.models.lightning_model import InternalLightningModule
-from plants_sm.models.fc.fc import DNN
+from plants_sm.ml.models.lightning_model import InternalLightningModule
+from plants_sm.ml.models.fc.fc import DNN
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import torch

@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from pandas import DataFrame
 
-from plants_sm.data_structures.dataset import SingleInputDataset, PLACEHOLDER_FIELD
+from plants_sm.ml.data_structures.dataset import SingleInputDataset, PLACEHOLDER_FIELD
 
 from tests import TEST_DIR
 

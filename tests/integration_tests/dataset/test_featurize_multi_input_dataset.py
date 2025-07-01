@@ -1,7 +1,7 @@
 from integration_tests.dataset.test_dataset import TestDataset
-from plants_sm.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
-from plants_sm.featurization.proteins.bio_embeddings.unirep import UniRepEmbeddings
-from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
+from plants_sm.ml.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
+from plants_sm.ml.featurization.proteins.bio_embeddings.unirep import UniRepEmbeddings
+from plants_sm.ml.featurization.proteins.propythia.propythia import PropythiaWrapper
 
 
 class TestFeaturizeMultiInputDataset(TestDataset):

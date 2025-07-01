@@ -5,12 +5,12 @@ from sklearn.metrics import accuracy_score
 from torch import nn
 from torch.optim import Adam
 
-from plants_sm.data_standardization.proteins.standardization import ProteinStandardizer
-from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
-from plants_sm.hyperparameter_optimization.experiment import Experiment
-from plants_sm.models.constants import BINARY
-from plants_sm.models.pytorch_model import PyTorchModel
-from plants_sm.pipeline.pipeline import Pipeline
+from plants_sm.ml.data_standardization.proteins.standardization import ProteinStandardizer
+from plants_sm.ml.featurization.proteins.propythia.propythia import PropythiaWrapper
+from plants_sm.ml.hyperparameter_optimization.experiment import Experiment
+from plants_sm.ml.models.constants import BINARY
+from plants_sm.ml.models.pytorch_model import PyTorchModel
+from plants_sm.ml.pipeline.pipeline import Pipeline
 from unit_tests.models._utils import TestPytorchBaselineModel
 
 

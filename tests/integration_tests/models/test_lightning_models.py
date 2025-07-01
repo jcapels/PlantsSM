@@ -3,9 +3,9 @@ from unittest import TestCase
 from tests import TEST_DIR
 import pandas as pd
 import os
-from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputDataset
+from plants_sm.ml.data_structures.dataset.multi_input_dataset import MultiInputDataset
 
-from plants_sm.models.lightning_model import InternalLightningModel
+from plants_sm.ml.models.lightning_model import InternalLightningModel
 from ._multi_modal_model import MultiModalModel
 from lightning.pytorch.callbacks import EarlyStopping
 from ._interaction_model import InteractionModel

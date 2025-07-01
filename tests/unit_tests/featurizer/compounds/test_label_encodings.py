@@ -1,8 +1,8 @@
 from unittest import skip
 
-from plants_sm.featurization.encoding.label_encoder import LabelEncoder
-from plants_sm.featurization.encoding.one_hot_encoder import OneHotEncoder
-from plants_sm.tokenisation.compounds.smilespe import AtomLevelTokenizer, SPETokenizer, KmerTokenizer
+from plants_sm.ml.featurization.encoding.label_encoder import LabelEncoder
+from plants_sm.ml.featurization.encoding.one_hot_encoder import OneHotEncoder
+from plants_sm.ml.tokenisation.compounds.smilespe import AtomLevelTokenizer, SPETokenizer, KmerTokenizer
 from unit_tests.featurizer.compounds.test_compound_featurizers import TestCompoundFeaturizers
 
 

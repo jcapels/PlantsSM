@@ -1,5 +1,5 @@
-from plants_sm.data_structures.dataset import PLACEHOLDER_FIELD
-from plants_sm.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
+from plants_sm.ml.data_structures.dataset import PLACEHOLDER_FIELD
+from plants_sm.ml.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
 from unit_tests.featurizer.compounds.test_compound_featurizers import TestCompoundFeaturizers
 
 

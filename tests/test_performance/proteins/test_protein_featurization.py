@@ -1,8 +1,8 @@
 import os
 from unittest import TestCase, skip
 
-from plants_sm.data_structures.dataset import SingleInputDataset
-from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
+from plants_sm.ml.data_structures.dataset import SingleInputDataset
+from plants_sm.ml.featurization.proteins.propythia.propythia import PropythiaWrapper
 from tests import TEST_DIR
 
 

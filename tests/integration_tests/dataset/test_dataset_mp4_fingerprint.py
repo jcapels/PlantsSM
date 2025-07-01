@@ -1,8 +1,8 @@
 from unittest import skip
 
 from integration_tests.dataset.test_dataset import TestDataset
-from plants_sm.data_structures.dataset import SingleInputDataset, PLACEHOLDER_FIELD
-from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
+from plants_sm.ml.data_structures.dataset import SingleInputDataset, PLACEHOLDER_FIELD
+from plants_sm.ml.featurization.proteins.propythia.propythia import PropythiaWrapper
 
 
 @skip("Requires conda")
@@ -10,7 +10,7 @@ class TestDatasetMAP4(TestDataset):
 
     def test_create_dataset_deep_mol(self):
         dataset = SingleInputDataset(dataframe=self.compounds_dataframe, representation_field="sequence")
-        from plants_sm.featurization.compounds.map4_fingerprint import MAP4Fingerprint
+        from plants_sm.ml.featurization.compounds.map4_fingerprint import MAP4Fingerprint
         deepmol_wrapper = MAP4Fingerprint()
         deepmol_wrapper.fit_transform(dataset)
 
@@ -20,7 +20,7 @@ class TestDatasetMAP4(TestDataset):
         self.assertEqual(dataset.instances_ids_field, "identifier")
 
     def test_multi_input_dataset_map4_fingerprint(self):
-        from plants_sm.featurization.compounds.map4_fingerprint import MAP4Fingerprint
+        from plants_sm.ml.featurization.compounds.map4_fingerprint import MAP4Fingerprint
         deepmol_wrapper = MAP4Fingerprint()
         deepmol_wrapper.fit_transform(self.multi_input_dataset, "ligands")
 

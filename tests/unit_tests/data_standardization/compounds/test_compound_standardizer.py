@@ -3,8 +3,8 @@ from unittest.mock import MagicMock
 
 from pandas import DataFrame
 
-from plants_sm.data_standardization.compounds.deepmol_standardizers import DeepMolStandardizer
-from plants_sm.data_structures.dataset import SingleInputDataset, PLACEHOLDER_FIELD
+from plants_sm.ml.data_standardization.compounds.deepmol_standardizers import DeepMolStandardizer
+from plants_sm.ml.data_structures.dataset import SingleInputDataset, PLACEHOLDER_FIELD
 
 
 class TestStandardizer(TestCase):

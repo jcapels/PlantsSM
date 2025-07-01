@@ -4,12 +4,12 @@ import shutil
 import pandas as pd
 
 from integration_tests.dataset.test_dataset import TestDataset
-from plants_sm.data_standardization.proteins.padding import SequencePadder
-from plants_sm.data_structures.dataset import SingleInputDataset
-from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputDataset
-from plants_sm.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
-from plants_sm.featurization.encoding.one_hot_encoder import OneHotEncoder
-from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
+from plants_sm.ml.data_standardization.proteins.padding import SequencePadder
+from plants_sm.ml.data_structures.dataset import SingleInputDataset
+from plants_sm.ml.data_structures.dataset.multi_input_dataset import MultiInputDataset
+from plants_sm.ml.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
+from plants_sm.ml.featurization.encoding.one_hot_encoder import OneHotEncoder
+from plants_sm.ml.featurization.proteins.propythia.propythia import PropythiaWrapper
 
 
 class TestDatasetImportExport(TestDataset):
