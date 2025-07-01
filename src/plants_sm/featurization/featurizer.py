@@ -102,7 +102,8 @@ class FeaturesGenerator(Transformer):
         try:
             features_values = self._featurize(instance)
         # TODO: catch the correct exception
-        except Exception:
+        except Exception as e:
+            print(f"Error featurizing instance {identifier}: {e}")
             features_values = np.zeros(len(self.features_names))
 
         temp_feature_dictionary = (identifier, features_values)

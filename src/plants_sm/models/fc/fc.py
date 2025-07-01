@@ -61,7 +61,7 @@ class DNN(nn.Module):
             out = self.dropout(out)
         return out
 
-    def forward(self, x):
+    def forward(self, x, return_embedding=False):
         x = x[0]
 
         if len(self.hidden_sizes) != 0:
@@ -77,10 +77,19 @@ class DNN(nn.Module):
                         out = self._forward_hidden_layer(out, i)
                 else:
                     out = self._forward_hidden_layer(out, i)
-            
+
+            if return_embedding:
+                embedding = torch.clone(out)
             out = self.fc_final(out)
         else:
+            if return_embedding:
+                embedding = torch.clone(x)
             out = self.fc_final(x)
+
+        if return_embedding:
+            if self.last_sigmoid:
+                out = nn.Sigmoid()(out)
+            return out, embedding
         
         if self.last_sigmoid:
             out = nn.Sigmoid()(out)

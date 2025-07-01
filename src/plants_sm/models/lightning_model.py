@@ -45,6 +45,24 @@ class InternalLightningModel(Model):
         embeddings = [embedding[1] for embedding in embeddings]
         embeddings = torch.cat(embeddings)
         return np.array(embeddings)
+    
+    def reset_weights(self):
+        """
+        refs:
+            - https://discuss.pytorch.org/t/how-to-re-set-alll-parameters-in-a-network/20819/6
+            - https://stackoverflow.com/questions/63627997/reset-parameters-of-a-neural-network-in-pytorch
+            - https://pytorch.org/docs/stable/generated/torch.nn.Module.html
+        """
+
+        @torch.no_grad()
+        def weight_reset(m):
+            # - check if the current module has reset_parameters & if it's callabed called it on m
+            reset_parameters = getattr(m, "reset_parameters", None)
+            if callable(reset_parameters):
+                m.reset_parameters()
+
+        # Applies fn recursively to every submodule see: https://pytorch.org/docs/stable/generated/torch.nn.Module.html
+        self.module.apply(fn=weight_reset)
 
 
     def _preprocess_data(self, dataset: Dataset, shuffle: bool = True) -> Dataset:
@@ -117,7 +135,7 @@ class InternalLightningModel(Model):
         else:
             self.trainer.fit(model=self.module, train_dataloaders=train_dataset_loader)
 
-    def _predict_proba(self, dataset: Union[Dataset, TensorDataset], trainer = L.Trainer(accelerator="cpu")) -> np.ndarray:
+    def _predict_proba(self, dataset: Union[Dataset, TensorDataset], trainer = L.Trainer(accelerator="cpu")) -> Union[np.ndarray, list]:
         """
         Predicts the probabilities of the classes.
 
@@ -128,8 +146,8 @@ class InternalLightningModel(Model):
 
         Returns
         -------
-        np.ndarray
-            The predicted probabilities.
+        Union[np.ndarray, list]
+            np.ndarray if the network only has one output, list of np.ndarray if the network has multiple outputs.
         """
         if isinstance(dataset, Dataset):
             predict_dataloader = self._preprocess_data(dataset, shuffle=False)
@@ -137,7 +155,17 @@ class InternalLightningModel(Model):
             predict_dataloader = dataset
 
         predictions = trainer.predict(self.module, predict_dataloader)
-        predictions = torch.cat(predictions)
+        if type(predictions[0]) == tuple:
+            len_tuple = len(predictions[0])
+            new_predictions = [None] * len_tuple
+            for i in range(len_tuple):
+                new_predictions[i] = [prediction[i] for prediction in predictions]
+                new_predictions[i] = torch.cat(new_predictions[i]).detach().cpu().numpy()
+            predictions = new_predictions
+        else:
+            predictions = torch.cat(predictions)
+            # convert to numpy array
+            predictions = predictions.detach().cpu().numpy()
         return predictions
 
 
@@ -156,8 +184,15 @@ class InternalLightningModel(Model):
             The predicted classes.
         """
         predictions = self._predict_proba(dataset, trainer)
-        predictions = _convert_proba_to_unified_form(self.module.problem_type, np.array(predictions))
-        predictions = _get_pred_from_proba(self.module.problem_type, predictions)
+
+        if type(predictions) == list:
+            for i in range(len(predictions)):
+                predictions[i] = _convert_proba_to_unified_form(self.module.problem_type, np.array(predictions[i]))
+                predictions[i] = _get_pred_from_proba(self.module.problem_type, predictions[i])
+        else:
+            predictions = _convert_proba_to_unified_form(self.module.problem_type, np.array(predictions))
+            predictions = _get_pred_from_proba(self.module.problem_type, predictions)
+
         return predictions
     
     @classmethod
@@ -191,7 +226,7 @@ class InternalLightningModel(Model):
         self.trainer.save_checkpoint(weights_path)
         write_pickle(os.path.join(path, "trainer.pk"), self.trainer)
         write_pickle(os.path.join(path, FileConstants.LIGHTNING_MODEL_PKL.value), self.module.__class__)
-        write_model_parameters_to_pickle(self.module._contructor_parameters, path)
+        write_model_parameters_to_pickle(self.module._constructor_parameters, path)
 
     @property
     def history(self):
@@ -215,7 +250,7 @@ class InternalLightningModule(L.LightningModule):
         self.problem_type = problem_type
         self.metric = metric
 
-        self._contructor_parameters = { "problem_type": problem_type }
+        self._constructor_parameters = { "problem_type": problem_type }
 
         self.training_step_outputs = []
         self.validation_step_outputs = []
