@@ -13,7 +13,6 @@ from plants_sm.data_standardization.proteins.standardization import ProteinStand
 from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputDataset
 from plants_sm.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
 from plants_sm.featurization.encoding.one_hot_encoder import OneHotEncoder
-from plants_sm.featurization.proteins.bio_embeddings.word2vec import Word2Vec
 from plants_sm.models.constants import BINARY
 from plants_sm.models.pytorch_model import PyTorchModel
 from sklearn.metrics import f1_score, \
@@ -336,44 +335,6 @@ class TestConv1D(TestCase):
         #
         # ModelReport(wrapper, BINARY, self.dataset_35000_instances_test).generate_metrics_report()
 
-    def test_pickle_dataset(self):
-        HEAVY_STANDARDIZATION = {
-            'remove_isotope'.upper(): True,
-            'NEUTRALISE_CHARGE'.upper(): True,
-            'remove_stereo'.upper(): True,
-            'keep_biggest'.upper(): True,
-            'add_hydrogen'.upper(): True,
-            'kekulize'.upper(): False,
-            'neutralise_charge_late'.upper(): True
-        }
-
-        kwargs = {"params": HEAVY_STANDARDIZATION}
-
-        DeepMolStandardizer(preset="custom_standardizer", kwargs=kwargs, n_jobs=8).fit_transform(
-            self.dataset_35000_instances_train,
-            "ligands")
-
-        ProteinStandardizer(n_jobs=8).fit_transform(self.dataset_35000_instances_valid, "proteins")
-
-        DeepMolStandardizer(preset="custom_standardizer", kwargs=kwargs, n_jobs=8).fit_transform(
-            self.dataset_35000_instances_valid,
-            "ligands")
-
-        ProteinStandardizer(n_jobs=8).fit_transform(self.dataset_35000_instances_train, "proteins")
-
-        Word2Vec().fit_transform(self.dataset_35000_instances_train,
-                                 "proteins")
-
-        DeepMolDescriptors(n_jobs=8).fit_transform(self.dataset_35000_instances_train, "ligands")
-
-        Word2Vec().fit_transform(self.dataset_35000_instances_valid,
-                                 "proteins")
-
-        DeepMolDescriptors(n_jobs=8).fit_transform(self.dataset_35000_instances_valid, "ligands")
-        file_pi = open('dataset_train.obj', 'wb')
-        pickle.dump(self.dataset_35000_instances_train, file_pi)
-        file_pi = open('dataset_valid.obj', 'wb')
-        pickle.dump(self.dataset_35000_instances_valid, file_pi)
 
     def test_get_dataset(self):
         file_pi = open('dataset.obj', 'rb')

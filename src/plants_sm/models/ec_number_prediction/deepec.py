@@ -26,7 +26,7 @@ class DeepECCNN(nn.Module):
         self.batchnorm4 = nn.BatchNorm1d(dense_layer_size)
         self.activation1 = nn.ReLU()
 
-        self.last_sigmoid = False
+        self.last_sigmoid = True
 
         for i in range(num_dense_layers):
             setattr(self, f"dense{i}", nn.Linear(dense_layer_size, dense_layer_size))
@@ -36,7 +36,10 @@ class DeepECCNN(nn.Module):
         self.dense_final = nn.Linear(dense_layer_size, num_classes)
 
     def forward(self, x):
-        x = x[0]
+        
+        if type(x) == list:
+            x = x[0]
+
         x = x.unsqueeze(1)
         to_concat = []
         for i in range(len(self.kernel_sizes)):

@@ -44,7 +44,9 @@ class DNN(nn.Module):
         self.final_batch_norm = nn.BatchNorm1d(output_size)
 
     def _forward_initial_layers(self, x):
-        out = self.fc_initial(x)
+
+        if type(x) == list:
+            out = self.fc_initial(x)
         if self.batch_norm and x.shape[0] > 1:
             out = self.batch_norm_initial(out)
         out = self.relu_initial(out)
