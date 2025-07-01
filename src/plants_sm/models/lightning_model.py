@@ -13,7 +13,6 @@ from plants_sm.models.constants import BINARY, FileConstants
 
 from plants_sm.models._utils import _convert_proba_to_unified_form, \
     write_model_parameters_to_pickle
-    write_model_parameters_to_pickle
 
 import numpy as np
 
@@ -289,11 +288,6 @@ class InternalLightningModule(L.LightningModule):
         self.training_step_y_true = []
         self.validation_step_y_true = []
         self.epoch_losses = []
-        self._update_constructor_parameters()
-
-    @abstractmethod
-    def _update_constructor_parameters():
-        pass
         self._update_constructor_parameters()
 
     @abstractmethod
