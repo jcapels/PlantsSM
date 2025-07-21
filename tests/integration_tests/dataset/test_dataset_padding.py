@@ -1,6 +1,6 @@
 from integration_tests.dataset.test_dataset import TestDataset
-from plants_sm.ml.data_standardization.proteins.padding import SequencePadder
-from plants_sm.ml.data_structures.dataset import SingleInputDataset
+from plants_sm.data_standardization.proteins.padding import SequencePadder
+from plants_sm.data_structures.dataset import SingleInputDataset
 
 
 class TestDatasetSequencePadding(TestDataset):

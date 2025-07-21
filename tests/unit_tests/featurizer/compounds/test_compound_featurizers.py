@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import numpy as np
 from pandas import DataFrame
 
-from plants_sm.ml.data_structures.dataset import PLACEHOLDER_FIELD, SingleInputDataset
+from plants_sm.data_structures.dataset import PLACEHOLDER_FIELD, SingleInputDataset
 
 
 class TestCompoundFeaturizers(TestCase):

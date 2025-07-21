@@ -2,8 +2,8 @@ from unittest import TestCase
 
 import pandas as pd
 
-from plants_sm.ml.data_standardization.proteins.standardization import ProteinStandardizer
-from plants_sm.ml.data_structures.dataset import SingleInputDataset
+from plants_sm.data_standardization.proteins.standardization import ProteinStandardizer
+from plants_sm.data_structures.dataset import SingleInputDataset
 
 
 class TestDatasetStandardizer(TestCase):

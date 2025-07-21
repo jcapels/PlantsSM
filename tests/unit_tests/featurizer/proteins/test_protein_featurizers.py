@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from pandas import DataFrame
 
-from plants_sm.ml.data_structures.dataset.single_input_dataset import PLACEHOLDER_FIELD, SingleInputDataset
+from plants_sm.data_structures.dataset.single_input_dataset import PLACEHOLDER_FIELD, SingleInputDataset
 
 
 class TestProteinFeaturizers(TestCase):

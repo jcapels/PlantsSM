@@ -1,5 +1,5 @@
-from plants_sm.ml.data_structures.dataset.single_input_dataset import PLACEHOLDER_FIELD
-from plants_sm.ml.featurization.proteins.propythia.propythia import PropythiaWrapper
+from plants_sm.data_structures.dataset.single_input_dataset import PLACEHOLDER_FIELD
+from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
 from ...featurizer.proteins.test_protein_featurizers import TestProteinFeaturizers
 
 

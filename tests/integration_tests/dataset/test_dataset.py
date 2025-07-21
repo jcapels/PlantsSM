@@ -3,8 +3,8 @@ from unittest import TestCase
 
 import pandas as pd
 
-from plants_sm.ml.data_structures.dataset import SingleInputDataset
-from plants_sm.ml.data_structures.dataset.multi_input_dataset import MultiInputDataset
+from plants_sm.data_structures.dataset import SingleInputDataset
+from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputDataset
 from tests import TEST_DIR
 
 

@@ -1,6 +1,6 @@
 from integration_tests.dataset.test_dataset import TestDataset
-from plants_sm.ml.data_standardization.proteins.padding import SequencePadder
-from plants_sm.ml.featurization.encoding.one_hot_encoder import OneHotEncoder
+from plants_sm.data_standardization.proteins.padding import SequencePadder
+from plants_sm.featurization.encoding.one_hot_encoder import OneHotEncoder
 
 
 class TestOneHotEncoderTokenizer(TestDataset):

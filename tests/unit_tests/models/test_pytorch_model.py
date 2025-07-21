@@ -7,8 +7,8 @@ from sklearn.metrics import accuracy_score
 from torch import nn
 from torch.optim import Adam
 
-from plants_sm.ml.models.constants import BINARY
-from plants_sm.ml.models.pytorch_model import PyTorchModel
+from plants_sm.models.constants import BINARY
+from plants_sm.models.pytorch_model import PyTorchModel
 from unit_tests.models._utils import TestPytorchBaselineModel
 from unit_tests.models.test_models import TestModels
 

@@ -1,6 +1,6 @@
 from unittest import skip
 import numpy as np
-from plants_sm.ml.featurization.reactions.reaction_bert import ReactionBERT
+from plants_sm.featurization.reactions.reaction_bert import ReactionBERT
 from tests.unit_tests.featurizer.reactions.test_reaction_featurizers import TestReactionFeaturizers
 
 # TODO: change the model (it has to be imported from transformers)

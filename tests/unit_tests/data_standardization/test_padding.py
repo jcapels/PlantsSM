@@ -3,9 +3,9 @@ from unittest.mock import MagicMock
 
 from pandas import DataFrame
 
-from plants_sm.ml.data_standardization.padding_enumerators import PaddingEnumerators
-from plants_sm.ml.data_standardization.proteins.padding import SequencePadder
-from plants_sm.ml.data_structures.dataset import PLACEHOLDER_FIELD, SingleInputDataset
+from plants_sm.data_standardization.padding_enumerators import PaddingEnumerators
+from plants_sm.data_standardization.proteins.padding import SequencePadder
+from plants_sm.data_structures.dataset import PLACEHOLDER_FIELD, SingleInputDataset
 
 
 class TestSequencePadding(TestCase):

@@ -3,7 +3,7 @@ from unittest import TestCase
 
 import pandas as pd
 
-from plants_sm.ml.data_structures.dataset.single_input_dataset import SingleInputDataset, PLACEHOLDER_FIELD
+from plants_sm.data_structures.dataset.single_input_dataset import SingleInputDataset, PLACEHOLDER_FIELD
 
 from tests import TEST_DIR
 

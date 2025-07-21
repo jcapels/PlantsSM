@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from plants_sm.ml.tokenisation.compounds.smilespe import AtomLevelTokenizer, KmerTokenizer, SPETokenizer
+from plants_sm.tokenisation.compounds.smilespe import AtomLevelTokenizer, KmerTokenizer, SPETokenizer
 
 
 class TestSmilesPETokenizers(TestCase):

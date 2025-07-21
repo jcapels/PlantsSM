@@ -4,12 +4,12 @@ import shutil
 import pandas as pd
 
 from integration_tests.dataset.test_dataset import TestDataset
-from plants_sm.ml.data_standardization.proteins.padding import SequencePadder
-from plants_sm.ml.data_structures.dataset import SingleInputDataset
-from plants_sm.ml.data_structures.dataset.multi_input_dataset import MultiInputDataset
-from plants_sm.ml.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
-from plants_sm.ml.featurization.encoding.one_hot_encoder import OneHotEncoder
-from plants_sm.ml.featurization.proteins.propythia.propythia import PropythiaWrapper
+from plants_sm.data_standardization.proteins.padding import SequencePadder
+from plants_sm.data_structures.dataset import SingleInputDataset
+from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputDataset
+from plants_sm.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
+from plants_sm.featurization.encoding.one_hot_encoder import OneHotEncoder
+from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
 
 
 class TestDatasetImportExport(TestDataset):
@@ -146,9 +146,9 @@ class TestDatasetImportExport(TestDataset):
 
         dataset.load_features("test")
         dataset.next_batch()
-        self.assertTrue(dataset.X.shape == (2, 9596))
+        self.assertTrue(dataset.X.shape == (2, 9595))
         dataset.next_batch()
-        self.assertTrue(dataset.X.shape == (1, 9596))
+        self.assertTrue(dataset.X.shape == (1, 9595))
         shutil.rmtree("test")
 
     def test_read_and_load_multi_input_dataset(self):
@@ -200,9 +200,9 @@ class TestDatasetImportExport(TestDataset):
 
         dataset.next_batch()
         print(dataset.X["proteins"].shape)
-        self.assertTrue(dataset.X["proteins"].shape == (2, 9596))
+        self.assertTrue(dataset.X["proteins"].shape == (2, 9595))
         dataset.next_batch()
-        self.assertTrue(dataset.X["proteins"].shape == (2, 9596))
+        self.assertTrue(dataset.X["proteins"].shape == (2, 9595))
         dataset.next_batch()
         self.assertTrue(dataset.X["ligands"].shape == (2, 27, 10))
 

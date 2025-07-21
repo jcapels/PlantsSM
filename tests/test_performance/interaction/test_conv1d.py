@@ -8,17 +8,17 @@ import torch
 from torch import nn, relu
 from torch.optim import Adam
 
-from plants_sm.ml.data_standardization.compounds.deepmol_standardizers import DeepMolStandardizer
-from plants_sm.ml.data_standardization.proteins.standardization import ProteinStandardizer
-from plants_sm.ml.data_structures.dataset.multi_input_dataset import MultiInputDataset
-from plants_sm.ml.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
-from plants_sm.ml.featurization.encoding.one_hot_encoder import OneHotEncoder
-from plants_sm.ml.models.constants import BINARY
-from plants_sm.ml.models.pytorch_model import PyTorchModel
+from plants_sm.data_standardization.compounds.deepmol_standardizers import DeepMolStandardizer
+from plants_sm.data_standardization.proteins.standardization import ProteinStandardizer
+from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputDataset
+from plants_sm.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
+from plants_sm.featurization.encoding.one_hot_encoder import OneHotEncoder
+from plants_sm.models.constants import BINARY
+from plants_sm.models.pytorch_model import PyTorchModel
 from sklearn.metrics import f1_score, \
     accuracy_score
 
-from plants_sm.ml.tokenisation.compounds.smilespe import AtomLevelTokenizer
+from plants_sm.tokenisation.compounds.smilespe import AtomLevelTokenizer
 from tests import TEST_DIR
 
 # environment_name = sys.executable.split('/')[-3]

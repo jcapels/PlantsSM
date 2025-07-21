@@ -1,6 +1,6 @@
 from integration_tests.dataset.test_dataset import TestDataset
-from plants_sm.ml.featurization.encoding.label_encoder import LabelEncoder
-from plants_sm.ml.tokenisation.compounds.smilespe import AtomLevelTokenizer
+from plants_sm.featurization.encoding.label_encoder import LabelEncoder
+from plants_sm.tokenisation.compounds.smilespe import AtomLevelTokenizer
 
 
 class TestDatasetLabelEncoderTokenizer(TestDataset):

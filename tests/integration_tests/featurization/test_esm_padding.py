@@ -1,6 +1,6 @@
 from integration_tests.dataset.test_dataset import TestDataset
-from plants_sm.ml.data_standardization.x_padder import XPadder
-from plants_sm.ml.featurization.proteins.bio_embeddings.esm import ESMEncoder
+from plants_sm.data_standardization.x_padder import XPadder
+from plants_sm.featurization.proteins.bio_embeddings.esm import ESMEncoder
 
 
 class TestESMPadding(TestDataset):
