@@ -1,6 +1,7 @@
 from abc import ABC
-from typing import List, Union
-from pydantic import BaseModel
+from typing import Dict, List, Union
+import pandas as pd
+from pydantic import BaseModel, validator
 from rdkit.Chem.rdchem import Mol
 from rdkit.Chem import MolToSmiles
 
@@ -29,6 +30,42 @@ class Protein(BiologicalEntity):
 
         return cls(representation=sequence)
     
+    @classmethod
+    def from_fasta(cls, file) -> Dict[str, 'Protein']:
+        from Bio import SeqIO
+
+        proteins = {}
+        # Read a FASTA file
+        for record in SeqIO.parse(file, "fasta"):
+            proteins[record.id] = cls.from_sequence(str(record.seq))
+        return proteins
+    
+    @classmethod
+    def from_csv(cls, file: str, **kwargs) -> Dict[str, 'Protein']:
+        """
+        Read a CSV file and create Protein objects from the sequences.
+        The CSV file should have columns "id" and "sequence".
+        Parameters
+        ----------
+        file : str
+            Path to the CSV file.
+        **kwargs : dict
+            Additional keyword arguments to pass to pandas read_csv.
+        Returns
+        -------
+        Dict[str, Protein]
+            A dictionary mapping protein IDs to Protein objects.
+        """
+
+        proteins = {}
+        # Read a CSV file
+        df = pd.read_csv(file, **kwargs)
+        for _, row in df.iterrows():
+            proteins[row["id"]] = cls.from_sequence(row["sequence"])
+            
+        return proteins
+
+    
 class Molecule(BiologicalEntity):
     
     smiles: str
@@ -37,14 +74,13 @@ class Molecule(BiologicalEntity):
     mol: Mol = None
 
     class Config:
-        """
-        Model Configuration: https://pydantic-docs.helpmanual.io/usage/model_config/
-        """
-        extra = 'allow'
-        allow_mutation = True
-        validate_assignment = True
-        underscore_attrs_are_private = True
         arbitrary_types_allowed = True
+
+    @validator('mol', pre=True, always=True, allow_reuse=True)
+    def validate_mol(cls, value):
+        if not isinstance(value, Mol):
+            raise ValueError("mol must be a RDKit Mol instance")
+        return value
 
     @classmethod
     def from_smiles(cls, smiles: str) -> 'Molecule':
@@ -64,16 +100,6 @@ class Reaction(BiologicalEntity):
     products: List[Molecule] = None
     ec_numbers: List[str] = None
     reaction: ReactionSmarts
-
-    class Config:
-        """
-        Model Configuration: https://pydantic-docs.helpmanual.io/usage/model_config/
-        """
-        extra = 'allow'
-        allow_mutation = True
-        validate_assignment = True
-        underscore_attrs_are_private = True
-        arbitrary_types_allowed = True
 
     @property
     def smarts(self):

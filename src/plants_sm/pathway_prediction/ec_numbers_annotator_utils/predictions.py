@@ -7,6 +7,7 @@ import pandas as pd
 from plants_sm.alignments.alignment import BLAST
 from plants_sm.data_structures.dataset import SingleInputDataset, Dataset
 from plants_sm.io.pickle import read_pickle
+from plants_sm.models._utils import multi_label_binarize
 from plants_sm.pipeline.pipeline import Pipeline
 from plants_sm.pathway_prediction.ec_numbers_annotator_utils._utils import *
 from plants_sm.pathway_prediction.ec_numbers_annotator_utils._utils import _download_blast_database_to_cache
@@ -217,7 +218,7 @@ def get_ec_from_regex_match(match: re.Match) -> Union[str, None]:
     return None
 
 
-def _generate_ec_number_from_model_predictions(ECs: list) -> Tuple[list, list, list, list]:
+def _generate_ec_number_from_model_predictions(ECs: list, ECs_proba: list) -> Tuple[list, list, list, list]:
     """
     Generate EC numbers from model predictions.
 
@@ -225,6 +226,8 @@ def _generate_ec_number_from_model_predictions(ECs: list) -> Tuple[list, list, l
     ----------
     ECs: list
         List of EC numbers.
+    ECs_proba: list
+        List of EC numbers probabilities.
 
     Returns
     -------
@@ -241,33 +244,34 @@ def _generate_ec_number_from_model_predictions(ECs: list) -> Tuple[list, list, l
     EC2 = []
     EC1 = []
     EC4 = []
-    for EC in ECs:
-        new_EC = re.search(r"^\d+.\d+.\d+.n*\d+", EC)
-        new_EC = get_ec_from_regex_match(new_EC)
-        if isinstance(new_EC, str):
-            if new_EC not in EC4:
-                EC4.append(new_EC)
 
-        new_EC = re.search(r"^\d+.\d+.\d+", EC)
-        new_EC = get_ec_from_regex_match(new_EC)
-        if isinstance(new_EC, str):
-            if new_EC not in EC3:
-                EC3.append(new_EC)
+    for EC, proba in zip(ECs, ECs_proba):
+        new_EC4 = re.search(r"^\d+.\d+.\d+.n*\d+", EC)
+        new_EC4 = get_ec_from_regex_match(new_EC4)
 
-        new_EC = re.search(r"^\d+.\d+", EC)
-        new_EC = get_ec_from_regex_match(new_EC)
-        if isinstance(new_EC, str):
-            if new_EC not in EC2:
-                EC2.append(new_EC)
+        new_EC3 = re.search(r"^\d+.\d+.\d+", EC)
+        new_EC3 = get_ec_from_regex_match(new_EC3)
 
-        new_EC = re.search(r"^\d+", EC)
-        new_EC = get_ec_from_regex_match(new_EC)
-        if isinstance(new_EC, str):
-            if new_EC not in EC1:
-                EC1.append(new_EC)
+        new_EC2 = re.search(r"^\d+.\d+", EC)
+        new_EC2 = get_ec_from_regex_match(new_EC2)
+
+        new_EC1 = re.search(r"^\d+", EC)
+        new_EC1 = get_ec_from_regex_match(new_EC1)
+
+        if isinstance(new_EC4, str):
+            EC4.append(f"{new_EC4}:{proba}")
+        
+        elif isinstance(new_EC3, str):
+            EC3.append(f"{new_EC3}:{proba}")
+        
+        elif isinstance(new_EC2, str):
+            EC2.append(f"{new_EC2}:{proba}")
+        
+        elif isinstance(new_EC1, str):
+            EC1.append(f"{new_EC1}:{proba}")
+
 
     return EC1, EC2, EC3, EC4
-
 
 def _make_predictions_with_model(dataset: Dataset, pipeline: Pipeline, device: str, all_data: bool = True,
                                  num_gpus: int = 1) \
@@ -308,7 +312,7 @@ def _make_predictions_with_model(dataset: Dataset, pipeline: Pipeline, device: s
 
     pipeline.models[0].model.to(device)
     pipeline.models[0].device = device
-    predictions = pipeline.predict(dataset)
+    predictions_proba = pipeline.predict_proba(dataset)
     if all_data:
         path = os.path.join(SRC_PATH, "labels_names_all_data.pkl")
     else:
@@ -317,14 +321,17 @@ def _make_predictions_with_model(dataset: Dataset, pipeline: Pipeline, device: s
     results_dataframe = pd.DataFrame(columns=["accession", "EC1", "EC2", "EC3", "EC4"])
     labels_names = read_pickle(path)
     # get all the column indexes where the value is 1
-    indices = [np.where(row == 1)[0].tolist() for row in predictions]
+    y_pred = multi_label_binarize(predictions_proba)
+
+    indices = [np.where(row == 1)[0].tolist() for row in y_pred]
     labels_names = np.array(labels_names)
 
     ids = dataset.dataframe[dataset.instances_ids_field]
     for i in range(len(indices)):
         label_predictions = labels_names[indices[i]]
+        labels_proba = predictions_proba[i, indices[i]]
 
-        EC1, EC2, EC3, EC4 = _generate_ec_number_from_model_predictions(label_predictions)
+        EC1, EC2, EC3, EC4 = _generate_ec_number_from_model_predictions(label_predictions, labels_proba)
         label_predictions = [";".join(EC1)] + [";".join(EC2)] + [";".join(EC3)] + [";".join(EC4)]
         results_dataframe.loc[i] = [ids[i]] + label_predictions
 

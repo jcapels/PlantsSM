@@ -2,11 +2,11 @@
 from abc import abstractmethod
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
     
 from plants_sm.pathway_prediction._chem_utils import ChemUtils
 from rdkit.Chem.rdchem import Mol
-from rdkit.Chem.rdChemReactions import ChemicalReaction, ReactionFromSmarts
+from rdkit.Chem.rdChemReactions import ChemicalReaction
 
 class Representation(BaseModel):
 
@@ -25,14 +25,13 @@ class Smiles(Representation):
     mol: Mol
 
     class Config:
-        """
-        Model Configuration: https://pydantic-docs.helpmanual.io/usage/model_config/
-        """
-        extra = 'allow'
-        allow_mutation = True
-        validate_assignment = True
-        underscore_attrs_are_private = True
         arbitrary_types_allowed = True
+
+    @validator('mol', pre=True, always=True, allow_reuse=True)
+    def validate_mol(cls, value):
+        if not isinstance(value, Mol):
+            raise ValueError("mol must be a RDKit Mol instance")
+        return value
 
     @property
     def _str_representation(self):
@@ -55,14 +54,13 @@ class ReactionSmarts(Representation):
     reaction: ChemicalReaction
 
     class Config:
-        """
-        Model Configuration: https://pydantic-docs.helpmanual.io/usage/model_config/
-        """
-        extra = 'allow'
-        allow_mutation = True
-        validate_assignment = True
-        underscore_attrs_are_private = True
         arbitrary_types_allowed = True
+
+    @validator('reaction', pre=True, always=True, allow_reuse=True)
+    def validate_reaction(cls, value):
+        if not isinstance(value, ChemicalReaction):
+            raise ValueError("reaction must be a ChemicalReaction instance")
+        return value
 
     @property
     def _str_representation(self):
