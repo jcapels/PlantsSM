@@ -280,7 +280,7 @@ class InternalLightningModule(L.LightningModule):
         self._update_constructor_parameters()
 
     @abstractmethod
-    def _update_constructor_parameters():
+    def _update_constructor_parameters(self):
         pass
 
     @abstractmethod

@@ -8,7 +8,7 @@ class Reactor(ABC):
 
     solutions: List[ReactionSolution] = None
 
-    def react(self, reactants: List[str]):
+    def react(self, reactants: List[str]) -> List[ReactionSolution]:
 
         self.solutions = self._react(reactants)
         return self.solutions

@@ -7,6 +7,7 @@ runs
 compound_protein_interaction
 tests/data/not_to_push_data
 
+lightning_logs/
 
 # C extensions
 *.so

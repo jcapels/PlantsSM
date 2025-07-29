@@ -1,12 +1,12 @@
 
 from pydantic import BaseModel, validator
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from plants_sm.pathway_prediction.entities import Molecule, Protein, Reaction
 
 class Solution(BaseModel):
 
-    score : float = None
+    score : Any = None
 
 
 class ReactionSolution(Solution):
@@ -15,6 +15,29 @@ class ReactionSolution(Solution):
     products: List[Molecule]
     reaction: Reaction
     ec_numbers: List[str] = None
+
+    def get_reactants_smiles(self) -> List[str]:
+        """
+        Get the SMILES strings of the reactants.
+
+        Returns
+        -------
+        List[str]
+            A list of SMILES strings for the reactants.
+        """
+        return [reactant.smiles for reactant in self.reactants]
+    
+    def get_products_smiles(self) -> List[str]:
+        """
+        Get the SMILES strings of the products.
+
+        Returns
+        -------
+        List[str]
+            A list of SMILES strings for the products.
+        """
+        return [product.smiles for product in self.products]
+
 
 
 class ECSolution(Solution):

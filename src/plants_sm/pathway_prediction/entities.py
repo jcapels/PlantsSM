@@ -100,6 +100,7 @@ class Reaction(BiologicalEntity):
     products: List[Molecule] = None
     ec_numbers: List[str] = None
     reaction: ReactionSmarts
+    score: float = None
 
     @property
     def smarts(self):

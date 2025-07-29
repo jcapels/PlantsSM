@@ -1,5 +1,7 @@
 import os
 from typing import List, Union
+
+from tqdm import tqdm
 from plants_sm.pathway_prediction._chem_utils import ChemUtils
 from plants_sm.pathway_prediction.entities import Molecule, Reaction, ReactionSmarts
 from plants_sm.pathway_prediction.reactor import Reactor
@@ -30,13 +32,14 @@ class ReactionRulesReactor(Reactor):
             reaction_id = row["RuleID"]
             smarts = row["SMARTS"]
             ec_numbers = row["EC_Numbers"]
+            score = row["Score"]
             if isinstance(ec_numbers, str):
                 ec_numbers = ec_numbers.split(",")
             else:
                 ec_numbers = None
 
             reaction = ReactionSmarts.from_smarts(smarts)
-            self.reactions.append(Reaction(representation=smarts, id=reaction_id, ec_numbers=ec_numbers, reaction=reaction))
+            self.reactions.append(Reaction(representation=smarts, id=reaction_id, ec_numbers=ec_numbers, reaction=reaction, score=score))
 
     def _predict_solutions(self, reactants, reaction):
 
@@ -76,7 +79,8 @@ class ReactionRulesReactor(Reactor):
                 solutions.append(ReactionSolution(products=product_molecules, 
                                 reactants=reactant_molecules, 
                                 reaction=reaction,
-                                ec_numbers=reaction.ec_numbers
+                                ec_numbers=reaction.ec_numbers,
+                                score=reaction.score
                                 ))
         except ValueError:
             pass
@@ -86,6 +90,7 @@ class ReactionRulesReactor(Reactor):
     def _react(self, reactants: List[Union[str, Mol]]) -> List[ReactionSolution]:
 
         solutions = []
+        ChemUtils.rdkit_logs()
 
         assert len(reactants) > 0
 
@@ -93,7 +98,7 @@ class ReactionRulesReactor(Reactor):
             for i in range(len(reactants)):
                 reactants[i] = Molecule.from_smiles(reactants[i]).mol
 
-        for reaction in self.reactions:
+        for reaction in tqdm(self.reactions, desc="Predicting reactions"):
 
             solutions.extend(self._predict_solutions(reactants, reaction))
 
