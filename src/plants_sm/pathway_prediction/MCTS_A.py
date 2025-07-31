@@ -12,6 +12,13 @@ from plants_sm.pathway_prediction.solution import ReactionSolution
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# implement quick logging
+import logging
+logging.basicConfig(filename='myapp.log', level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+
 class MCTS_A(Searcher):
 
     value_net_path: str = os.path.join(BASE_DIR,
@@ -41,6 +48,8 @@ class MCTS_A(Searcher):
         
         self.opening_size = simulations
         self.iterations = 0
+
+        self.target_mol = None
         
     def search(self, molecule: Molecule) -> SearcherSolution:
         routes = []
@@ -49,14 +58,16 @@ class MCTS_A(Searcher):
         depths = []
         counts = []
 
-        try:
-            with time_limit(600):
-                success, node, count = self._search(molecule)
-                route, template = self.vis_synthetic_path(node)
-        except:
-            success = False
-            route = [None]
-            template = [None]
+        self.target_mol = molecule.smiles
+
+        # try:
+        with time_limit(600):
+            success, node, count = self._search(molecule)
+            route, template = self.vis_synthetic_path(node)
+        # except:
+            # success = False
+            # route = [None]
+            # template = [None]
         routes.append(route)
         templates.append(template)
         successes.append(success)
@@ -73,22 +84,24 @@ class MCTS_A(Searcher):
             'depth': depths,
             'counts': counts
         }
-        print(ans)
-        with open('stat_norm_retro_' + str(self.opening_size) + '_' + str(self.cpuct) + '_' + str(self.times) + '.pkl', 'wb') as writer:
-            pickle.dump(ans, writer, protocol=4)
+        logging.info(f"Search completed with success: {success}, depth: {depths[0]}, count: {counts[0]}")
+        # with open('stat_norm_retro_' + str(self.opening_size) + '_' + str(self.cpuct) + '_' + str(self.times) + '.pkl', 'wb') as writer:
+        #     pickle.dump(ans, writer, protocol=4)
 
-    def _search(self, molecule: Molecule, times: int) -> SearcherSolution:
+    def _search(self, molecule: Molecule) -> SearcherSolution:
 
-        root_value = value_fn(self.value_model, [molecule.mol], self.device)
+        root_value = value_fn(self.value_model, [molecule.smiles], self.device)
 
-        self.root = Node([molecule.mol], root_value, prior=1.0, cpuct=self.cpuct)
+        logging.info(f"Starting MCTS search for molecule: {molecule.smiles} with root value: {root_value}")
+
+        self.root = Node([molecule.smiles], root_value, prior=1.0, cpuct=self.cpuct)
         self.open = [self.root]
 
         self.min_max_stats = MinMaxStats()
         self.min_max_stats.update(self.root.f)
         
         success, node = False, None
-        while self.iterations < times and not success and (not np.all(self.root.child_illegal > 0) or len(self.root.child_illegal) == 0):
+        while self.iterations < self.times and not success and (not np.all(self.root.child_illegal > 0) or len(self.root.child_illegal) == 0):
             expand_node = self.select()
             if '.'.join(expand_node.state) in self.visited_state:
                 expand_node.parent.child_illegal[expand_node.fmove] = 1000
@@ -98,11 +111,12 @@ class MCTS_A(Searcher):
                     back_check_node = back_check_node.parent
                 continue
             else:
+                logging.info(f"State {expand_node.state} is being expanded.")
                 self.visited_state.append('.'.join(expand_node.state))
                 success, node = self.expand(expand_node)
                 self.update(expand_node)
             if self.visited_policy[self.target_mol] is None:
-                return False, None, times
+                return False, None, self.times
         return success, node, self.iterations
 
     def select_a_leaf(self):
@@ -150,7 +164,7 @@ class MCTS_A(Searcher):
                 reactant = sorted(list(set(reactant)))
                 cost = - np.log(np.clip(expanded_policy[i].score, 1e-3, 1.0))
                 template = str(expanded_policy[i].reaction)
-                reaction = expanded_policy[i].get_products_smiles() + '>>' + expanded_mol
+                reaction = ".".join(expanded_policy[i].get_products_smiles()) + '>>' + expanded_mol
                 priors = np.array([1.0 / len(expanded_policy)] * len(expanded_policy))
                 if len(reactant) == 0:
                     child = Node([], 0, cost=cost, prior=priors[i], action_mol=expanded_mol, reaction=reaction, fmove=len(node.children), template=template, parent=node, cpuct=self.cpuct)

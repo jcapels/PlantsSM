@@ -20,7 +20,8 @@ class ReactionRulesReactor(Reactor):
                                 "retrorules_MINE.tsv")
     reactions: List[Reaction] = []
 
-    def __init__(self):
+    def __init__(self, score_threshold = 0.5):
+        self.score_threshold = score_threshold
         self._convert_tsv_to_reaction_rules()
 
     def _convert_tsv_to_reaction_rules(self):
@@ -63,25 +64,26 @@ class ReactionRulesReactor(Reactor):
             solution_reactions = list(set([AllChem.ReactionToSmiles(entry, canonical=True) for entry in res]))
 
             for solution_reaction in solution_reactions:
-                solution_reaction = ReactionFromSmarts(solution_reaction)
-                ps = solution_reaction.RunReactants(reactants)
-                reactant_molecules = []
-                for reactant in reactants:
-                    reactant_molecules.append(Molecule.from_mol(reactant))
-                
-                product_molecules = []
-                for product_tuple in ps:
-                    smiles = Molecule.from_mol(product_tuple[0]).smiles
-                    products = smiles.split(".")
-                    for product_ in products:
-                        product_molecules.append(Molecule.from_smiles(product_))
-                
-                solutions.append(ReactionSolution(products=product_molecules, 
-                                reactants=reactant_molecules, 
-                                reaction=reaction,
-                                ec_numbers=reaction.ec_numbers,
-                                score=reaction.score
-                                ))
+                if reaction.score < self.score_threshold:
+                    solution_reaction = ReactionFromSmarts(solution_reaction)
+                    ps = solution_reaction.RunReactants(reactants)
+                    reactant_molecules = []
+                    for reactant in reactants:
+                        reactant_molecules.append(Molecule.from_mol(reactant))
+                    
+                    product_molecules = []
+                    for product_tuple in ps:
+                        smiles = Molecule.from_mol(product_tuple[0]).smiles
+                        products = smiles.split(".")
+                        for product_ in products:
+                            product_molecules.append(Molecule.from_smiles(product_))
+                    
+                    solutions.append(ReactionSolution(products=product_molecules, 
+                                    reactants=reactant_molecules, 
+                                    reaction=reaction,
+                                    ec_numbers=reaction.ec_numbers,
+                                    score=reaction.score
+                                    ))
         except ValueError:
             pass
 

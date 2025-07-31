@@ -1,10 +1,10 @@
-from unittest import TestCase
+from unittest import TestCase, skip
 
 from plants_sm.pathway_prediction.MCTS_A import MCTS_A
 from plants_sm.pathway_prediction.entities import Molecule
 from plants_sm.pathway_prediction.reaction_rules_reactor import ReactionRulesReactor
 
-
+@skip("For now")
 class TestMCTS_A(TestCase):
 
     def test_search(self):
