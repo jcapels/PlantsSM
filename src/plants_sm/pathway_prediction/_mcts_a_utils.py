@@ -190,44 +190,6 @@ class Node:
         return best_move
 
 
-
-
-def play(dataset, mols, thread, known_mols, value_model, expand_fn, device, simulations, cpuct, times=500):
-    routes = []
-    templates = []
-    successes = []
-    depths = []
-    counts = []
-    for mol in mols:
-        try:
-            with time_limit(600):
-                player = MCTS_A(mol, known_mols, value_model, expand_fn, device, simulations, cpuct)
-                success, node, count = player.search(times=times)
-                route, template = player.vis_synthetic_path(node)
-        except:
-            success = False
-            route = [None]
-            template = [None]
-        routes.append(route)
-        templates.append(template)
-        successes.append(success)
-        if success:
-            depths.append(node.depth)
-            counts.append(count)
-        else:
-            depths.append(32)
-            counts.append(-1)
-    ans = {
-        'route': routes,
-        'template': templates,
-        'success': successes,
-        'depth': depths,
-        'counts': counts
-    }
-    with open('./test/stat_norm_retro_' + dataset + '_' + str(simulations) + '_' + str(cpuct) + '_' + str(thread) + '.pkl', 'wb') as writer:
-        pickle.dump(ans, writer, protocol=4)
-
-
 def gather(dataset, simulations, cpuct, times):
     result = {
         'route': [],
@@ -250,39 +212,3 @@ def gather(dataset, simulations, cpuct, times):
     f = open('./test/stat_norm_retro_' + dataset + '_' + str(simulations) + '_' + str(cpuct) + '_' + str(times) + '.pkl', 'wb')
     pickle.dump(result, f)
     f.close()
-
-
-if __name__ == '__main__':
-    known_mols = prepare_starting_molecules_natural()
-    simulations = 100
-    cpuct = 4.0
-    multiprocessing.set_start_method('spawn', force=True)
-    one_steps = []
-    devices = []
-    value_models = []
-    model_f = './saved_model/value_pc.pt'
-    gpus = [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3]
-    for i in range(len(gpus)):
-        one_step = policy_onmt(gpus[i])
-        device = torch.device('cuda:' + str(gpus[i]))
-        value_model = prepare_value(model_f, gpus[i])
-        value_models.append(value_model)
-        one_steps.append(one_step)
-        devices.append(device)
-    for dataset in ['natural']:
-        fileName = './test_dataset/' + dataset + '.pkl'
-        with open(fileName, 'rb') as f:
-            targets = pickle.load(f)
-        intervals = int(len(targets) / len(gpus))
-        num_more = len(targets) - intervals * len(gpus)
-        for simulations in [100]:
-            for times in [3000]:
-                jobs = [Process(target=play, args=(dataset, targets[i * (intervals + 1): (i + 1) * (intervals + 1)], i, known_mols, value_models[i], one_steps[i], devices[i], simulations, cpuct, times)) for i in range(num_more)]
-                start = num_more * (intervals + 1)
-                for i in range(len(gpus)- num_more):
-                    jobs.append(Process(target=play, args=(dataset, targets[start + i * intervals: start + (i + 1) * intervals], num_more + i, known_mols, value_models[num_more + i], one_steps[num_more + i], devices[num_more + i], simulations, cpuct, times)))
-                for j in jobs:
-                    j.start()
-                for j in jobs:
-                    j.join()
-                gather(dataset, simulations, cpuct, times)

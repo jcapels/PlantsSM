@@ -85,6 +85,7 @@ class MCTS_A(Searcher):
             'counts': counts
         }
         logging.info(f"Search completed with success: {success}, depth: {depths[0]}, count: {counts[0]}")
+        logging.info(node.state)
         # with open('stat_norm_retro_' + str(self.opening_size) + '_' + str(self.cpuct) + '_' + str(self.times) + '.pkl', 'wb') as writer:
         #     pickle.dump(ans, writer, protocol=4)
 
@@ -159,12 +160,12 @@ class MCTS_A(Searcher):
         if expanded_policy is not None and (len(expanded_policy) > 0):
             node.child_illegal = np.array([0] * len(expanded_policy))
             for i in range(len(expanded_policy)):
-                reactant = [r for r in expanded_policy[i].get_products_smiles() if r not in self.known_mols]
+                reactant = [r for r in expanded_policy[i].get_reactants_smiles() if r not in self.known_mols]
                 reactant = reactant + node.state[: expanded_mol_index] + node.state[expanded_mol_index + 1:]
                 reactant = sorted(list(set(reactant)))
                 cost = - np.log(np.clip(expanded_policy[i].score, 1e-3, 1.0))
                 template = str(expanded_policy[i].reaction)
-                reaction = ".".join(expanded_policy[i].get_products_smiles()) + '>>' + expanded_mol
+                reaction = ".".join(expanded_policy[i].get_reactants_smiles()) + '>>' + expanded_mol
                 priors = np.array([1.0 / len(expanded_policy)] * len(expanded_policy))
                 if len(reactant) == 0:
                     child = Node([], 0, cost=cost, prior=priors[i], action_mol=expanded_mol, reaction=reaction, fmove=len(node.children), template=template, parent=node, cpuct=self.cpuct)

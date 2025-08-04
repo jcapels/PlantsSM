@@ -78,8 +78,8 @@ class ReactionRulesReactor(Reactor):
                         for product_ in products:
                             product_molecules.append(Molecule.from_smiles(product_))
                     
-                    solutions.append(ReactionSolution(products=product_molecules, 
-                                    reactants=reactant_molecules, 
+                    solutions.append(ReactionSolution(products=reactant_molecules, 
+                                    reactants=product_molecules, 
                                     reaction=reaction,
                                     ec_numbers=reaction.ec_numbers,
                                     score=reaction.score
@@ -89,16 +89,12 @@ class ReactionRulesReactor(Reactor):
 
         return solutions
 
-    def _react(self, reactants: List[Union[str, Mol]]) -> List[ReactionSolution]:
+    def _react(self, reactants: List[Mol]) -> List[ReactionSolution]:
 
         solutions = []
         ChemUtils.rdkit_logs()
 
         assert len(reactants) > 0
-
-        if isinstance(reactants[0], str):
-            for i in range(len(reactants)):
-                reactants[i] = Molecule.from_smiles(reactants[i]).mol
 
         for reaction in tqdm(self.reactions, desc="Predicting reactions"):
 
