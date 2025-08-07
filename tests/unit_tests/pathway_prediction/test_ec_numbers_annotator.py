@@ -1,5 +1,5 @@
 import os
-from unittest import TestCase
+from unittest import TestCase, skip
 
 import pandas as pd
 
@@ -8,6 +8,7 @@ from plants_sm.pathway_prediction.ec_numbers_annotator_utils.predictions import 
 
 from tests import TEST_DIR
 
+@skip("Require model download")
 class TestEcNumbersAnnotatorUtils(TestCase):
 
     def setUp(self):
@@ -20,7 +21,7 @@ class TestEcNumbersAnnotatorUtils(TestCase):
                            output_path="predictions_protbert.csv",
                            ids_field="id",
                            sequences_field="sequence",
-                           device="cuda:3")
+                           device="cpu")
         
         self.assertEqual(type(results), pd.DataFrame)
 
@@ -28,10 +29,11 @@ class TestEcNumbersAnnotatorUtils(TestCase):
         results = predict_with_model_from_fasta(pipeline="DNN ProtBERT all data",
                            fasta_path=self.fasta_data_path,
                            output_path="predictions_protbert_fasta.csv",
-                           device="cuda:3")
+                           device="cpu")
 
         self.assertEqual(type(results), pd.DataFrame)
 
+@skip("Require model download")
 class TestEcNumbersAnnotator(TestCase):
     def setUp(self):
         self.annotator = ProtBertECAnnotator()  # Replace with actual annotator instance if needed

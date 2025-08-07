@@ -100,13 +100,14 @@ class ReactionRulesReactor(Reactor):
 
             solutions.extend(self._predict_solutions(reactants, reaction))
 
-        unique_solutions_product_smiles = set()
+        unique_solutions_reactants_smiles = set()
         unique_solutions = []
         for solution in solutions:
-            product_smiles = ".".join([product.smiles for product in solution.products])
-            if product_smiles not in unique_solutions_product_smiles:
-                unique_solutions_product_smiles.add(product_smiles)
+            reactant_smiles = ".".join([reactant.smiles for reactant in solution.reactants])
+            if reactant_smiles not in unique_solutions_reactants_smiles:
+                unique_solutions_reactants_smiles.add(reactant_smiles)
                 unique_solutions.append(solution)
+
 
         return unique_solutions
     

@@ -1,5 +1,5 @@
 
-from unittest import TestCase
+from unittest import TestCase, skip
 from tests import TEST_DIR
 import pandas as pd
 import os
@@ -10,6 +10,7 @@ from ._multi_modal_model import MultiModalModel
 from lightning.pytorch.callbacks import EarlyStopping
 from ._interaction_model import InteractionModel
 
+@skip("Specific for a model with files that are not present for testing due to being to heavy")
 class TestMultiModalLightningModel(TestCase):
 
     def setUp(self) -> None:
