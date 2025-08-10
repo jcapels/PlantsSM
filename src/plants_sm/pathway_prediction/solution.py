@@ -2,7 +2,7 @@
 from pydantic import BaseModel, validator
 from typing import Any, Dict, List, Tuple
 
-from plants_sm.pathway_prediction.entities import Molecule, Protein, Reaction
+from plants_sm.pathway_prediction.entities import BiologicalEntity, Molecule, Protein, Reaction
 
 class Solution(BaseModel):
 
@@ -42,20 +42,20 @@ class ReactionSolution(Solution):
 
 class ECSolution(Solution):
 
-    enzymes_ec_1 : Dict[str, List[Tuple[str, float]]]
-    enzymes_ec_2 : Dict[str, List[Tuple[str, float]]]
-    enzymes_ec_3 : Dict[str, List[Tuple[str, float]]]
-    enzymes_ec_4 : Dict[str, List[Tuple[str, float]]]
-    enzymes : Dict[str, Protein] # dictionary to trace the sequence by the ID
+    entity_ec_1 : Dict[str, List[Tuple[str, float]]]
+    entity_ec_2 : Dict[str, List[Tuple[str, float]]]
+    entity_ec_3 : Dict[str, List[Tuple[str, float]]]
+    entity_ec_4 : Dict[str, List[Tuple[str, float]]]
+    entities : Dict[str, BiologicalEntity] # dictionary to trace the sequence by the ID
 
-    def get_score(self, protein_id: str, ec_number: str) -> List[Tuple[str, float]]:
+    def get_score(self, entity_id: str, ec_number: str) -> List[Tuple[str, float]]:
         """
         Get the score for a specific EC number.
 
         Parameters
         ----------
-        protein_id : str
-            The ID of the protein.
+        entity_id : str
+            The ID of the biological entity.
         ec_number : str
             The EC number to get the score for.
         
@@ -66,13 +66,13 @@ class ECSolution(Solution):
 
         """
         if ec_number == "EC1":
-            return self.enzymes_ec_1.get(protein_id, [])
+            return self.entity_ec_1.get(entity_id, [])
         elif ec_number == "EC2":
-            return self.enzymes_ec_2.get(protein_id, [])
+            return self.entity_ec_2.get(entity_id, [])
         elif ec_number == "EC3":
-            return self.enzymes_ec_3.get(protein_id, [])
+            return self.entity_ec_3.get(entity_id, [])
         elif ec_number == "EC4":
-            return self.enzymes_ec_4.get(protein_id, [])
+            return self.entity_ec_4.get(entity_id, [])
         else:
             raise ValueError(f"Unknown EC number: {ec_number}, available options are EC1, EC2, EC3, EC4.")
         

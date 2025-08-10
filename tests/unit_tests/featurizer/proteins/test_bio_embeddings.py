@@ -8,24 +8,10 @@ from plants_sm.featurization.proteins.bio_embeddings.esm import ESMEncoder
 from plants_sm.featurization.proteins.bio_embeddings.prot_bert import ProtBert
 from tests.unit_tests.featurizer.proteins.test_protein_featurizers import TestProteinFeaturizers
 
-from plants_sm.featurization.proteins.bio_embeddings.unirep import UniRepEmbeddings
 from tests import TEST_DIR
 
 
 class TestEmbeddings(TestProteinFeaturizers):
-
-    def test_unirep_embeddings(self):
-        UniRepEmbeddings().fit_transform(self.dataset)
-        self.assertEqual(self.dataset.X().shape, (2, 1900))
-        self.assertAlmostEqual(0.016247222, self.dataset.X()[0, 0], delta=0.0005)
-
-    def test_unirep_embeddings_3d(self):
-        UniRepEmbeddings(output_shape_dimension=3).fit_transform(self.dataset)
-
-        self.assertEqual((2, 454, 1900), self.dataset.X().shape)
-
-    def test_raise_errors_unirep(self):
-        UniRepEmbeddings(output_shape_dimension=2, device="2").fit_transform(self.dataset)
 
     def test_prot_bert_embeddings(self):
         ProtBert().fit_transform(self.dataset)

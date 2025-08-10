@@ -8,7 +8,7 @@ from plants_sm.pathway_prediction.ec_numbers_annotator_utils.predictions import 
 
 from tests import TEST_DIR
 
-@skip("Require model download")
+# @skip("Require model download")
 class TestEcNumbersAnnotatorUtils(TestCase):
 
     def setUp(self):

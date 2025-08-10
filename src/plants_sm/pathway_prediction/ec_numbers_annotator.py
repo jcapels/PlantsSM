@@ -49,11 +49,11 @@ class ECAnnotator(Annotator):
                 enzymes_ec_4[protein_id] = [(x.split(":")[0], float(x.split(":")[1])) for x in result["EC4"].split(";")]
 
         return ECSolution(
-                enzymes_ec_1=enzymes_ec_1,
-                enzymes_ec_2=enzymes_ec_2,
-                enzymes_ec_3=enzymes_ec_3,
-                enzymes_ec_4=enzymes_ec_4,
-                enzymes=proteins 
+                entity_ec_1=enzymes_ec_1,
+                entity_ec_2=enzymes_ec_2,
+                entity_ec_3=enzymes_ec_3,
+                entity_ec_4=enzymes_ec_4,
+                entities=proteins 
             )
 
     

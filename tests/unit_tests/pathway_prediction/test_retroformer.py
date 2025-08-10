@@ -2,7 +2,7 @@ from unittest import TestCase, skip
 
 from plants_sm.pathway_prediction.retroformer_reactor import Retroformer
 
-@skip
+# @skip
 class TestRetroformer(TestCase):
 
     def test_retroformer(self):

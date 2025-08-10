@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 import pandas as pd
 from typing import Dict, List, Union
 from pydantic import BaseModel
@@ -9,7 +9,7 @@ from plants_sm.pathway_prediction.solution import ECSolution, Solution
 from Bio import SeqIO
 
 
-class Annotator(BaseModel):
+class Annotator(ABC):
 
     solution: Solution = None
 
@@ -18,7 +18,7 @@ class Annotator(BaseModel):
         pass
 
     def annotate(self, entities: Union[List[BiologicalEntity], pd.DataFrame]) -> List[Solution]:
-        self._annotate(entities)
+        return self._annotate(entities)
 
     def annotate_from_file(self, file: str, format: str, **kwargs) -> Solution:
 
