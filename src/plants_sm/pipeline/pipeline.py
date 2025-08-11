@@ -91,6 +91,25 @@ class Pipeline:
             for step in self.steps[instance_type]:
                 step.transform(dataset, instance_type=instance_type)
 
+    def add_models(self, models: Union[List[Model], Model]):
+
+        if isinstance(models, list):
+            for model in models:
+                model_name = model.name
+                if model_name in self._models_indexes:
+                    raise ValueError(f"Model with name {model_name} already exists")
+                self._models_indexes[model_name] = model
+            self.models.extend(models)
+        else:
+            model_name = models.name
+            if model_name in self._models_indexes:
+                raise ValueError(f"Model with name {model_name} already exists")
+            self._models_indexes[model_name] = models
+            self.models.append(models)
+
+        
+
+
     def transform(self, dataset: Dataset) -> Dataset:
         """
         Transform the dataset according to the pipeline

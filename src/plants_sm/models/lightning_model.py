@@ -18,9 +18,10 @@ import numpy as np
 
 class InternalLightningModel(Model):
 
-    def __init__(self, module, batch_size: int = 32, devices="cpu", **trainer_kwargs) -> None:
+    def __init__(self, module, batch_size: int = 32, devices="cpu", model_name = "lightning_model", **trainer_kwargs) -> None:
         super().__init__()
 
+        self.name = model_name
         self.module = module
         self.batch_size = batch_size
         self.trainer_kwargs = trainer_kwargs
