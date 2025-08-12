@@ -44,7 +44,7 @@ class ReactionECNumberAnnotator(Annotator):
     rxn_featurizer = CondensedGraphOfReactionFeaturizer(atom_featurizer=atom_featurizer)
 
     def __init__(self, device="cpu"):
-        self.model = models.MPNN.load_from_checkpoint(self.model_path)
+        self.model = models.MPNN.load_from_checkpoint(self.model_path, map_location=torch.device(device))
         if "cuda" in device:
             self.trainer = Trainer(accelerator="gpu", devices=device)
         else:
