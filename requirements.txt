@@ -1,6 +1,6 @@
 biopython==1.79
 dask==2022.2.0
-lxml==4.9.1
+lxml
 matplotlib
 modlamp==4.3.0
 openpyxl==3.0.10
@@ -20,7 +20,5 @@ tensorboard==2.14.0
 fairscale==0.4.13
 optuna==3.1.1
 lightning
-mol2vec @ git+https://github.com/samoturk/mol2vec#egg=mol2vec
-map4 @ git+https://github.com/reymond-group/map4@v1.0
 easydict
 chemprop
