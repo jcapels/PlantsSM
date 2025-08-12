@@ -146,9 +146,9 @@ class TestDatasetImportExport(TestDataset):
 
         dataset.load_features("test")
         dataset.next_batch()
-        self.assertTrue(dataset.X.shape == (2, 9596))
+        self.assertTrue(dataset.X.shape == (2, 9595))
         dataset.next_batch()
-        self.assertTrue(dataset.X.shape == (1, 9596))
+        self.assertTrue(dataset.X.shape == (1, 9595))
         shutil.rmtree("test")
 
     def test_read_and_load_multi_input_dataset(self):
@@ -200,9 +200,9 @@ class TestDatasetImportExport(TestDataset):
 
         dataset.next_batch()
         print(dataset.X["proteins"].shape)
-        self.assertTrue(dataset.X["proteins"].shape == (2, 9596))
+        self.assertTrue(dataset.X["proteins"].shape == (2, 9595))
         dataset.next_batch()
-        self.assertTrue(dataset.X["proteins"].shape == (2, 9596))
+        self.assertTrue(dataset.X["proteins"].shape == (2, 9595))
         dataset.next_batch()
         self.assertTrue(dataset.X["ligands"].shape == (2, 27, 10))
 

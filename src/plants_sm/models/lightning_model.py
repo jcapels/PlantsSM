@@ -18,9 +18,10 @@ import numpy as np
 
 class InternalLightningModel(Model):
 
-    def __init__(self, module, batch_size: int = 32, devices="cpu", **trainer_kwargs) -> None:
+    def __init__(self, module, batch_size: int = 32, devices="cpu", model_name = "lightning_model", **trainer_kwargs) -> None:
         super().__init__()
 
+        self.name = model_name
         self.module = module
         self.batch_size = batch_size
         self.trainer_kwargs = trainer_kwargs
@@ -46,6 +47,24 @@ class InternalLightningModel(Model):
         embeddings = [embedding[1] for embedding in embeddings]
         embeddings = torch.cat(embeddings)
         return np.array(embeddings)
+    
+    def reset_weights(self):
+        """
+        refs:
+            - https://discuss.pytorch.org/t/how-to-re-set-alll-parameters-in-a-network/20819/6
+            - https://stackoverflow.com/questions/63627997/reset-parameters-of-a-neural-network-in-pytorch
+            - https://pytorch.org/docs/stable/generated/torch.nn.Module.html
+        """
+
+        @torch.no_grad()
+        def weight_reset(m):
+            # - check if the current module has reset_parameters & if it's callabed called it on m
+            reset_parameters = getattr(m, "reset_parameters", None)
+            if callable(reset_parameters):
+                m.reset_parameters()
+
+        # Applies fn recursively to every submodule see: https://pytorch.org/docs/stable/generated/torch.nn.Module.html
+        self.module.apply(fn=weight_reset)
 
 
     def _preprocess_data(self, dataset: Dataset, shuffle: bool = True) -> Dataset:
@@ -73,11 +92,13 @@ class InternalLightningModel(Model):
             tensor = torch.tensor(dataset.X, dtype=torch.float)
             tensors.append(tensor)
 
+
         try:
             if dataset.y is not None:
                 tensors.append(torch.tensor(dataset.y, dtype=torch.float))
         except ValueError:
             pass
+
 
         dataset = TensorDataset(
             *tensors
@@ -90,6 +111,7 @@ class InternalLightningModel(Model):
         )
         return data_loader
     
+
     def _fit_data(self, train_dataset: Union[Dataset, TensorDataset], 
                   validation_dataset: Union[Dataset, TensorDataset]):
         """
@@ -119,7 +141,7 @@ class InternalLightningModel(Model):
         else:
             self.trainer.fit(model=self.module, train_dataloaders=train_dataset_loader)
 
-    def _predict_proba(self, dataset: Union[Dataset, TensorDataset], trainer = L.Trainer(accelerator="cpu")) -> Union[np.ndarray, list]:
+    def _predict_proba(self, dataset: Union[Dataset, TensorDataset], trainer = L.Trainer(accelerator="cpu")) -> Union[Union[np.ndarray, list], list]:
         """
         Predicts the probabilities of the classes.
 
@@ -130,6 +152,8 @@ class InternalLightningModel(Model):
 
         Returns
         -------
+        Union[np.ndarray, list]
+            np.ndarray if the network only has one output, list of np.ndarray if the network has multiple outputs.
         Union[np.ndarray, list]
             np.ndarray if the network only has one output, list of np.ndarray if the network has multiple outputs.
         """
@@ -177,6 +201,15 @@ class InternalLightningModel(Model):
             predictions = _convert_proba_to_unified_form(self.module.problem_type, np.array(predictions))
             predictions = _get_pred_from_proba(self.module.problem_type, predictions)
 
+
+        if type(predictions) == list:
+            for i in range(len(predictions)):
+                predictions[i] = _convert_proba_to_unified_form(self.module.problem_type, np.array(predictions[i]))
+                predictions[i] = _get_pred_from_proba(self.module.problem_type, predictions[i])
+        else:
+            predictions = _convert_proba_to_unified_form(self.module.problem_type, np.array(predictions))
+            predictions = _get_pred_from_proba(self.module.problem_type, predictions)
+
         return predictions
     
     @classmethod
@@ -191,9 +224,12 @@ class InternalLightningModel(Model):
         """
         weights_path = os.path.join(path, FileConstants.LIGHTNING_WEIGHTS.value)
         model = read_pickle(os.path.join(path, FileConstants.LIGHTNING_MODEL_PKL.value))
+        weights_path = os.path.join(path, FileConstants.LIGHTNING_WEIGHTS.value)
+        model = read_pickle(os.path.join(path, FileConstants.LIGHTNING_MODEL_PKL.value))
         model_parameters = read_pickle(os.path.join(path, FileConstants.MODEL_PARAMETERS_PKL.value))
         model = model.load_from_checkpoint(weights_path,**model_parameters)
         model = cls(module=model)
+        model.trainer = read_pickle(os.path.join(path, "trainer.pk"))
         model.trainer = read_pickle(os.path.join(path, "trainer.pk"))
         return model
 
@@ -206,6 +242,7 @@ class InternalLightningModel(Model):
         path: str
             The path to save the model to.
         """
+        weights_path = os.path.join(path, FileConstants.LIGHTNING_WEIGHTS.value)
         weights_path = os.path.join(path, FileConstants.LIGHTNING_WEIGHTS.value)
         self.trainer.save_checkpoint(weights_path)
         write_pickle(os.path.join(path, "trainer.pk"), self.trainer)
@@ -234,7 +271,7 @@ class InternalLightningModule(L.LightningModule):
         self.problem_type = problem_type
         self.metric = metric
 
-        self._contructor_parameters = { "problem_type": problem_type }
+        self._constructor_parameters = { "problem_type": problem_type }
 
         self.training_step_outputs = []
         self.validation_step_outputs = []
@@ -244,7 +281,7 @@ class InternalLightningModule(L.LightningModule):
         self._update_constructor_parameters()
 
     @abstractmethod
-    def _update_constructor_parameters():
+    def _update_constructor_parameters(self):
         pass
 
     @abstractmethod
@@ -255,8 +292,12 @@ class InternalLightningModule(L.LightningModule):
         x, y = batch
         if not isinstance(x, list):
             x = [x]
+        if not isinstance(x, list):
+            x = [x]
         logits = self(x)
         loss = self.compute_loss(logits, y)
+        logits = logits.detach().cpu()
+        y = y.detach().cpu()
         logits = logits.detach().cpu()
         y = y.detach().cpu()
         
@@ -270,8 +311,12 @@ class InternalLightningModule(L.LightningModule):
         inputs, target = batch
         if not isinstance(inputs, list):
             inputs = [inputs]
+        if not isinstance(inputs, list):
+            inputs = [inputs]
         output = self(inputs)
 
+        output = output.detach().cpu()
+        target = target.detach().cpu()
         output = output.detach().cpu()
         target = target.detach().cpu()
 
@@ -307,6 +352,12 @@ class InternalLightningModule(L.LightningModule):
 
     
     def predict_step(self, batch):
+        if len(batch) == 2:
+            inputs, target = batch
+        else:
+            inputs = batch
+        if not isinstance(inputs, list):
+            inputs = [inputs]
         if len(batch) == 2:
             inputs, target = batch
         else:

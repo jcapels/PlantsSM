@@ -1,8 +1,5 @@
 import torch
 
-from tensorflow.keras import Input
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.models import Model
 from torch import nn
 
 
@@ -44,23 +41,3 @@ class TestPytorchBaselineModel(nn.Module):
         return y
 
 
-class ToyTensorflowModel:
-
-    def __init__(self, input_dim):
-        self.input_dim = input_dim
-        self.model = self.build_model()
-
-    def build_model(self):
-        inputs = Input(shape=self.input_dim, dtype='int32')
-
-        # Fully connected
-        FC1 = Dense(1024, activation='relu')(inputs)
-        FC2 = Dense(512, activation='relu')(FC1)
-
-        # And add a logistic regression on top
-        predictions = Dense(1, activation='sigmoid')(FC2)
-
-        model = Model(inputs=inputs, outputs=[predictions])
-
-        model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-        return model

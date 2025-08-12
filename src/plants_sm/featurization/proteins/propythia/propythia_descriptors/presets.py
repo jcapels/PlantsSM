@@ -34,7 +34,6 @@ from .sequence_order import (SequenceOrderCouplingNumbersDescriptor,
 
 
 PHYSICO_CHEMICAL_DESCRIPTORS = [
-    LengthDescriptor,
     ChargeDescriptor,
     ChargeDensityDescriptor,
     FormulaDescriptor,
@@ -105,5 +104,11 @@ DESCRIPTORS_PRESETS = {
     'seq-order': SEQUENCE_ORDER_DESCRIPTORS,
     'modlamp-correlation': MODLAMP_CORRELATION_DESCRIPTORS,
     'modlamp-all': [*MODLAMP_CORRELATION_DESCRIPTORS,
-                    *MODLAM_PHYSICO_CHEMICAL_DESCRIPTORS]
+                    *MODLAM_PHYSICO_CHEMICAL_DESCRIPTORS],
+    'all-no-aac': [*PHYSICO_CHEMICAL_DESCRIPTORS,
+            *AUTO_CORRELATION_DESCRIPTORS,
+            *CTD_DESCRIPTORS,
+            *SEQUENCE_ORDER_DESCRIPTORS,
+            *MODLAMP_CORRELATION_DESCRIPTORS,
+            *MODLAM_PHYSICO_CHEMICAL_DESCRIPTORS]
 }

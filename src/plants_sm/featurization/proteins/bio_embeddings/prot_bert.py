@@ -1,5 +1,5 @@
 import numpy as np
-from transformers import AutoTokenizer, AutoModel
+from transformers import AutoTokenizer, AutoModel, BertTokenizer, BertTokenizerFast
 
 from plants_sm.data_structures.dataset import Dataset
 from plants_sm.featurization.featurizer import FeaturesGenerator
@@ -17,6 +17,7 @@ class ProtBert(FeaturesGenerator):
         """
         self.features_names = [f"prot_bert_{num}" for num in range(1, self.embedding_dimension + 1)]
 
+
     def _fit(self, dataset: Dataset, instance_type: str) -> 'ProtBert':
         """
         Fit the ProtBert model to the dataset.
@@ -32,6 +33,7 @@ class ProtBert(FeaturesGenerator):
             the fitted ProtBert
         """
         self.tokenizer = AutoTokenizer.from_pretrained("Rostlab/prot_bert", do_lower_case=False)
+
         model = AutoModel.from_pretrained("Rostlab/prot_bert")
 
         device_to_use = get_device(self.device)

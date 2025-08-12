@@ -8,7 +8,7 @@ from plants_sm.data_structures.dataset import Dataset
 
 class Experiment:
 
-    def __init__(self, train_dataset: Dataset, validation_dataset: Dataset = None, **kwargs):
+    def __init__(self, **kwargs):
         """
         Initialize an experiment.
 
@@ -62,22 +62,7 @@ class Experiment:
                 ``direction`` and ``directions`` must not be specified at the same time.
         """
         self.best_parameters = None
-        self.train_dataset = train_dataset
-        self.validation_dataset = validation_dataset
         self.study = optuna.create_study(**kwargs)
-
-    @property
-    @abstractmethod
-    def best_experiment(self) -> Any:
-        """
-        Method to be implemented by all experiments to return the best experiment. It can be a Pipeline, a Model,
-        a Transformer, etc.
-
-        Returns
-        -------
-        Any
-            The best experiment. It can be a Pipeline, a Model, Transformer, etc.
-        """
 
     @abstractmethod
     def objective(self, trial: optuna.trial.Trial) -> float:

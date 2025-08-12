@@ -5,7 +5,8 @@ from typing import Type
 from plants_sm.models.constants import FileConstants
 from plants_sm.models.model import Model
 from plants_sm.models.pytorch_model import PyTorchModel
-from plants_sm.models.tensorflow_model import TensorflowModel
+
+from plants_sm.models.lightning_model import InternalLightningModel
 
 
 class ModelFilesClasses(Enum):
@@ -14,7 +15,8 @@ class ModelFilesClasses(Enum):
     PYTORCH_MODEL_WEIGHTS = PyTorchModel
     PYTORCH_MODEL_PKL = PyTorchModel
 
-    TENSORFLOW_MODEL = TensorflowModel
+    LIGHTNING_WEIGHTS = InternalLightningModel
+    LIGHTNING_MODEL_PKL = InternalLightningModel
 
     MODEL_PARAMETERS_PKL = None
 

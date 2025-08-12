@@ -78,7 +78,7 @@ class Dataset(ConcreteSubject, PickleMixin):
         else:
             write_pickle(os.path.join(folder_path, f"features.pkl"), self.features)
 
-    def load_features(self, folder_path: str):
+    def load_features(self, folder_path: str, instance_type: str = "all"):
         """
         Method to load the features of the dataset.
 
@@ -90,13 +90,25 @@ class Dataset(ConcreteSubject, PickleMixin):
         if self.batch_size is not None:
             self._folder_to_load_features = folder_path
             i = 0
-            self.features = read_pickle(os.path.join(folder_path, f"features_{i}.pkl"))
-            i += 1
-            while self.next_batch():
+            if instance_type == "all":
                 self.features = read_pickle(os.path.join(folder_path, f"features_{i}.pkl"))
                 i += 1
+                while self.next_batch():
+                    self.features = read_pickle(os.path.join(folder_path, f"features_{i}.pkl"))
+                    i += 1
+            else:
+                features = read_pickle(os.path.join(folder_path, f"features_{i}.pkl"))
+                self.add_features(instance_type, features[instance_type])
+                i += 1
+                while self.next_batch():
+                    features = read_pickle(os.path.join(folder_path, f"features_{i}.pkl"))
+                    self.add_features(instance_type, features[instance_type])
+                    i += 1
         else:
-            self.features = read_pickle(os.path.join(folder_path, f"features.pkl"))
+            if instance_type == "all":
+                self.features = read_pickle(os.path.join(folder_path, f"features.pkl"))
+            else:
+                self.add_features(instance_type, read_pickle(os.path.join(folder_path, f"features.pkl"))[instance_type])
 
     def save(self, folder_path: str):
         """

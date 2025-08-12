@@ -17,7 +17,7 @@ class TestDatasetPipeline(TestDataset):
 
     def test_dataset_pipeline(self):
         steps = [ProteinStandardizer(), PropythiaWrapper(preset='performance')]
-        model = TestPytorchBaselineModel(8677, 50)
+        model = TestPytorchBaselineModel(8676, 50)
         pytorch_model = PyTorchModel(model=model,
                                      loss_function=nn.BCELoss(),
                                      device="cpu",
@@ -61,7 +61,7 @@ class TestDatasetPipeline(TestDataset):
                                                                     batch_size=1)
 
         steps = [ProteinStandardizer(), PropythiaWrapper(preset='performance')]
-        model = TestPytorchBaselineModel(8677, 50)
+        model = TestPytorchBaselineModel(8676, 50)
         pytorch_model = PyTorchModel(model=model,
                                      loss_function=nn.BCELoss(),
                                      device="cpu",

@@ -1,8 +1,9 @@
+from unittest import skip
 from integration_tests.dataset.test_dataset import TestDataset
 from plants_sm.data_standardization.x_padder import XPadder
 from plants_sm.featurization.proteins.bio_embeddings.esm import ESMEncoder
 
-
+@skip("Not used, it will most likely be a deprecated functionality")
 class TestESMPadding(TestDataset):
 
     def test_esm_padding(self):
