@@ -128,7 +128,7 @@ class Pipeline:
         self._transform_dataset(dataset)
         return dataset
 
-    def predict(self, test_dataset: Dataset, model_name: str = None) -> np.ndarray:
+    def predict(self, test_dataset: Dataset, model_name: str = None, force_transform = True) -> np.ndarray:
         """
         Predict the dataset according to the pipeline
 
@@ -138,6 +138,8 @@ class Pipeline:
             dataset to predict
         model_name: str
             name of the model to use
+        force_transform: bool
+            if after calculating features you need to calculate them again
 
         Returns
         -------
@@ -145,7 +147,8 @@ class Pipeline:
             predictions of the dataset
         """
 
-        self._transform_dataset(test_dataset)
+        if force_transform or test_dataset.X is None:
+            self._transform_dataset(test_dataset)
 
         if model_name is not None:
             return self._models_indexes[model_name].predict(test_dataset)
@@ -154,7 +157,7 @@ class Pipeline:
         else:
             return self._models_indexes[self.models[0].name].predict(test_dataset)
 
-    def predict_proba(self, test_dataset: Dataset, model_name: str = None) -> np.ndarray:
+    def predict_proba(self, test_dataset: Dataset, model_name: str = None, force_transform = True) -> np.ndarray:
         """
         Predict the dataset according to the pipeline
 
@@ -164,6 +167,8 @@ class Pipeline:
             dataset to predict
         model_name: str
             name of the model to use
+        force_transform: bool
+            if after calculating features you need to calculate them again
 
         Returns
         -------
@@ -171,7 +176,8 @@ class Pipeline:
             predictions of the dataset
         """
 
-        self._transform_dataset(test_dataset)
+        if force_transform or test_dataset.X is None:
+            self._transform_dataset(test_dataset)
 
         if model_name is not None:
             return self._models_indexes[model_name].predict_proba(test_dataset)

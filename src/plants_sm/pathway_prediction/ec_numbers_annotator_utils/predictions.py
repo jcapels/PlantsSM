@@ -411,6 +411,7 @@ def predict_with_model(pipeline: str, dataset_path: str, sequences_field: str,
         pandas dataframe with results
     """
     pipeline_path = _download_pipeline_to_cache(pipeline)
+    
     return make_predictions_with_model(pipeline_path=pipeline_path,
                                 dataset_path=dataset_path,
                                 sequences_field=sequences_field,

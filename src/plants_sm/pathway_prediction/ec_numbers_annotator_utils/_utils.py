@@ -287,6 +287,7 @@ def _download_pipeline_to_cache(pipeline: str) -> str:
         "DNN ESM1b all data": ModelsDownloadPaths.DNN_ESM1b_ALL_DATA.value,
         "DNN ProtBERT all data": ModelsDownloadPaths.DNN_PROTBERT_ALL_DATA.value,
         "DNN ESM2 3B all data": ModelsDownloadPaths.DNN_ESM2_3B_ALL_DATA.value,
+        "ProtBERT pipeline": ModelsDownloadPaths.PROTBERT_PIPELINE.value,
         "DNN ESM2 3B trial 2 train plus validation": ModelsDownloadPaths.DNN_ESM2_3B_TRAIN_VALID.value,
         "DNN ESM1b trial 4 train plus validation": ModelsDownloadPaths.DNN_ESM1b_TRAIN_VALID.value,
         "ProtBERT trial 2 train plus validation": ModelsDownloadPaths.DNN_PROTBERT_TRAIN_VALID.value,

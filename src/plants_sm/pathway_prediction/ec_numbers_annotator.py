@@ -3,7 +3,7 @@ from typing import Dict, List, Tuple
 
 import pandas as pd
 from plants_sm.pathway_prediction.annotator import Annotator
-from plants_sm.pathway_prediction.ec_numbers_annotator_utils.predictions import predict_with_model, predict_with_model_from_fasta
+from plants_sm.pathway_prediction.ec_numbers_annotator_utils.prot_bert_prediction import predict_from_csv, predict_with_model_from_fasta
 from plants_sm.pathway_prediction.entities import Protein
 from plants_sm.pathway_prediction.solution import ECSolution
 
@@ -111,8 +111,6 @@ class ECAnnotator(Annotator):
 
 class ProtBertECAnnotator(ECAnnotator):
 
-    pipeline: str = "DNN ProtBERT all data"
-
     def _predict_from_fasta(self, file: str, **kwargs) -> pd.DataFrame:
         """
         Predict EC numbers from a FASTA file using the ProtBERT model.
@@ -129,7 +127,7 @@ class ProtBertECAnnotator(ECAnnotator):
             A DataFrame containing the predictions.
         """
 
-        return predict_with_model_from_fasta(self.pipeline, file, **kwargs)
+        return predict_with_model_from_fasta(file, **kwargs)
     
     def _predict_from_csv(self, file: str, **kwargs) -> pd.DataFrame:
         """
@@ -149,4 +147,4 @@ class ProtBertECAnnotator(ECAnnotator):
             kwargs["sequences_field"] = "sequence" 
         if "ids_field" not in kwargs:
             kwargs["ids_field"] = "id"
-        return predict_with_model(self.pipeline, file, **kwargs)
+        return predict_from_csv(file, **kwargs)
