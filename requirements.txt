@@ -1,6 +1,6 @@
 biopython==1.79
 dask==2022.2.0
-lxml
+lxml==6.0.0
 matplotlib
 modlamp==4.3.0
 openpyxl==3.0.10
