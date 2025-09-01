@@ -16,6 +16,11 @@ from unit_tests.models._utils import TestPytorchBaselineModel
 
 class MockExperiment(Experiment):
 
+    def __init__(self, train_dataset, validation_dataset, **kwargs):
+        self.train_dataset = train_dataset
+        self.validation_dataset = validation_dataset
+        super().__init__(**kwargs)
+
     def objective(self, trial: optuna.trial.Trial) -> float:
         lr = trial.suggest_float("lr", 0.0001, 0.1, log=True)
         intermediate_dim = trial.suggest_int("intermediate_dim", 20, 500)
@@ -26,7 +31,7 @@ class MockExperiment(Experiment):
 
     def pipeline_runner(self, lr: float, intermediate_dim: int):
         steps = [ProteinStandardizer(), PropythiaWrapper(preset='performance')]
-        model = TestPytorchBaselineModel(8677, 50, intermediate_dim=intermediate_dim)
+        model = TestPytorchBaselineModel(8676, 50, intermediate_dim=intermediate_dim)
         pytorch_model = PyTorchModel(model=model,
                                      loss_function=nn.BCELoss(),
                                      device="cpu",

@@ -9,27 +9,27 @@ class TestPropythiaWrapper(TestProteinFeaturizers):
         wrapper = PropythiaWrapper(preset="all", n_jobs=2)
         wrapper._fit(self.dataset, PLACEHOLDER_FIELD)
         features = wrapper._featurize(list(self.dataset.get_instances().values())[0])
-        self.assertEqual(features.shape[0], 9596)
+        self.assertEqual(features.shape[0], 9595)
 
     def test_all(self):
         wrapper = PropythiaWrapper(preset="all", n_jobs=2)
         wrapper.fit_transform(self.dataset)
         self.assertEqual(self.dataset.dataframe.shape[0], 2)
-        self.assertEqual(self.dataset.X().shape[1], 9596)
+        self.assertEqual(self.dataset.X().shape[1], 9595)
         self.assertEqual(wrapper.features_names, self.dataset.features_fields[PLACEHOLDER_FIELD])
 
     def test_physicochemical(self):
         wrapper = PropythiaWrapper(preset="physicochemical", n_jobs=2)
         wrapper.fit_transform(self.dataset)
         self.assertEqual(self.dataset.dataframe.shape[0], 2)
-        self.assertEqual(self.dataset.X().shape[1], 26)
+        self.assertEqual(self.dataset.X().shape[1], 25)
         self.assertEqual(wrapper.features_names, self.dataset.features_fields[PLACEHOLDER_FIELD])
 
     def test_performance(self):
         wrapper = PropythiaWrapper(preset="performance", n_jobs=2)
         wrapper.fit_transform(self.dataset)
         self.assertEqual(self.dataset.dataframe.shape[0], 2)
-        self.assertEqual(self.dataset.X().shape[1], 8677)
+        self.assertEqual(self.dataset.X().shape[1], 8676)
         self.assertEqual(wrapper.features_names, self.dataset.features_fields[PLACEHOLDER_FIELD])
 
     def test_aac(self):

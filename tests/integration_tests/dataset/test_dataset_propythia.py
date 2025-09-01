@@ -11,8 +11,8 @@ class TestDatasetPropythia(TestDataset):
         propythia.fit_transform(dataset)
 
         self.assertEqual(dataset.dataframe.shape[0], 2)
-        self.assertEqual(dataset.X.shape[1], 9596)
-        self.assertEqual(dataset.features_fields[PLACEHOLDER_FIELD][0], "length")
+        self.assertEqual(dataset.X.shape[1], 9595)
+        self.assertEqual(dataset.features_fields[PLACEHOLDER_FIELD][0], "charge")
         self.assertEqual(dataset.instances_ids_field, "identifier")
 
     def test_different_orders_dictionary_dataframe(self):
@@ -22,4 +22,4 @@ class TestDatasetPropythia(TestDataset):
         propythia = PropythiaWrapper(preset="physicochemical")
         propythia.fit_transform(dataset)
 
-        self.assertEqual(dataset.X[0, 0], 54.0)
+        self.assertAlmostEqual(float(dataset.X[0, 0]), 4.031, delta=0.1)

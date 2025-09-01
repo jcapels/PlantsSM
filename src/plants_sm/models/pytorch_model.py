@@ -162,6 +162,8 @@ class PyTorchModel(Model):
         self.early_stopping_method = early_stopping_method
         self.objective = objective
 
+        self.name = model_name
+
     @property
     def history(self) -> dict:
         """

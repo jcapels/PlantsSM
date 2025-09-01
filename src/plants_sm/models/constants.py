@@ -17,6 +17,9 @@ class FileConstants(Enum):
     PYTORCH_MODEL_WEIGHTS = 'pytorch_model_weights.pt'
     PYTORCH_MODEL_PKL = 'pytorch_model.pkl'
 
+    LIGHTNING_WEIGHTS = 'pytorch_model_weights.ckpt'
+    LIGHTNING_MODEL_PKL = 'lightning_model.pkl'
+
     TENSORFLOW_MODEL = 'tensorflow_model.h5'
 
     MODEL_PARAMETERS_PKL = 'model_parameters.pkl'

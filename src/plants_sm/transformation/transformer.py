@@ -6,7 +6,7 @@ from plants_sm.estimation.estimator import Estimator
 
 
 class Transformer(Estimator):
-    n_jobs: int = 1
+    n_jobs: int = -1
 
     @abstractmethod
     def _transform(self, dataset: Dataset, instance_type: str) -> Dataset:

@@ -18,7 +18,7 @@ class Pipeline:
     metrics: List[callable]
 
     def __init__(self, steps: Union[List[Transformer], Dict[str, List[Transformer]]] = None,
-                 models: List[Model] = None,
+                 models: List[Model] = [],
                  metrics: List[callable] = None):
         """
         Constructor
@@ -91,7 +91,44 @@ class Pipeline:
             for step in self.steps[instance_type]:
                 step.transform(dataset, instance_type=instance_type)
 
-    def predict(self, test_dataset: Dataset, model_name: str = None) -> np.ndarray:
+    def add_models(self, models: Union[List[Model], Model]):
+
+        if isinstance(models, list):
+            for model in models:
+                model_name = model.name
+                if model_name in self._models_indexes:
+                    raise ValueError(f"Model with name {model_name} already exists")
+                self._models_indexes[model_name] = model
+            self.models.extend(models)
+        else:
+            model_name = models.name
+            if model_name in self._models_indexes:
+                raise ValueError(f"Model with name {model_name} already exists")
+            self._models_indexes[model_name] = models
+            self.models.append(models)
+
+        
+
+
+    def transform(self, dataset: Dataset) -> Dataset:
+        """
+        Transform the dataset according to the pipeline
+
+        Parameters
+        ----------
+        dataset: Dataset
+            dataset to transform
+
+        Returns
+        -------
+        transformed_dataset: Dataset
+            transformed dataset
+        """
+
+        self._transform_dataset(dataset)
+        return dataset
+
+    def predict(self, test_dataset: Dataset, model_name: str = None, force_transform = True) -> np.ndarray:
         """
         Predict the dataset according to the pipeline
 
@@ -101,6 +138,8 @@ class Pipeline:
             dataset to predict
         model_name: str
             name of the model to use
+        force_transform: bool
+            if after calculating features you need to calculate them again
 
         Returns
         -------
@@ -108,7 +147,8 @@ class Pipeline:
             predictions of the dataset
         """
 
-        self._transform_dataset(test_dataset)
+        if force_transform or test_dataset.X is None:
+            self._transform_dataset(test_dataset)
 
         if model_name is not None:
             return self._models_indexes[model_name].predict(test_dataset)
@@ -117,7 +157,7 @@ class Pipeline:
         else:
             return self._models_indexes[self.models[0].name].predict(test_dataset)
 
-    def predict_proba(self, test_dataset: Dataset, model_name: str = None) -> np.ndarray:
+    def predict_proba(self, test_dataset: Dataset, model_name: str = None, force_transform = True) -> np.ndarray:
         """
         Predict the dataset according to the pipeline
 
@@ -127,6 +167,8 @@ class Pipeline:
             dataset to predict
         model_name: str
             name of the model to use
+        force_transform: bool
+            if after calculating features you need to calculate them again
 
         Returns
         -------
@@ -134,7 +176,8 @@ class Pipeline:
             predictions of the dataset
         """
 
-        self._transform_dataset(test_dataset)
+        if force_transform or test_dataset.X is None:
+            self._transform_dataset(test_dataset)
 
         if model_name is not None:
             return self._models_indexes[model_name].predict_proba(test_dataset)
