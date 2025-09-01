@@ -953,3 +953,37 @@ class PyTorchModel(Model):
         y_pred_proba = self._predict_proba(dataset)
         y_pred = self.get_pred_from_proba(y_pred_proba)
         return y_pred
+
+    def get_embeddings(self, dataset: Dataset) -> np.ndarray:
+        """
+        Get the embeddings for each sample in the dataset.
+
+        Parameters
+        ----------
+        dataset: Dataset
+            Dataset to get embeddings from
+
+        Returns
+        -------
+        np.ndarray
+            Array of embeddings
+        """
+        self.model.eval()
+        embeddings = None
+
+        dataset_preprocessed = self._preprocess_data(dataset, shuffle=False)
+        for i, inputs_targets in enumerate(dataset_preprocessed):
+            for j, inputs_elem in enumerate(inputs_targets):
+                inputs_targets[j] = inputs_elem.to(self.device)
+
+            yhat, embedding = self.model(inputs_targets, return_embedding=True)
+
+            embedding = array_from_tensor(embedding)
+            embedding = array_reshape(embedding)
+
+            if i == 0 and embeddings is None:
+                embeddings = embedding
+            else:
+                embeddings = np.concatenate((embeddings, embedding))
+
+        return np.array(embeddings)

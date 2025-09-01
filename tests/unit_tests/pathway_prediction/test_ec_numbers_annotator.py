@@ -5,7 +5,8 @@ import pandas as pd
 
 from plants_sm.pathway_prediction.ec_numbers_annotator import ProtBertECAnnotator
 
-from plants_sm.pathway_prediction.ec_numbers_annotator_utils.prot_bert_prediction import predict_from_csv, predict_with_model_from_fasta
+from plants_sm.pathway_prediction.ec_numbers_annotator_utils.esm1b_predictions import predict_with_esm1b_from_csv, predict_with_esm1b_from_fasta
+from plants_sm.pathway_prediction.ec_numbers_annotator_utils.prot_bert_prediction import predict_with_protbert_from_csv, predict_with_protbert_from_fasta
 from tests import TEST_DIR
 
 @skip("Require model download")
@@ -16,7 +17,7 @@ class TestEcNumbersAnnotatorUtils(TestCase):
         self.fasta_data_path = os.path.join(TEST_DIR, "data", "test.fasta")
 
     def test_make_prediction_protbert(self):
-        results = predict_from_csv(
+        results = predict_with_protbert_from_csv(
                            dataset_path=self.data_path,
                            output_path="predictions_protbert.csv",
                            ids_field="id",
@@ -26,9 +27,27 @@ class TestEcNumbersAnnotatorUtils(TestCase):
         self.assertEqual(type(results), pd.DataFrame)
 
     def test_make_prediction_protbert_from_fasta(self):
-        results = predict_with_model_from_fasta(
+        results = predict_with_protbert_from_fasta(
                            fasta_path=self.fasta_data_path,
                            output_path="predictions_protbert_fasta.csv",
+                           device="cpu")
+
+        self.assertEqual(type(results), pd.DataFrame)
+
+    def test_make_prediction_esm1b(self):
+        results = predict_with_esm1b_from_csv(
+                           dataset_path=self.data_path,
+                           output_path="predictions_esm1b.csv",
+                           ids_field="id",
+                           sequences_field="sequence",
+                           device="cpu")
+        
+        self.assertEqual(type(results), pd.DataFrame)
+
+    def test_make_prediction_esm1b_from_fasta(self):
+        results = predict_with_esm1b_from_fasta(
+                           fasta_path=self.fasta_data_path,
+                           output_path="predictions_esm1b_fasta.csv",
                            device="cpu")
 
         self.assertEqual(type(results), pd.DataFrame)

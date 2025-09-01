@@ -4,7 +4,6 @@ import pandas as pd
 from plants_sm.data_structures.dataset.single_input_dataset import SingleInputDataset
 from plants_sm.pathway_prediction.ec_numbers_annotator_utils._models_predictions_utils import _make_predictions_with_model
 from plants_sm.pathway_prediction.ec_numbers_annotator_utils._utils import _download_pipeline_to_cache, convert_fasta_to_csv
-
 from plants_sm.pipeline.pipeline import Pipeline
 
 import torch
@@ -15,24 +14,23 @@ from torch import nn
 from plants_sm.models.lightning_model import InternalLightningModel
 from plants_sm.pathway_prediction._fine_tune_ec_number_prediction_model import FineTuneModelECNumber
 
-def setup_protbert_models(pipeline_path, device):
+def setup_esm1b_models(pipeline_path, device):
 
     pipeline = Pipeline.load(pipeline_path)
 
-    model = DNN(1024, [2560], 5743, batch_norm=True, last_sigmoid=True)
-    model.load_state_dict(torch.load(f"{pipeline_path}/prot_bert.pt"))
+    model = DNN(1280, [2560, 5120], 5743, batch_norm=True, last_sigmoid=True)
+    model.load_state_dict(torch.load(f"{pipeline_path}/esm1b.pt"))
     model_1 = PyTorchModel(model=model, loss_function=nn.BCELoss, model_name="ec_number", device=device)
 
-    additional_layers = [1280, 640]
+    additional_layers = [1280]
 
-    # learning_rate = 0.0035555738943412697
-    # base_layers = [2560]
-    batch_size = 64
-    input_dim = 1024
+    batch_size = 16
+    input_dim = 1280
 
     module = FineTuneModelECNumber.load_from_checkpoint(f"{pipeline_path}/enzyme_discrimination.ckpt",
-                                            input_dim=input_dim, additional_layers=additional_layers, classification_neurons=1, \
-                                                path_to_model=f"{pipeline_path}/prot_bert.pt")
+                                            input_dim=input_dim, additional_layers=additional_layers, base_layers=[2560, 5120], 
+                                            classification_neurons=1,
+                                                path_to_model=f"{pipeline_path}/esm1b.pt")
     if device == "cpu":
         accelerator = "cpu"
     else:
@@ -49,7 +47,7 @@ def setup_protbert_models(pipeline_path, device):
 
     return pipeline
 
-def predict_with_protbert_from_csv(dataset_path: str, sequences_field: str,
+def predict_with_esm1b_from_csv(dataset_path: str, sequences_field: str,
                     ids_field: str, output_path: str = None, all_data: bool = True,
                     device: str = "cpu", num_gpus: int = 1)-> pd.DataFrame:
     
@@ -78,13 +76,13 @@ def predict_with_protbert_from_csv(dataset_path: str, sequences_field: str,
     results: pandas dataframe
         pandas dataframe with results
     """
-    pipeline_path = _download_pipeline_to_cache("ProtBERT pipeline")
-    # pipeline_path = "/home/jcapela/plants_ec_number_prediction/PlantsSM/examples/ProtBERT_pipeline"
+    # pipeline_path = _download_pipeline_to_cache("ESM1b pipeline")
+    pipeline_path = "/home/jcapela/plants_ec_number_prediction/PlantsSM/examples/ESM1b_pipeline"
 
     dataset = SingleInputDataset.from_csv(dataset_path, representation_field=sequences_field,
                                           instances_ids_field=ids_field)
     
-    pipeline = setup_protbert_models(pipeline_path, device)
+    pipeline = setup_esm1b_models(pipeline_path, device)
     
     results_dataframe = _make_predictions_with_model(dataset, pipeline, device, all_data, num_gpus=num_gpus)
 
@@ -94,7 +92,7 @@ def predict_with_protbert_from_csv(dataset_path: str, sequences_field: str,
     return results_dataframe
     
 
-def predict_with_protbert_from_fasta(fasta_path: str,
+def predict_with_esm1b_from_fasta(fasta_path: str,
                                   output_path: str = None, all_data: bool = True,
                                   device: str = "cpu", num_gpus: int = 1) -> pd.DataFrame:
     """
@@ -124,15 +122,9 @@ def predict_with_protbert_from_fasta(fasta_path: str,
     temp_csv = os.path.join(current_directory, "temp.csv")
     convert_fasta_to_csv(fasta_path, temp_csv)
     try:
-        predictions = predict_with_protbert_from_csv(temp_csv, "sequence", "id", output_path, all_data, device, num_gpus)
+        predictions = predict_with_esm1b_from_csv(temp_csv, "sequence", "id", output_path, all_data, device, num_gpus)
         os.remove(temp_csv)
         return predictions
     except Exception as e:
         os.remove(temp_csv)
         raise Exception(e)
-
-
-
-
-
-

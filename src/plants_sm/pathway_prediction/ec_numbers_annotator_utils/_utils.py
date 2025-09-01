@@ -13,6 +13,11 @@ import csv
 from plants_sm.pathway_prediction.ec_numbers_annotator_utils.enumerators import BLASTDownloadPaths, ModelsDownloadPaths
 
 
+import os
+import numpy as np
+import pandas as pd
+
+
 def get_unique_labels_by_level(dataset, level):
     final_dataset_test = dataset.copy()
     final_dataset_test = final_dataset_test.loc[:, level]
