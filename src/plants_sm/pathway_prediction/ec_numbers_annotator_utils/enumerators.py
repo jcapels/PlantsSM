@@ -9,6 +9,7 @@ class ModelsDownloadPaths(Enum):
     DNN_ESM1b_TRAIN_VALID = "https://zenodo.org/records/11380947/files/DNN_ESM1b_trial_4_train_plus_validation.zip?download=1"
     DNN_PROTBERT_TRAIN_VALID = "https://zenodo.org/records/11380947/files/DNN_ProtBERT_trial_2_train_plus_validation.zip?download=1"
     PROTBERT_PIPELINE = "https://zenodo.org/records/16813319/files/ProtBERT_pipeline.zip?download=1"
+    ESM1B_PIPELINE = "https://zenodo.org/records/17036028/files/ESM1b_pipeline.zip?download=1"
 
 class BLASTDownloadPaths(Enum):
 

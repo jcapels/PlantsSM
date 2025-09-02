@@ -296,6 +296,7 @@ def _download_pipeline_to_cache(pipeline: str) -> str:
         "DNN ESM2 3B trial 2 train plus validation": ModelsDownloadPaths.DNN_ESM2_3B_TRAIN_VALID.value,
         "DNN ESM1b trial 4 train plus validation": ModelsDownloadPaths.DNN_ESM1b_TRAIN_VALID.value,
         "ProtBERT trial 2 train plus validation": ModelsDownloadPaths.DNN_PROTBERT_TRAIN_VALID.value,
+        "ESM1b pipeline": ModelsDownloadPaths.ESM1B_PIPELINE.value
     }
 
     if pipeline not in pipelines:

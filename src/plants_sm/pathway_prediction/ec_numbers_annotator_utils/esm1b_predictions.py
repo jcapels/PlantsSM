@@ -76,8 +76,8 @@ def predict_with_esm1b_from_csv(dataset_path: str, sequences_field: str,
     results: pandas dataframe
         pandas dataframe with results
     """
-    # pipeline_path = _download_pipeline_to_cache("ESM1b pipeline")
-    pipeline_path = "/home/jcapela/plants_ec_number_prediction/PlantsSM/examples/ESM1b_pipeline"
+    pipeline_path = _download_pipeline_to_cache("ESM1b pipeline")
+    # pipeline_path = "/home/jcapela/plants_ec_number_prediction/PlantsSM/examples/ESM1b_pipeline"
 
     dataset = SingleInputDataset.from_csv(dataset_path, representation_field=sequences_field,
                                           instances_ids_field=ids_field)
