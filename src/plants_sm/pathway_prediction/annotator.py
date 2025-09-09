@@ -27,7 +27,7 @@ class Annotator(ABC):
         return self.solution
     
     @abstractmethod
-    def _annotate_from_file(self, file: str, format: str, **kwargs) -> List[BiologicalEntity]:
+    def _annotate_from_file(self, file: str, format: str, **kwargs) -> List[Solution]:
         pass
 
 
