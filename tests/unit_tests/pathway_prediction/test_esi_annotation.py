@@ -6,6 +6,7 @@ import pandas as pd
 from plants_sm.pathway_prediction.esi_annotator import ProtBertESIAnnotator
 from tests import TEST_DIR
 
+@skip("Requires model download")
 class TestESIAnnotator(TestCase):
 
     def setUp(self):
