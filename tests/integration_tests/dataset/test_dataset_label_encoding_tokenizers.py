@@ -9,6 +9,6 @@ class TestDatasetLabelEncoderTokenizer(TestDataset):
         tokenizer = LabelEncoder(tokenizer=AtomLevelTokenizer())
         tokenizer.fit_transform(self.multi_input_dataset, instance_type="ligands")
 
-        self.assertEqual(self.multi_input_dataset.dataframe.shape[0], 9)
+        self.assertEqual(self.multi_input_dataset.dataframe.shape[0], 10)
         self.assertIn("[C@@H]", self.multi_input_dataset.features_fields["ligands"])
         self.assertEqual(self.multi_input_dataset.instances_ids_field["interaction"], "ids")

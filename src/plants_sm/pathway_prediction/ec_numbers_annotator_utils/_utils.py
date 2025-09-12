@@ -13,6 +13,11 @@ import csv
 from plants_sm.pathway_prediction.ec_numbers_annotator_utils.enumerators import BLASTDownloadPaths, ModelsDownloadPaths
 
 
+import os
+import numpy as np
+import pandas as pd
+
+
 def get_unique_labels_by_level(dataset, level):
     final_dataset_test = dataset.copy()
     final_dataset_test = final_dataset_test.loc[:, level]
@@ -185,6 +190,25 @@ def convert_fasta_to_csv(fasta_file: str, csv_file: str):
         for record in SeqIO.parse(fasta, "fasta"):
             csv_writer.writerow([record.id, str(record.seq)])
 
+def fasta_to_dataframe(fasta_path: str) -> pd.DataFrame:
+    """
+    Convert a FASTA file into a pandas DataFrame with columns 'id' and 'sequence'.
+
+    Args:
+        fasta_path (str): Path to the FASTA file.
+
+    Returns:
+        pd.DataFrame: DataFrame with 'id' and 'sequence' columns.
+    """
+    records = []
+    with open(fasta_path, "r") as fasta_file:
+        for record in SeqIO.parse(fasta_file, "fasta"):
+            records.append({
+                "id": record.id,
+                "sequence": str(record.seq)
+            })
+    return pd.DataFrame(records)
+
 
 def _download_and_unzip_file_to_cache(url: str, cache_path: str, method_name: str) -> str:
     """
@@ -291,6 +315,7 @@ def _download_pipeline_to_cache(pipeline: str) -> str:
         "DNN ESM2 3B trial 2 train plus validation": ModelsDownloadPaths.DNN_ESM2_3B_TRAIN_VALID.value,
         "DNN ESM1b trial 4 train plus validation": ModelsDownloadPaths.DNN_ESM1b_TRAIN_VALID.value,
         "ProtBERT trial 2 train plus validation": ModelsDownloadPaths.DNN_PROTBERT_TRAIN_VALID.value,
+        "ESM1b pipeline": ModelsDownloadPaths.ESM1B_PIPELINE.value
     }
 
     if pipeline not in pipelines:
