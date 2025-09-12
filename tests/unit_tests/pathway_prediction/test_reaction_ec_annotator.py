@@ -15,4 +15,8 @@ class TestEcNumbersAnnotatorReactions(TestCase):
     def test_annotate_reactions(self):
         annotator = ReactionECNumberAnnotator()
 
-        print(annotator.annotate(pd.read_csv(self.test_csv)))
+        entities = pd.read_csv(self.test_csv)
+
+        solution = annotator.annotate(entities)
+
+        self.assertEqual(len(solution.entity_ec_3), entities.shape[0] - 1)

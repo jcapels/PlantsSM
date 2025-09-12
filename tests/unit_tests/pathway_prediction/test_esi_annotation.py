@@ -14,6 +14,23 @@ class TestESIAnnotator(TestCase):
                                       "data", 
                                       "multi_input_dataset.csv")
         self.annotator = ProtBertESIAnnotator()
+        self.non_valid_smiles_data_path = os.path.join(TEST_DIR,
+                                      "data", 
+                                      "non_valid_smiles_multi_input_dataset.csv")
         
     def test_esi_annotator(self):
-        solution = self.annotator.annotate_from_csv(self.data_path)
+        data = pd.read_csv(self.data_path)
+        unique_compounds = pd.unique(data.iloc[:, 2]) 
+        solution = self.annotator.annotate_from_file(self.data_path, "csv")
+        self.assertEqual(len(solution.substrate_protein_solutions), len(unique_compounds))
+        self.assertEqual(len(solution.get_score(39)), 2)
+        self.assertGreater(solution.get_score(39)[0][1], solution.get_score(39)[1][1])
+
+    def test_non_valid_compounds(self):
+        
+        data = pd.read_csv(self.non_valid_smiles_data_path)
+        unique_compounds = pd.unique(data.iloc[:, 2]) 
+        solution = self.annotator.annotate_from_file(self.non_valid_smiles_data_path, "csv")
+        self.assertEqual(len(solution.substrate_protein_solutions), len(unique_compounds)-1)
+        self.assertEqual(len(solution.get_score(39)), 2)
+        self.assertGreater(solution.get_score(39)[0][1], solution.get_score(39)[1][1])

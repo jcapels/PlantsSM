@@ -190,6 +190,25 @@ def convert_fasta_to_csv(fasta_file: str, csv_file: str):
         for record in SeqIO.parse(fasta, "fasta"):
             csv_writer.writerow([record.id, str(record.seq)])
 
+def fasta_to_dataframe(fasta_path: str) -> pd.DataFrame:
+    """
+    Convert a FASTA file into a pandas DataFrame with columns 'id' and 'sequence'.
+
+    Args:
+        fasta_path (str): Path to the FASTA file.
+
+    Returns:
+        pd.DataFrame: DataFrame with 'id' and 'sequence' columns.
+    """
+    records = []
+    with open(fasta_path, "r") as fasta_file:
+        for record in SeqIO.parse(fasta_file, "fasta"):
+            records.append({
+                "id": record.id,
+                "sequence": str(record.seq)
+            })
+    return pd.DataFrame(records)
+
 
 def _download_and_unzip_file_to_cache(url: str, cache_path: str, method_name: str) -> str:
     """

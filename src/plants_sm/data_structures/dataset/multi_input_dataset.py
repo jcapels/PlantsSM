@@ -266,6 +266,9 @@ class MultiInputDataset(Dataset, CSVMixin, ExcelMixin):
         Returns
         -------
         """
+        if instance_type in features:
+            features = features[instance_type]
+            
         if instance_type in self._features:
             self._features[instance_type].update(features)
         else:

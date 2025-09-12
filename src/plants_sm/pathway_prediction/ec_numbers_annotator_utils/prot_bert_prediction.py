@@ -92,7 +92,51 @@ def predict_with_protbert_from_csv(dataset_path: str, sequences_field: str,
         results_dataframe.to_csv(output_path, index=False)
 
     return results_dataframe
+
+def predict_with_protbert_from_dataframe(dataset: pd.DataFrame, sequences_field: str,
+                    ids_field: str, output_path: str = None, all_data: bool = True,
+                    device: str = "cpu", num_gpus: int = 1)-> pd.DataFrame:
     
+    """
+    Make predictions with a model.
+
+    Parameters
+    ----------
+    dataset: pd.DataFrame
+        Dataframe with proteins and respective ids
+    sequences_field: str
+        Path to the database.
+    ids_field: str
+        Field containing the ids.
+    output_path: str
+        Path to the output file.
+    all_data: bool
+        Use all data from the dataset.
+    device: str
+        Device to use.
+    num_gpus: int
+        Number of GPUs to use for predicting the ESM embedding.
+
+    Returns
+    -------
+    results: pandas dataframe
+        pandas dataframe with results
+    """
+    pipeline_path = _download_pipeline_to_cache("ProtBERT pipeline")
+    # pipeline_path = "/home/jcapela/plants_ec_number_prediction/PlantsSM/examples/ProtBERT_pipeline"
+
+    dataset = SingleInputDataset(dataset, representation_field=sequences_field,
+                                          instances_ids_field=ids_field)
+    
+    pipeline = setup_protbert_models(pipeline_path, device)
+    
+    results_dataframe = _make_predictions_with_model(dataset, pipeline, device, all_data, num_gpus=num_gpus)
+
+    if output_path is not None:
+        results_dataframe.to_csv(output_path, index=False)
+
+    return results_dataframe
+
 
 def predict_with_protbert_from_fasta(fasta_path: str,
                                   output_path: str = None, all_data: bool = True,

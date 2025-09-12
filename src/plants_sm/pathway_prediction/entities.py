@@ -23,12 +23,19 @@ class Protein(BiologicalEntity):
         return self.representation
 
     @classmethod
-    def from_sequence(cls, sequence: str) -> 'ReactionSmarts':
+    def from_sequence(cls, sequence: str) -> 'Protein':
         is_valid = SequenceUtils.is_valid_protein_sequence(sequence)
         if not is_valid:
             raise ValueError("Amino-acid sequence not valid")
 
         return cls(representation=sequence)
+    
+    @classmethod
+    def from_sequences(cls, ids: List[Union[str, int]], sequences: List[str]) -> Dict[str, 'Protein']:
+        proteins = {}
+        for i, id_ in enumerate(ids):
+            proteins[id_] = cls.from_sequence(sequences[i])
+        return proteins
     
     @classmethod
     def from_fasta(cls, file) -> Dict[str, 'Protein']:

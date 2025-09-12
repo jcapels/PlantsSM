@@ -1,10 +1,13 @@
 from abc import abstractmethod
+import os
 from typing import Dict, List, Tuple
 
 import pandas as pd
+from plants_sm.pathway_prediction._validation_utils import _validate_proteins
 from plants_sm.pathway_prediction.annotator import Annotator
-from plants_sm.pathway_prediction.ec_numbers_annotator_utils.esm1b_predictions import predict_with_esm1b_from_csv, predict_with_esm1b_from_fasta
-from plants_sm.pathway_prediction.ec_numbers_annotator_utils.prot_bert_prediction import predict_with_protbert_from_csv, predict_with_protbert_from_fasta
+from plants_sm.pathway_prediction.ec_numbers_annotator_utils._utils import fasta_to_dataframe
+from plants_sm.pathway_prediction.ec_numbers_annotator_utils.esm1b_predictions import predict_with_esm1b_from_csv, predict_with_esm1b_from_dataframe, predict_with_esm1b_from_fasta
+from plants_sm.pathway_prediction.ec_numbers_annotator_utils.prot_bert_prediction import predict_with_protbert_from_csv, predict_with_protbert_from_dataframe, predict_with_protbert_from_fasta
 from plants_sm.pathway_prediction.entities import Protein
 from plants_sm.pathway_prediction.solution import ECSolution
 
@@ -13,21 +16,43 @@ class ECAnnotator(Annotator):
 
     solution: ECSolution = None
 
-    def annotate_from_fasta(self, file, **kwargs) -> ECSolution:
+    def _dataframe_from_fasta(self, file, **kwargs) -> ECSolution:
 
-        proteins = Protein.from_fasta(file)
+        entities = fasta_to_dataframe(file)
 
-        results = self._predict_from_fasta(file, **kwargs)
-
-        return self._annotate((proteins, results))
-
+        return entities
+    
     @abstractmethod
-    def _predict_from_fasta(self, file: str, **kwargs) -> pd.DataFrame:
+    def _make_predictions_from_dataframe(self, entities: pd.DataFrame, **kwargs):
         pass
 
-    def _annotate(self, results: Tuple[Dict[str, Protein], pd.DataFrame]) -> ECSolution:
+    def validate_input(self, entities: pd.DataFrame):
+        
+        valid_entities_ids = _validate_proteins(entities)
+        valid_mask = (
+            entities[entities.columns[0]].isin(valid_entities_ids)
+        )
+        valid_entities = entities[valid_mask]
 
-        proteins, results = results
+        # Get invalid rows
+        invalid_entities = entities[~valid_mask]
+
+        valid_entities.reset_index(inplace=True, drop=True)
+        invalid_entities.reset_index(inplace=True, drop=True)
+
+        # Return valid entities, unique proteins, and unique compounds
+        return valid_entities, invalid_entities
+
+    def _annotate(self, entities: Tuple[Dict[str, Protein], pd.DataFrame], **kwargs) -> ECSolution:
+        
+        if "sequences_field" not in kwargs:
+            kwargs["sequences_field"] = "sequence" 
+        if "ids_field" not in kwargs:
+            kwargs["ids_field"] = "id"
+
+        proteins = Protein.from_sequences(entities.loc[:, kwargs["ids_field"]], entities.loc[:, kwargs["sequences_field"]])
+        results = self._make_predictions_from_dataframe(entities=entities, **kwargs)
+
         enzymes_ec_1 = {}
         enzymes_ec_2 = {}
         enzymes_ec_3 = {}
@@ -58,36 +83,7 @@ class ECAnnotator(Annotator):
             )
 
     
-    def annotate_from_csv(self, file: str, **kwargs) -> ECSolution:
-        """
-        Read a CSV file and create ECSolution objects from the sequences.
-        The CSV file should have columns "id" and "sequence".
-        Parameters
-        ----------
-        file : str
-            Path to the CSV file.
-        **kwargs : dict
-            Additional keyword arguments to pass to pandas read_csv.
-        Returns
-        -------
-        ECSolution
-            An ECSolution object containing the annotated EC numbers.
-        """
-        
-        proteins = Protein.from_csv(file, **kwargs)
-
-        results = self._predict_from_csv(file, **kwargs)
-
-        return self._annotate((proteins, results))
-    
-    @abstractmethod
-    def _predict_from_csv(self, file: str, **kwargs) -> pd.DataFrame:
-        """
-        Abstract method to be implemented by subclasses to annotate from a CSV file.
-        """
-        pass
-
-    def _annotate_from_file(self, file: str, format: str, **kwargs) -> ECSolution:
+    def _convert_to_readable_format(self, file: str, format: str, **kwargs) -> ECSolution:
         """
         Annotate from a file based on the specified format.
         Parameters
@@ -105,87 +101,21 @@ class ECAnnotator(Annotator):
         """
 
         if format in ["faa", "fasta"]:
-            return self.annotate_from_fasta(file, **kwargs)
+            return self._dataframe_from_fasta(file, **kwargs)
         
         elif format in ["csv", "tsv"]:
-            return self.annotate_from_csv(file, **kwargs)
+            return self._dataframe_from_csv(file, **kwargs)
 
 class ProtBertECAnnotator(ECAnnotator):
 
-    def _predict_from_fasta(self, file: str, **kwargs) -> pd.DataFrame:
-        """
-        Predict EC numbers from a FASTA file using the ProtBERT model.
-        
-        Parameters
-        ----------
-        file : str
-            Path to the FASTA file.
-        **kwargs : dict
-            Additional keyword arguments to pass to the fasta reading function.
-        Returns
-        -------
-        pd.DataFrame
-            A DataFrame containing the predictions.
-        """
+    def _make_predictions_from_dataframe(self, entities, **kwargs):
 
-        return predict_with_protbert_from_fasta(file, **kwargs)
-
-    def _predict_from_csv(self, file: str, **kwargs) -> pd.DataFrame:
-        """
-        Predict EC numbers from a CSV file using the ProtBERT model.
-        Parameters
-        ----------
-        file : str
-            Path to the CSV file.
-        **kwargs : dict
-            Additional keyword arguments to pass to the prediction function.
-        Returns
-        -------
-        pd.DataFrame
-            A DataFrame containing the predictions.
-        """
-        if "sequences_field" not in kwargs:
-            kwargs["sequences_field"] = "sequence" 
-        if "ids_field" not in kwargs:
-            kwargs["ids_field"] = "id"
-        return predict_with_protbert_from_csv(file, **kwargs)
+        return predict_with_protbert_from_dataframe(entities, **kwargs)
     
+
+
 class ESM1bECAnnotator(ECAnnotator):
 
-    def _predict_from_fasta(self, file: str, **kwargs) -> pd.DataFrame:
-        """
-        Predict EC numbers from a FASTA file using the ProtBERT model.
-        
-        Parameters
-        ----------
-        file : str
-            Path to the FASTA file.
-        **kwargs : dict
-            Additional keyword arguments to pass to the fasta reading function.
-        Returns
-        -------
-        pd.DataFrame
-            A DataFrame containing the predictions.
-        """
+    def _make_predictions_from_dataframe(self, entities, **kwargs):
 
-        return predict_with_esm1b_from_fasta(file, **kwargs)
-
-    def _predict_from_csv(self, file: str, **kwargs) -> pd.DataFrame:
-        """
-        Predict EC numbers from a CSV file using the ProtBERT model.
-        Parameters
-        ----------
-        file : str
-            Path to the CSV file.
-        **kwargs : dict
-            Additional keyword arguments to pass to the prediction function.
-        Returns
-        -------
-        pd.DataFrame
-            A DataFrame containing the predictions.
-        """
-        if "sequences_field" not in kwargs:
-            kwargs["sequences_field"] = "sequence" 
-        if "ids_field" not in kwargs:
-            kwargs["ids_field"] = "id"
-        return predict_with_esm1b_from_csv(file, **kwargs)
+        return predict_with_esm1b_from_dataframe(entities, **kwargs)

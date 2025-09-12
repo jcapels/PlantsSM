@@ -5,7 +5,6 @@ def fit_status(func):
 
     @wraps(func)
     def wrapper(self, *args, **kwargs):
-        # TODO: implement try/except block to catch for fitting errors rather than ValueError
         try:
             # it is required to set fitted twice.
             # the first time allows to set the estimated parameters,

@@ -1,9 +1,11 @@
 
 
 import os
+from typing import Tuple
 
 from lightning import Trainer
 import numpy as np
+import pandas as pd
 import torch
 from plants_sm.io.pickle import read_pickle
 from plants_sm.pathway_prediction.annotator import Annotator
@@ -51,6 +53,28 @@ class ReactionECNumberAnnotator(Annotator):
             self.trainer = Trainer(accelerator="cpu")
         self.label_encoder = read_pickle(self.label_encoder_path)
 
+    def validate_input(self, entities: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+
+        if "rxn_smiles" not in entities.columns:
+            raise ValueError("rxn_smiles has to be the name of the column where the reaction SMILES in in")
+
+        rxn_smis = entities.rxn_smiles
+        
+        valid_entities_idx = []
+        invalid_entities_idx = []
+
+        for i, rxn_smi in tqdm(enumerate(rxn_smis), total=len(rxn_smis), desc="Checking reactions validity"):
+            try:
+                _ = ReactionDatapoint.from_smi(rxn_smi, keep_h=True)
+                valid_entities_idx.append(i)
+            except Exception:
+                invalid_entities_idx.append(i)
+        
+        valid_entities = entities.loc[valid_entities_idx, :]
+        invalid_entities = entities.loc[invalid_entities_idx, :]
+
+        return valid_entities, invalid_entities
+
     def _create_reaction_datapoints(self, rxn_smis, shuffle=True):
         """
         Encodes labels and creates reaction datapoints from SMILES and labels.
@@ -63,8 +87,6 @@ class ReactionECNumberAnnotator(Annotator):
         tuple: A tuple containing a list of ReactionDatapoint objects and the fitted LabelEncoder.
         """
         # Encode labels
-        atom_featurizer = MultiHotAtomFeaturizer.organic()
-        rxn_featurizer = CondensedGraphOfReactionFeaturizer(atom_featurizer=atom_featurizer)
 
         rxn_datapoints = []
 
@@ -76,15 +98,18 @@ class ReactionECNumberAnnotator(Annotator):
             except RuntimeError:
                 continue
 
-        dset = ReactionDataset(rxn_datapoints, featurizer=rxn_featurizer)
+        dset = ReactionDataset(rxn_datapoints, featurizer=self.rxn_featurizer)
         loader = data.build_dataloader(dset, num_workers=3, shuffle=shuffle)
 
         return loader
     
-    def _annotate_from_file(self, file, format, **kwargs):
-        pass
+    def _convert_to_readable_format(self, file, format, **kwargs):
+        if format == "csv":
+            return self._dataframe_from_csv(file, **kwargs)
+        else:
+            raise ValueError(f"Format {format} not supported. Only csv for now")
 
-    def _annotate(self, entities):
+    def _annotate(self, entities) -> ECSolution:
         
         rxn_smis = entities.rxn_smiles
 
