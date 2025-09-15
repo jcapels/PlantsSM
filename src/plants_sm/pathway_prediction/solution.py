@@ -1,3 +1,4 @@
+import pandas as pd
 from pydantic import BaseModel, validator
 from typing import Any, Dict, List, Tuple, Union
 from plants_sm.pathway_prediction.entities import BiologicalEntity, Molecule, Protein, Reaction
@@ -90,9 +91,22 @@ class ESISolution(Solution):
     ----------
     substrate_protein_solutions : Dict[Union[str, int], List[Tuple[Union[str, int], float]]]
         Dictionary mapping substrate IDs to lists of (protein ID, score) tuples, sorted by score.
+    dataframe_with_solutions: pd.DataFrame
+        keep the dataset with solutions
     """
 
     substrate_protein_solutions: Dict[Union[str, int], List[Tuple[Union[str, int], float]]]
+    dataframe_with_solutions: pd.DataFrame
+
+    class Config:
+        arbitrary_types_allowed = True
+
+    @validator('dataframe_with_solutions', pre=True, always=True, allow_reuse=True)
+    @classmethod
+    def validate_reaction(cls, value):
+        if not isinstance(value, pd.DataFrame):
+            raise ValueError("dataframe_with_solutions must be a pandas DataFrame")
+        return value
 
     def get_score(self, compound_id: str, highest: bool = False) -> Union[List[Tuple[str, float]], Tuple[str, float]]:
         """

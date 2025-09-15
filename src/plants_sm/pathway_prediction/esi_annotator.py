@@ -261,13 +261,16 @@ class ProtBertESIAnnotator(Annotator):
                 protein_id = protein_ids[i]
 
                 substrate_protein_solutions[compound_id].append((protein_id, proba))
+            
+            entities["proba"] = predictions_proba
                 
-            solution = ESISolution(substrate_protein_solutions = substrate_protein_solutions)
+            solution = ESISolution(substrate_protein_solutions = substrate_protein_solutions,
+                                   dataframe_with_solutions = entities)
             return solution
                                 
 
         else:
-            raise ValueError("For now, this method only accepts pd.Dataframes as input.")
+            raise ValueError("For now, this method only accepts pd.DataFrame as input.")
 
     def _convert_to_readable_format(self, file: str, format: str, **kwargs) -> List[Solution]:
         """

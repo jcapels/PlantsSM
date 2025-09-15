@@ -52,6 +52,15 @@ class ChemUtils:
             return mol
         except :
             return None
+        
+    @staticmethod
+    def mol_to_cannonical_smiles(mol: Mol):
+        try:
+            smiles = MolToSmiles(mol)
+            return smiles
+        except :
+            return None
+
 
     @staticmethod
     def rdkit_logs(enable=False):

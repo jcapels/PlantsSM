@@ -212,7 +212,7 @@ class ReactionECNumberAnnotator(Annotator):
             entity_ec_2=reaction_ec_2,
             entity_ec_3=reaction_ec_3,
             entity_ec_4=reaction_ec_4,
-            entities=reactions
+            entities=reactions,
         )
 
     def _dataframe_from_csv(self, file: str, **kwargs) -> pd.DataFrame:

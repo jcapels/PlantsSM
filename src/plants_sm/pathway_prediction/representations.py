@@ -41,6 +41,7 @@ class Smiles(Representation):
     @classmethod
     def from_smiles(cls, smiles: str) -> 'Smiles':
         mol = ChemUtils.smiles_to_mol(smiles)
+        smiles = ChemUtils.mol_to_cannonical_smiles(mol)
         if mol is not None:
             return cls(representation = smiles, mol = mol)
         else:

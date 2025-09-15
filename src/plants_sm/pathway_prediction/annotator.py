@@ -5,6 +5,41 @@ from typing import List, Union
 from plants_sm.pathway_prediction.entities import BiologicalEntity
 from plants_sm.pathway_prediction.solution import Solution
 
+class AnnotatorLinker(ABC):
+    """
+    Abstract base class for linking annotations.
+    """
+
+    def __init__(self, annotators: List["Annotator"] = None, solutions: List[Solution] = None):
+
+        if annotators is None and solutions is None:
+            raise ValueError("Either annotators or solutions must be provided")
+        
+        if annotators == None:
+            self.annotators = [] 
+        else:
+            self.annotators = annotators
+
+        if solutions == None:
+            self.solutions = []
+        else:
+            self.solutions = solutions
+
+        assert len(self.solutions) + len(self.annotators) == 2 
+
+        #create a dictionary where the key is the annotator name and the value is the annotator object or dataframe
+
+    def link_annotations(self, entities_list: List[Union[List[BiologicalEntity], pd.DataFrame]] = []) -> List[Union["Solution", BiologicalEntity]]:
+        
+        for i, entities in enumerate(entities_list):
+            solution = self.annotators[i].annotate(entities)
+            self.solutions.append(solution)
+
+        return self._link()
+    
+    @abstractmethod
+    def _link(self):
+        pass
 
 
 class Annotator(ABC):

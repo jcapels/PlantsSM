@@ -322,3 +322,25 @@ class Reaction(BiologicalEntity):
         for product in products_set:
             products.append(Molecule.from_smiles(product))
         return cls(reaction=reaction, representation=smiles, products=products, reactants=reactants)
+    
+    def get_reactants_smiles(self) -> List[str]:
+        """
+        Get the SMILES strings of the reactants.
+
+        Returns
+        -------
+        List[str]
+            A list of SMILES strings for the reactants.
+        """
+        return [reactant.smiles for reactant in self.reactants]
+
+    def get_products_smiles(self) -> List[str]:
+        """
+        Get the SMILES strings of the products.
+
+        Returns
+        -------
+        List[str]
+            A list of SMILES strings for the products.
+        """
+        return [product.smiles for product in self.products]

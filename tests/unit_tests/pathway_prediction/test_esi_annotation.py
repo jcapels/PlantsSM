@@ -26,6 +26,8 @@ class TestESIAnnotator(TestCase):
         self.assertEqual(len(solution.substrate_protein_solutions), len(unique_compounds))
         self.assertEqual(len(solution.get_score(39)), 2)
         self.assertGreater(solution.get_score(39)[0][1], solution.get_score(39)[1][1])
+        self.assertIsInstance(solution.dataframe_with_solutions, pd.DataFrame)
+        self.assertEqual(solution.dataframe_with_solutions.shape[0], data.shape[0])
 
     def test_non_valid_compounds(self):
         
