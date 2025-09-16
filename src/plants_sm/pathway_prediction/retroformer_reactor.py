@@ -90,6 +90,4 @@ class Retroformer(Reactor):
                 except ValueError as e:
                     if str(e) != "SMILES is not valid":
                         raise ValueError
-                    else:
-                        print(solution_products)
         return solutions

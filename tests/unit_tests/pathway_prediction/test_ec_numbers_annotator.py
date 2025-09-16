@@ -9,7 +9,7 @@ from plants_sm.pathway_prediction.ec_numbers_annotator_utils.esm1b_predictions i
 from plants_sm.pathway_prediction.ec_numbers_annotator_utils.prot_bert_prediction import predict_with_protbert_from_csv, predict_with_protbert_from_fasta
 from tests import TEST_DIR
 
-@skip("Require model download")
+# @skip("Require model download")
 class TestEcNumbersAnnotatorUtils(TestCase):
 
     def setUp(self):

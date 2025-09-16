@@ -99,7 +99,7 @@ class Annotator(ABC):
             If not implemented by a subclass.
         """
 
-    def annotate(self, entities: Union[List[BiologicalEntity], pd.DataFrame]) -> List[Solution]:
+    def annotate(self, entities: Union[List[BiologicalEntity], pd.DataFrame], **kwargs) -> List[Solution]:
         """
         Validate input entities and annotate the valid ones.
 
@@ -123,7 +123,7 @@ class Annotator(ABC):
         
         valid_entities, self.invalid_entities = self.validate_input(entities)
         
-        self.solution = self._annotate(valid_entities)
+        self.solution = self._annotate(valid_entities, **kwargs)
 
         return self.solution
     
@@ -179,9 +179,9 @@ class Annotator(ABC):
         - Calls `annotate` to validate and annotate the entities.
         """
 
-        entities = self._convert_to_readable_format(file, format, **kwargs)
+        entities = self._convert_to_readable_format(file, format)
 
-        self.annotate(entities)
+        self.annotate(entities, **kwargs)
 
         return self.solution
     

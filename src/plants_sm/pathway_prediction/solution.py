@@ -1,6 +1,7 @@
 import pandas as pd
 from pydantic import BaseModel, validator
 from typing import Any, Dict, List, Tuple, Union
+from plants_sm.pathway_prediction.ec_numbers_annotator_utils._utils import fasta_to_dataframe
 from plants_sm.pathway_prediction.entities import BiologicalEntity, Molecule, Protein, Reaction
 
 def sort_solutions(property_name: str):
@@ -160,6 +161,52 @@ class ECSolution(Solution):
     entity_ec_3: Dict[str, List[Tuple[str, float]]]
     entity_ec_4: Dict[str, List[Tuple[str, float]]]
     entities: Dict[str, BiologicalEntity]
+
+    @classmethod
+    def from_csv_and_fasta(cls, csv_path: str, fasta_file: str, id_field: str):
+
+        def _ec_score_breakdown(ec_column):
+            result = []
+            if isinstance(ec_column, str):
+                different_ecs = ec_column.split(";")
+                for ec_ in different_ecs:
+                    ec_, score = ec_.split(":")
+                    result.append((ec_, score))
+                return result
+            return []
+
+        dataframe = pd.read_csv(csv_path)
+
+        entity_ec_1 = {}
+        entity_ec_2 = {}
+        entity_ec_3 = {}
+        entity_ec_4 = {}
+        entities = {}
+
+        entities_enzymes = fasta_to_dataframe(fasta_file)
+        entities_enzymes.columns = [id_field, entities_enzymes.columns[1]]
+
+        dataframe = pd.merge(dataframe, entities_enzymes, on=id_field).drop_duplicates()
+
+        for _, row in dataframe.iterrows():
+            id_ = row[id_field]
+
+            EC1 = row["EC1"]
+            EC2 = row["EC2"]
+            EC3 = row["EC3"]
+            EC4 = row["EC4"]
+            entity_ec_1[id_] = _ec_score_breakdown(EC1)
+            entity_ec_2[id_] = _ec_score_breakdown(EC2)
+            entity_ec_3[id_] = _ec_score_breakdown(EC3)
+            entity_ec_4[id_] = _ec_score_breakdown(EC4)
+            entities[id_] = Protein.from_sequence(row["sequence"])
+
+        return cls(entity_ec_1=entity_ec_1,
+                   entity_ec_2=entity_ec_2,
+                   entity_ec_3=entity_ec_3,
+                   entity_ec_4=entity_ec_4,
+                   entities=entities)
+            
 
     def get_score(self, entity_id: str, ec_number: str) -> List[Tuple[str, float]]:
         """
