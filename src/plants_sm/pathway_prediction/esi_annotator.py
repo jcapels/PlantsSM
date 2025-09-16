@@ -39,6 +39,9 @@ class ProtBertESIAnnotator(Annotator):
                                 "esi",
                                 "xgb_prot_bert_20.pkl")
     
+    def __init__(self, device = "cpu"):
+        self.device = device
+    
     def _predict_with_xgboost(self, dataset: MultiInputDataset):
         """
         Predict using a pre-trained XGBoost model on a multi-input dataset.

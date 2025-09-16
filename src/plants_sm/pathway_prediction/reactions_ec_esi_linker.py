@@ -17,17 +17,17 @@ class ReactionEnzymeLinker(AnnotatorLinker):
 
         assert len(ec_solutions) > 1
         # check the one with less solutions as the len(solution.entity_ec3)
-        solution_1 = ec_solutions[0]
-        solution_2 = ec_solutions[1]
+        self.solution_1 = ec_solutions[0]
+        self.solution_2 = ec_solutions[1]
 
         linked_solutions = {}
-        for i, entry_1 in enumerate(solution_1.entity_ec_3.keys()):
-            scores = solution_1.get_score(entry_1, "EC3")
+        for i, entry_1 in enumerate(self.solution_1.entity_ec_3.keys()):
+            scores = self.solution_1.get_score(entry_1, "EC3")
             ec_numbers_1 = set([ec for ec, score in scores])
             linked_solutions[entry_1] = []
 
-            for j, entry_2 in enumerate(solution_2.entity_ec_3.keys()):
-                scores = solution_2.get_score(entry_2, "EC3")
+            for j, entry_2 in enumerate(self.solution_2.entity_ec_3.keys()):
+                scores = self.solution_2.get_score(entry_2, "EC3")
                 ec_numbers_2 = set([ec for ec, score in scores])
                 if len(ec_numbers_1.intersection(ec_numbers_2)) > 0:
                     linked_solutions[entry_1].append(entry_2)
@@ -44,7 +44,7 @@ class ReactionEnzymeSubstratePairsLinker(object):
         self.enzyme_annotator_solution = enzyme_annotator_solution
         self.esi_annotator = esi_annotator
 
-    def link_reactions_to_enzymes(self, reactions, proteins = None):
+    def link_reactions_to_enzymes(self, reactions, proteins = None, **kwargs):
 
         if isinstance(self.enzyme_annotator_solution, Solution):
             solutions = [self.enzyme_annotator_solution]
@@ -62,7 +62,7 @@ class ReactionEnzymeSubstratePairsLinker(object):
         else:
             entities = [proteins, reactions]
 
-        annotations = linker.link_annotations(entities)
+        annotations = linker.link_annotations(entities, **kwargs)
         protein_ids = []
         protein_sequences = []
         compound_ids = []
@@ -78,7 +78,7 @@ class ReactionEnzymeSubstratePairsLinker(object):
                 protein_id = annotation_entry
                 protein_sequence = linker.solutions[0].entities[protein_id].sequence
                 for reaction in reactions:
-                    substrates_retrobiosynthesis = linker.solutions[1].entities[reaction].get_products_smiles()
+                    substrates_retrobiosynthesis = linker.solutions[1].entities[reaction].get_reactants_smiles()
                     for substrate_retrobiosynthesis in substrates_retrobiosynthesis:
                         if substrate_retrobiosynthesis not in compounds_in_dataset:
                             compound_id_total += 1
@@ -101,13 +101,18 @@ class ReactionEnzymeSubstratePairsLinker(object):
         
         results = self.esi_annotator.annotate(entities)
         solutions = results.dataframe_with_solutions
-        solutions = solutions[solutions["proba"] >= 0.5]
-        if len(solutions) > 1:
-            unique_pairs = solutions[['report_reactions', 'protein_ids']].drop_duplicates()
-            unique_pairs_list = unique_pairs.to_records(index=False).tolist()
-            return unique_pairs_list
-        else:
-            return None
+        # Sort by 'proba' in descending order
+        solutions = solutions.sort_values(by="proba", ascending=False)
+
+        # Group by 'report_reactions' and aggregate both 'protein_ids' and 'proba' into lists of tuples
+        reaction_protein_map = (
+            solutions
+            .groupby('report_reactions')
+            .apply(lambda x: list(zip(x['protein_ids'], x['proba'])))
+            .to_dict()
+        )
+
+        return reaction_protein_map, linker.solution_1, linker.solution_2
 
 
                             

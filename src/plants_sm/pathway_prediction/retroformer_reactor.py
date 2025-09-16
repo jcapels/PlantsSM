@@ -21,15 +21,15 @@ class Retroformer(Reactor):
         Configuration arguments for the Retroformer model.
     """
 
-    def __init__(self):
+    def __init__(self, topk=10, beam_size=10, device="cpu"):
         """
         Initialize the Retroformer reactor.
 
         Loads the Retroformer model and vocabulary from saved files.
         """
-        exp_topk = 10
-        beam_size = 10
-        device = 'cuda'
+        exp_topk = topk
+        beam_size = beam_size
+        device = device
         retroformer_path = os.path.join(
             BASE_DIR, "pathway_prediction", "retroformer", "saved_models", "model.pt"
         )
@@ -42,12 +42,16 @@ class Retroformer(Reactor):
 
     def _react(self, reactants: List[Mol]) -> List[ReactionSolution]:
         """
-        Predict retro-synthetic pathways for a list of reactants using Retroformer.
+        Predict retro-synthetic pathways for a list of reactants using Retroformer. 
+        It generates a solution that is in accordance to what happens in reality: 
+        in retrobiosynthesis setups we often see real products (reactant in the input) >> real reactant, 
+        
+        however in this case it returns real reactants >> real products.
 
         Parameters
         ----------
         reactants : List[Mol]
-            List of RDKit Mol objects representing the reactants.
+            List of RDKit Mol objects representing the reactants (products in nature).
 
         Returns
         -------

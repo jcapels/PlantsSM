@@ -256,6 +256,10 @@ class Reaction(BiologicalEntity):
     reaction: ReactionSmarts
     score: float = None
 
+    def get_reverse_reaction(self):
+        substrates, products = self.representation.split(">>")
+        return ">>".join([products, substrates])
+
     @property
     def smarts(self) -> str:
         """

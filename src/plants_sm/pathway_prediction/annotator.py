@@ -27,12 +27,13 @@ class AnnotatorLinker(ABC):
 
         assert len(self.solutions) + len(self.annotators) == 2 
 
-        #create a dictionary where the key is the annotator name and the value is the annotator object or dataframe
 
-    def link_annotations(self, entities_list: List[Union[List[BiologicalEntity], pd.DataFrame]] = []) -> List[Union["Solution", BiologicalEntity]]:
+    def link_annotations(self, entities_list: List[Union[List[BiologicalEntity], pd.DataFrame]] = [], export_suffix_path: str = None) -> List[Union["Solution", BiologicalEntity]]:
         
         for i, entities in enumerate(entities_list):
             solution = self.annotators[i].annotate(entities)
+            if export_suffix_path is not None:
+                solution.to_csv(f"{self.annotators[i].__class__.__name__}_solution_{export_suffix_path}.csv")
             self.solutions.append(solution)
 
         return self._link()
