@@ -18,8 +18,13 @@ class ProteomeCompass(ABC):
         
 
         self.enzyme_annotator_solution = enzyme_annotator_solution
+        if isinstance(enzyme_annotator_solution, Annotator):
+            self.enzyme_annotator_solution.device = device
+        
         self.reaction_annotator = reaction_annotator
+        self.reaction_annotator.device = device
         self.esi_annotator = esi_annotator
+        self.esi_annotator.device = device
         self.device = device
 
         self.annotations_linker =  ReactionEnzymeSubstratePairsLinker(
@@ -27,7 +32,7 @@ class ProteomeCompass(ABC):
                                      reaction_annotator=self.reaction_annotator,
                                      esi_annotator=self.esi_annotator)
 
-    def direct(self, solutions: List[ReactionSolution]):
+    def direct(self, solutions: List[ReactionSolution]) -> List[ReactionSolution]:
 
         reaction_id = 0
         reaction_ids = []

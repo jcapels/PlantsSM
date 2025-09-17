@@ -63,7 +63,7 @@ class MCTS_A(Searcher):
         # try:
         with time_limit(600):
             success, node, count = self._search(molecule)
-            route, template = self.vis_synthetic_path(node)
+            route, template, reaction_solutions = self.vis_synthetic_path(node)
         # except:
             # success = False
             # route = [None]
@@ -82,12 +82,13 @@ class MCTS_A(Searcher):
             'template': templates,
             'success': successes,
             'depth': depths,
-            'counts': counts
+            'counts': counts, 
+            "reaction_solutions": reaction_solutions
         }
         logging.info(f"Search completed with success: {success}, depth: {depths[0]}, count: {counts[0]}")
         logging.info(node.state)
-        # with open('stat_norm_retro_' + str(self.opening_size) + '_' + str(self.cpuct) + '_' + str(self.times) + '.pkl', 'wb') as writer:
-        #     pickle.dump(ans, writer, protocol=4)
+
+        return SearcherSolution(**ans)
 
     def _search(self, molecule: Molecule) -> SearcherSolution:
 
@@ -95,7 +96,7 @@ class MCTS_A(Searcher):
 
         logging.info(f"Starting MCTS search for molecule: {molecule.smiles} with root value: {root_value}")
 
-        self.root = Node([molecule.smiles], root_value, prior=1.0, cpuct=self.cpuct)
+        self.root = Node([molecule.smiles], root_value, prior=1.0, cpuct=self.cpuct, reaction_solution=None)
         self.open = [self.root]
 
         self.min_max_stats = MinMaxStats()
@@ -141,7 +142,6 @@ class MCTS_A(Searcher):
         for reactor in self.reactors:
             solutions.extend(reactor.react([molecule.mol]))
         return solutions
-    
 
     def expand(self, node):
 
@@ -168,11 +168,13 @@ class MCTS_A(Searcher):
                 reaction = ".".join(expanded_policy[i].get_reactants_smiles()) + '>>' + expanded_mol
                 priors = np.array([1.0 / len(expanded_policy)] * len(expanded_policy))
                 if len(reactant) == 0:
-                    child = Node([], 0, cost=cost, prior=priors[i], action_mol=expanded_mol, reaction=reaction, fmove=len(node.children), template=template, parent=node, cpuct=self.cpuct)
+                    child = Node([], 0, reaction_solution=expanded_policy[i], cost=cost, prior=priors[i], action_mol=expanded_mol, reaction=reaction, fmove=len(node.children), template=template, parent=node, cpuct=self.cpuct)
                     return True, child
                 else:
                     h = value_fn(self.value_model, reactant, self.device)
-                    child = Node(reactant, h, cost=cost, prior=priors[i], action_mol=expanded_mol, reaction=reaction, fmove=len(node.children), template=template, parent=node, cpuct=self.cpuct)
+                    child = Node(reactant, h, reaction_solution=expanded_policy[i], cost=cost, prior=priors[i], 
+                                 action_mol=expanded_mol, reaction=reaction, 
+                                 fmove=len(node.children), template=template, parent=node, cpuct=self.cpuct)
                     if '.'.join(reactant) in self.visited_state:
                         node.child_illegal[child.fmove] = 1000
                         back_check_node = node
@@ -201,9 +203,11 @@ class MCTS_A(Searcher):
             return [], []
         reaction_path = []
         template_path = []
+        reaction_solutions = []
         current = node
         while current is not None:
             reaction_path.append(current.reaction)
             template_path.append(current.template)
+            reaction_solutions.append(current.reaction_solution)
             current = current.parent
-        return reaction_path[::-1], template_path[::-1]
+        return reaction_path[::-1], template_path[::-1], reaction_solutions[::-1]

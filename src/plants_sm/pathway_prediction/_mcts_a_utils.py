@@ -1,6 +1,4 @@
 import pickle
-from multiprocessing import Process
-import multiprocessing
 import torch
 import numpy as np
 import signal
@@ -67,7 +65,7 @@ def smiles_to_fp(s, fp_dim=2048, pack=False):
     mol = Chem.MolFromSmiles(s)
     fp = AllChem.GetMorganFingerprintAsBitVect(mol, 2, nBits=fp_dim)
     onbits = list(fp.GetOnBits())
-    arr = np.zeros(fp.GetNumBits(), dtype=np.bool)
+    arr = np.zeros(fp.GetNumBits(), dtype=np.bool_)
     arr[onbits] = 1
     if pack:
         arr = np.packbits(arr)
@@ -136,7 +134,8 @@ def value_fn(model, mols, device):
     return v[0][0]
 
 class Node:
-    def __init__(self, state, h, prior, cost=0, action_mol=None, fmove=0, reaction=None, template=None, parent=None, cpuct=1.5):
+    def __init__(self, state, h, prior, reaction_solution, cost=0, action_mol=None, fmove=0, 
+                 reaction=None, template=None, parent=None, cpuct=1.5):
         self.state = state
         self.cost = cost
         self.h = h
@@ -149,6 +148,7 @@ class Node:
         self.reaction = reaction
         self.parent = parent
         self.cpuct = cpuct
+        self.reaction_solution = reaction_solution
         self.children = []
         self.child_illegal = np.array([])
         if parent is not None:

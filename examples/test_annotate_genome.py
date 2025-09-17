@@ -1,4 +1,13 @@
+import pickle
+import pandas as pd
+from plants_sm.pathway_prediction.MCTS_A import MCTS_A
 from plants_sm.pathway_prediction.ec_numbers_annotator import ProtBertECAnnotator
+from plants_sm.pathway_prediction.entities import Molecule
+from plants_sm.pathway_prediction.esi_annotator import ProtBertESIAnnotator
+from plants_sm.pathway_prediction.proteome_compass import ProteomeCompass
+from plants_sm.pathway_prediction.proteome_compassed_reactor import ProteomeCompassedReactor
+from plants_sm.pathway_prediction.reaction_ec_number_annotator import ReactionECNumberAnnotator
+from plants_sm.pathway_prediction.reactions_ec_esi_linker import ReactionEnzymeSubstratePairsLinker
 from plants_sm.pathway_prediction.retroformer_reactor import Retroformer
 from plants_sm.pathway_prediction.solution import ECSolution
 
@@ -6,8 +15,24 @@ from plants_sm.pathway_prediction.solution import ECSolution
 # ProtBertECAnnotator().annotate_from_file("ITAG4.1_proteins.fasta", "fasta", output_path="tomato_genome.csv", device="cuda:2")
 
 
-# solution = ECSolution.from_csv_and_fasta("tomato_genome.csv", "ITAG4.1_proteins.fasta", "accession")
+ec_solution = ECSolution.from_csv_and_fasta("tomato_genome.csv", "ITAG4.1_proteins.fasta", "accession")
 
-reactor = Retroformer()
-compound = "C[C@H]1[C@H]2[C@H](C[C@@H]3[C@@]2(CC[C@H]4[C@H]3CC[C@@H]5[C@@]4(CC[C@@H](C5)O[C@H]6[C@@H]([C@H]([C@H]([C@H](O6)CO)O[C@H]7[C@@H]([C@H]([C@@H]([C@H](O7)CO)O)O[C@H]8[C@@H]([C@H]([C@@H](CO8)O)O)O)O[C@H]9[C@@H]([C@H]([C@@H]([C@H](O9)CO)O)O)O)O)O)C)C)O[C@]11[C@H](C[C@@H](CN1)CO[C@H]1[C@@H]([C@H]([C@@H]([C@H](O1)CO)O)O)O)OC(=O)C"
-print(reactor.react([compound]))
+reactor = Retroformer(topk=50, beam_size=50, device="cuda")
+compound = "[H]O[C@@H]1CC2=C(C([H])([H])[C@@H](CC2)C(=C([H])[H])C([H])([H])[H])[C@@]([H])([C@H]1O[H])C([H])([H])[H]"
+linker = ReactionEnzymeSubstratePairsLinker(
+                                     enzyme_annotator_solution=ec_solution, 
+                                     reaction_annotator=ReactionECNumberAnnotator(),
+                                     esi_annotator=ProtBertESIAnnotator()
+        )
+compass = ProteomeCompass(enzyme_annotator_solution=ec_solution, 
+                reaction_annotator=ReactionECNumberAnnotator(),
+                esi_annotator=ProtBertESIAnnotator(),
+                device = "cuda:0")
+
+searcher = MCTS_A(reactors=[ProteomeCompassedReactor(compass, Retroformer(device="cuda:0"))], device='cuda:0', 
+                  simulations=100, cpuct=4.0, times=500)
+solutions = searcher.search(molecule=Molecule.from_smiles(compound))
+
+with open('solution_retrosynthesis.pkl','wb') as f:
+    pickle.dump(solutions,f)
+
