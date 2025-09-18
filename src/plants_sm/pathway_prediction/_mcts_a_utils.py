@@ -7,6 +7,9 @@ from contextlib import contextmanager
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
+import torch.nn as nn
+import torch.nn.functional as F
+
 class TimeoutException(Exception):
     """Exception raised when a time limit is exceeded."""
     pass
