@@ -1,12 +1,10 @@
 import os
 from typing import List, Union
-
 from tqdm import tqdm
 from plants_sm.pathway_prediction._chem_utils import ChemUtils
 from plants_sm.pathway_prediction.entities import Molecule, Reaction, ReactionSmarts
 from plants_sm.pathway_prediction.reactor import Reactor
 from plants_sm.pathway_prediction.solution import ReactionSolution
-
 from rdkit.Chem.rdChemReactions import ChemicalReaction, ReactionFromSmarts
 from rdkit.Chem import AllChem
 from rdkit.Chem import Mol
@@ -14,21 +12,44 @@ from rdkit.Chem import Mol
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 class ReactionRulesReactor(Reactor):
-    
-    rules_path: str = os.path.join(BASE_DIR,
-                                "pathway_prediction",
-                                "retrorules_MINE.tsv")
+    """A reactor that predicts reaction solutions using a set of reaction rules from a TSV file.
+
+    This class loads reaction rules from a TSV file, converts them into RDKit reaction objects,
+    and uses them to predict possible reaction solutions for a given set of reactants.
+    Only reactions with a score above a specified threshold are considered.
+
+    Attributes
+    ----------
+    rules_path : str
+        Path to the TSV file containing the reaction rules.
+    reactions : List[Reaction]
+        List of Reaction objects loaded from the TSV file.
+    score_threshold : float
+        Minimum score threshold for a reaction to be considered.
+    """
+
+    rules_path: str = os.path.join(BASE_DIR, "pathway_prediction", "retrorules_MINE.tsv")
     reactions: List[Reaction] = []
 
-    def __init__(self, score_threshold = 0.5):
+    def __init__(self, score_threshold: float = 0.5):
+        """Initialize the ReactionRulesReactor with a score threshold.
+
+        Parameters
+        ----------
+        score_threshold : float, optional
+            Minimum score threshold for a reaction to be considered. Default is 0.5.
+        """
         self.score_threshold = score_threshold
         self._convert_tsv_to_reaction_rules()
 
     def _convert_tsv_to_reaction_rules(self):
+        """Load and convert reaction rules from the TSV file into Reaction objects.
+
+        This method reads the TSV file, parses each row, and creates a Reaction object
+        for each rule, storing them in the `reactions` attribute.
+        """
         import pandas as pd
-
         rules = pd.read_csv(self.rules_path, sep="\t")
-
         for _, row in rules.iterrows():
             reaction_id = row["RuleID"]
             smarts = row["SMARTS"]
@@ -38,17 +59,36 @@ class ReactionRulesReactor(Reactor):
                 ec_numbers = ec_numbers.split(",")
             else:
                 ec_numbers = None
-
             reaction = ReactionSmarts.from_smarts(smarts)
-            self.reactions.append(Reaction(representation=smarts, id=reaction_id, ec_numbers=ec_numbers, reaction=reaction, score=score))
+            self.reactions.append(
+                Reaction(
+                    representation=smarts,
+                    id=reaction_id,
+                    ec_numbers=ec_numbers,
+                    reaction=reaction,
+                    score=score
+                )
+            )
 
-    def _predict_solutions(self, reactants, reaction):
+    def _predict_solutions(self, reactants: List[Mol], reaction: Reaction) -> List[ReactionSolution]:
+        """Predict reaction solutions for a given set of reactants and a specific reaction rule.
 
+        Parameters
+        ----------
+        reactants : List[Mol]
+            List of RDKit Mol objects representing the reactants.
+        reaction : Reaction
+            The reaction rule to apply.
+
+        Returns
+        -------
+        List[ReactionSolution]
+            List of predicted reaction solutions.
+        """
         solutions = []
-
         try:
             ps = reaction.reaction.to_chemical_reaction().RunReactants(reactants)
-        
+
             res = []
             for pset in ps:
                 pset = [ChemUtils._sanitize_mol(pset_i) for pset_i in pset]
@@ -58,46 +98,57 @@ class ReactionRulesReactor(Reactor):
                         tres.AddProductTemplate(ChemUtils._remove_hs(p))
                     for reactant in reactants:
                         tres.AddReactantTemplate(ChemUtils._remove_hs(reactant))
-
                     res.append(tres)
-            
-            solution_reactions = list(set([AllChem.ReactionToSmiles(entry, canonical=True) for entry in res]))
 
+            solution_reactions = list(set([AllChem.ReactionToSmiles(entry, canonical=True) for entry in res]))
             for solution_reaction in solution_reactions:
-                if reaction.score < self.score_threshold:
+                if reaction.score >= self.score_threshold:
                     solution_reaction = ReactionFromSmarts(solution_reaction)
                     ps = solution_reaction.RunReactants(reactants)
                     reactant_molecules = []
                     for reactant in reactants:
                         reactant_molecules.append(Molecule.from_mol(reactant))
-                    
+
                     product_molecules = []
                     for product_tuple in ps:
                         smiles = Molecule.from_mol(product_tuple[0]).smiles
                         products = smiles.split(".")
                         for product_ in products:
                             product_molecules.append(Molecule.from_smiles(product_))
-                    
-                    solutions.append(ReactionSolution(products=reactant_molecules, 
-                                    reactants=product_molecules, 
-                                    reaction=reaction,
-                                    ec_numbers=reaction.ec_numbers,
-                                    score=reaction.score
-                                    ))
+
+                    solutions.append(
+                        ReactionSolution(
+                            products=product_molecules,
+                            reactants=reactant_molecules,
+                            reaction=reaction,
+                            ec_numbers=reaction.ec_numbers,
+                            score=reaction.score
+                        )
+                    )
         except ValueError:
             pass
-
         return solutions
 
     def _react(self, reactants: List[Mol]) -> List[ReactionSolution]:
+        """Predict reaction solutions for a given set of reactants.
 
+        This method applies all loaded reaction rules to the reactants and returns
+        a list of unique reaction solutions.
+
+        Parameters
+        ----------
+        reactants : List[Mol]
+            List of RDKit Mol objects representing the reactants.
+
+        Returns
+        -------
+        List[ReactionSolution]
+            List of unique reaction solutions.
+        """
         solutions = []
         ChemUtils.rdkit_logs()
-
         assert len(reactants) > 0
-
         for reaction in tqdm(self.reactions, desc="Predicting reactions"):
-
             solutions.extend(self._predict_solutions(reactants, reaction))
 
         unique_solutions_reactants_smiles = set()
@@ -107,7 +158,4 @@ class ReactionRulesReactor(Reactor):
             if reactant_smiles not in unique_solutions_reactants_smiles:
                 unique_solutions_reactants_smiles.add(reactant_smiles)
                 unique_solutions.append(solution)
-
-
         return unique_solutions
-    

@@ -110,9 +110,6 @@ class ChemUtils:
         
     @staticmethod
     def break_reaction(smiles: str):
-        """
-        
-        """
         reactants, products = smiles.split(">>")
         reactants_set = reactants.split(".")
         products_set = products.split(".")
