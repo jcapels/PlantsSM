@@ -4,6 +4,53 @@ from plants_sm.models.lightning_model import InternalLightningModule
 from plants_sm.models.fc.fc import DNN
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
+class ModelECNumber(InternalLightningModule):
+
+    def __init__(self, input_dim, layers, classification_neurons, metric=None, learning_rate = 1e-3, layers_to_freeze=0, 
+                 scheduler = False) -> None:
+
+        self._contructor_parameters = {}
+        self.layers = layers
+        self.classification_neurons = classification_neurons
+        self.input_dim = input_dim
+        self.learning_rate = learning_rate
+        self.layers_to_freeze = layers_to_freeze
+        self.scheduler = scheduler
+
+        
+        super().__init__(metric=metric)
+        
+        self._create_model()
+        self._update_constructor_parameters()
+
+    def _create_model(self):
+        self.fc_model = DNN(self.input_dim, self.layers, self.classification_neurons, batch_norm=True, last_sigmoid=True, 
+                            dropout=None, layers_to_freeze=self.layers_to_freeze)
+        
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam([{'params': self.fc_model.parameters()}], lr=self.learning_rate)
+
+        # Define a custom learning rate scheduler using LambdaLR
+        if self.scheduler:
+            scheduler = {'scheduler': ReduceLROnPlateau(optimizer, 'min'), 'monitor': 'val_loss'}
+            return [optimizer], [scheduler]
+        else:
+            return optimizer
+        
+    def _update_constructor_parameters(self):
+        self._contructor_parameters.update({
+                                            "classification_neurons": self.classification_neurons, "layers_to_freeze": self.layers_to_freeze, 
+                                            "input_dim": self.input_dim, "learning_rate": self.learning_rate, 
+                                            "scheduler": self.scheduler})
+
+    def forward(self, x):
+        return self.fc_model(x)
+
+    def compute_loss(self, logits, y):
+        return BCELoss()(logits, y)
+
+
+
 class FineTuneModelECNumber(InternalLightningModule):
 
     def __init__(self, input_dim, additional_layers, classification_neurons, path_to_model, metric=None, 

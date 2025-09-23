@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from copy import deepcopy
 import os
 from typing import List, Tuple
@@ -7,6 +8,7 @@ from plants_sm.data_standardization.proteins.standardization import ProteinStand
 from plants_sm.data_standardization.truncation import Truncator
 from plants_sm.data_structures.dataset import SingleInputDataset
 from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputDataset
+from plants_sm.featurization.proteins.bio_embeddings.esm import ESMEncoder
 from plants_sm.io.pickle import read_pickle
 from plants_sm.pathway_prediction._validation_utils import _validate_compounds, _validate_proteins
 from plants_sm.pathway_prediction.annotator import Annotator
@@ -26,20 +28,14 @@ import numpy as np
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-class ProtBertESIAnnotator(Annotator):
 
-    """
-    This annotator takes pairs of proteins and compounds and 
-    predict whether the compounds are substrates of the paired enzyme.  
-    """
-
-    device: str = "cpu"
-    xgboost_model_path: str = os.path.join(BASE_DIR,
-                                "pathway_prediction",
-                                "esi",
-                                "xgb_prot_bert_20.pkl")
+class ESIAnnotator(Annotator):
     
+    device: str = "cpu"
+    xgboost_model_path: str
+
     def __init__(self, device = "cpu"):
+        
         self.device = device
     
     def _predict_with_xgboost(self, dataset: MultiInputDataset):
@@ -141,10 +137,49 @@ class ProtBertESIAnnotator(Annotator):
 
         # Return valid entities, unique proteins, and unique compounds
         return valid_entities, invalid_entities
-
-    def _apply_transfer_learning_to_features(self, dataset: SingleInputDataset):
+    
+    @abstractmethod
+    def _get_model_for_transfer_learning(self) -> PyTorchModel:
         """
-        Apply transfer learning to protein sequences using ProtBERT.
+        Get the model to be used for transfer learning.
+
+        Returns
+        -------
+        model : PyTorchModel
+            The model to be used for transfer learning.
+
+        Notes
+        -----
+        - This method should be implemented in subclasses.
+        """
+        pass
+        
+
+    @abstractmethod
+    def _transform_with_protein_language_model(self, dataset: SingleInputDataset) -> SingleInputDataset:
+        """
+        Transform the dataset using a protein language model to generate embeddings.
+
+        Parameters
+        ----------
+        dataset : SingleInputDataset
+            Dataset containing protein sequences to be transformed.
+
+        Returns
+        -------
+        SingleInputDataset
+            Transformed dataset with protein embeddings.
+
+        Notes
+        -----
+        - This method should be implemented in subclasses.
+        - The transformation typically involves standardization, truncation, and embedding generation.
+        """
+        pass
+
+    def _get_features(self, dataset: SingleInputDataset):
+        """
+        Generate features for the given dataset using transfer learning.
 
         Parameters
         ----------
@@ -156,31 +191,17 @@ class ProtBertESIAnnotator(Annotator):
         Dict[str, Dict[str, np.ndarray]]
             features : dict
                 Dictionary with keys "proteins" and values as another dictionary mapping protein IDs to their embeddings.
-
-        Notes
-        -----
-        - Standardizes and truncates protein sequences.
-        - Uses ProtBERT for embedding generation.
-        - Loads a pre-trained ProtBERT model from cache.
         """
-
         truncator = Truncator(max_length=884)
         protein_standardizer = ProteinStandardizer()
 
         dataset = protein_standardizer.fit_transform(dataset)
         dataset = truncator.fit_transform(dataset)
+
+        dataset = self._transform_with_protein_language_model(dataset)
+
+        model = self._get_model_for_transfer_learning()
         
-        transformer = ProtBert(batch_size=1, device=self.device)
-        dataset = transformer.fit_transform(dataset)
-
-        pipeline_path = _download_pipeline_to_cache("ProtBERT pipeline")
-
-        protein_model_ = torch.load(os.path.join(pipeline_path, "prot_bert.pt"), map_location="cpu")
-        protein_model = DNN(1024, [2560], 5743, batch_norm=True, last_sigmoid=True)
-
-        protein_model.load_state_dict(protein_model_)
-        model = PyTorchModel(model=protein_model, loss_function=nn.BCELoss, model_name="ec_number", device=self.device)
-
         embedding = model.get_embeddings(dataset)
 
         features = {"proteins": {}}
@@ -189,6 +210,7 @@ class ProtBertESIAnnotator(Annotator):
             features["proteins"][ids] = emb
         
         return features
+        
     
     def _annotate(self, entities: pd.DataFrame) -> List[Solution]:
         """
@@ -234,7 +256,7 @@ class ProtBertESIAnnotator(Annotator):
             df_copy = deepcopy(entities)
 
             dataset_to_generate_features = SingleInputDataset(entities, representation_field=protein_sequences, instances_ids_field=protein_ids)
-            protein_features = self._apply_transfer_learning_to_features(dataset_to_generate_features)
+            protein_features = self._get_features(dataset_to_generate_features)
 
             del dataset_to_generate_features
 
@@ -274,7 +296,7 @@ class ProtBertESIAnnotator(Annotator):
 
         else:
             raise ValueError("For now, this method only accepts pd.DataFrame as input.")
-
+    
     def _convert_to_readable_format(self, file: str, format: str, **kwargs) -> List[Solution]:
         """
         Convert input file to a list of Solution objects.
@@ -307,6 +329,181 @@ class ProtBertESIAnnotator(Annotator):
             return self._dataframe_from_csv(file, **kwargs)
         else:
             raise ValueError(f"Format {format} not supported. Only csv for now")
-        
+
+class ProtBertESIAnnotator(ESIAnnotator):
+
+    """
+    This annotator takes pairs of proteins and compounds and 
+    predict whether the compounds are substrates of the paired enzyme.  
+    """
+
+    device: str = "cpu"
+    xgboost_model_path: str = os.path.join(BASE_DIR,
+                                "pathway_prediction",
+                                "esi",
+                                "xgb_prot_bert_20.pkl")
+    
+    def _get_model_for_transfer_learning(self) -> PyTorchModel:
+        """
+        Get the ProtBERT model for transfer learning.
+
+        Returns
+        -------
+        model : PyTorchModel
+            The ProtBERT model wrapped in a PyTorchModel.
+
+        Notes
+        -----
+        - Loads a pre-trained ProtBERT model from cache.
+        """
+        pipeline_path = _download_pipeline_to_cache("ProtBERT pipeline")
+
+        protein_model_ = torch.load(os.path.join(pipeline_path, "prot_bert.pt"), map_location="cpu")
+        protein_model = DNN(1024, [2560], 5743, batch_norm=True, last_sigmoid=True)
+
+        protein_model.load_state_dict(protein_model_)
+        model = PyTorchModel(model=protein_model, loss_function=nn.BCELoss, model_name="ec_number", device=self.device)
+
+        return model
+    
+    def _transform_with_protein_language_model(self, dataset):
+        """
+        Transform protein sequences using a pre-trained language model.
+
+        Parameters
+        ----------
+        dataset : SingleInputDataset
+            Dataset containing protein sequences to be transformed.
+
+        Returns
+        -------
+        SingleInputDataset
+            Transformed dataset with protein embeddings.
+        Notes
+        -----
+        - Uses ProtBERT for embedding generation.
+        - Loads a pre-trained ProtBERT model from cache.
+        """
+        transformer = ProtBert(batch_size=1, device=self.device)
+        dataset = transformer.fit_transform(dataset)
+        return dataset
+    
+
+class ESM1bESIAnnotator(ESIAnnotator):
 
     
+    """
+    This annotator takes pairs of proteins and compounds and 
+    predict whether the compounds are substrates of the paired enzyme.  
+    """
+
+    device: str = "cpu"
+    xgboost_model_path: str = os.path.join(BASE_DIR,
+                                "pathway_prediction",
+                                "esi",
+                                "xgb_esm1b_20.pkl")
+    
+    def _get_model_for_transfer_learning(self) -> PyTorchModel:
+        """
+        Get the ESM1b model for transfer learning.
+
+        Returns
+        -------
+        model : PyTorchModel
+            The ESM1b model wrapped in a PyTorchModel.
+
+        Notes
+        -----
+        - Loads a pre-trained ESM1b model from cache.
+        """
+        pipeline_path = _download_pipeline_to_cache("ESM1b pipeline")
+
+        protein_model_ = torch.load(os.path.join(pipeline_path, "esm1b.pt"), map_location="cpu")
+        protein_model = DNN(1280, [2560, 5120], 5743, batch_norm=True, last_sigmoid=True)
+
+        protein_model.load_state_dict(protein_model_)
+        model = PyTorchModel(model=protein_model, loss_function=nn.BCELoss, model_name="ec_number", device=self.device)
+        return model
+    
+    def _transform_with_protein_language_model(self, dataset):
+        """
+        Transform protein sequences using a pre-trained language model.
+
+        Parameters
+        ----------
+        dataset : SingleInputDataset
+            Dataset containing protein sequences to be transformed.
+
+        Returns
+        -------
+        SingleInputDataset
+            Transformed dataset with protein embeddings.
+        Notes
+        -----
+        - Uses ESM1b for embedding generation.
+        - Loads a pre-trained ESM1b model from cache.
+        """
+        transformer = ESMEncoder(esm_function="esm1b_t33_650M_UR50S", batch_size=1, device=self.device)
+        dataset = transformer.fit_transform(dataset)
+        return dataset
+    
+
+class ESM2ESIAnnotator(ESIAnnotator):
+    """
+    This annotator takes pairs of proteins and compounds and 
+    predict whether the compounds are substrates of the paired enzyme.  
+    """
+
+    device: str = "cpu"
+    xgboost_model_path: str = os.path.join(BASE_DIR,
+                                "pathway_prediction",
+                                "esi",
+                                "xgb_esm2_20.pkl")
+    
+    def __init__(self, device="cpu", num_gpus=1):
+        self.num_gpus = num_gpus
+        super().__init__(device)
+    
+    def _get_model_for_transfer_learning(self) -> PyTorchModel:
+        """
+        Get the ESM2 model for transfer learning.
+
+        Returns
+        -------
+        model : PyTorchModel
+            The ESM2 model wrapped in a PyTorchModel.
+
+        Notes
+        -----
+        - Loads a pre-trained ESM2 model from cache.
+        """
+        pipeline_path = _download_pipeline_to_cache("ESM2 pipeline")
+
+        protein_model_ = torch.load(os.path.join(pipeline_path, "esm2_3b.pt"), map_location="cpu")
+        protein_model = DNN(2560, [2560], 5743, batch_norm=True, last_sigmoid=True)
+
+        protein_model.load_state_dict(protein_model_)
+        model = PyTorchModel(model=protein_model, loss_function=nn.BCELoss, model_name="ec_number", device=self.device)
+        return model
+    
+    def _transform_with_protein_language_model(self, dataset):
+        """
+        Transform protein sequences using a pre-trained language model.
+
+        Parameters
+        ----------
+        dataset : SingleInputDataset
+            Dataset containing protein sequences to be transformed.
+
+        Returns
+        -------
+        SingleInputDataset
+            Transformed dataset with protein embeddings.
+        Notes
+        -----
+        - Uses ESM2 for embedding generation.
+        - Loads a pre-trained ESM2 model from cache.
+        """
+        transformer = ESMEncoder(esm_function="esm2_t36_3B_UR50D", batch_size=1, device=self.device, num_gpus=self.num_gpus)
+        dataset = transformer.fit_transform(dataset)
+        return dataset
