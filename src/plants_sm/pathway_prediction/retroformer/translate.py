@@ -91,8 +91,8 @@ def translate(args, batch, models, dataset, singlestep=False):
 
             current_i += len(predict)
             ordering = np.argsort(hypo_scores_i)[::-1]
-            generations.append(np.array(hypo_i)[ordering][:10])
-            scores.append(np.array(hypo_scores_i)[ordering][:10])
+            generations.append(np.array(hypo_i)[ordering][:args.expansion_topk])
+            scores.append(np.array(hypo_scores_i)[ordering][:args.expansion_topk])
         
         if singlestep:
             generations = [list(g) for g in generations]
@@ -119,6 +119,7 @@ def translate(args, batch, models, dataset, singlestep=False):
     scores = list(generation_dict.values())
     
     ordering = np.argsort(scores)[::-1][:args.expansion_topk]
+    
     generations = list(np.array(generations)[ordering])
     scores = list(np.array(scores)[ordering])
 

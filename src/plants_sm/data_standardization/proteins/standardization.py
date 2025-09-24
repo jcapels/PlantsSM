@@ -37,6 +37,7 @@ class ProteinStandardizer(Transformer):
     O: str = 'K'
     J: str = 'I'  # It can be either 'I' or 'L'
     X: str = ''
+    asterisk: str = ''
 
     def _fit(self, dataset: Dataset, instance_type: str) -> 'ProteinStandardizer':
         """
@@ -52,7 +53,7 @@ class ProteinStandardizer(Transformer):
         self : ProteinStandardizer
             Fitted transformer.
         """
-        self.replace_dict = {'B': self.B, 'Z': self.Z, 'U': self.U, 'O': self.O, 'J': self.J, 'X': self.X}
+        self.replace_dict = {'B': self.B, 'Z': self.Z, 'U': self.U, 'O': self.O, 'J': self.J, 'X': self.X, "*": self.asterisk}
         return self
 
     def _fit_batch(self, dataset: Dataset, instance_type: str) -> 'ProteinStandardizer':

@@ -5,6 +5,42 @@ from typing import List, Union
 from plants_sm.pathway_prediction.entities import BiologicalEntity
 from plants_sm.pathway_prediction.solution import Solution
 
+class AnnotatorLinker(ABC):
+    """
+    Abstract base class for linking annotations.
+    """
+
+    def __init__(self, annotators: List["Annotator"] = None, solutions: List[Solution] = None):
+
+        if annotators is None and solutions is None:
+            raise ValueError("Either annotators or solutions must be provided")
+        
+        if annotators == None:
+            self.annotators = [] 
+        else:
+            self.annotators = annotators
+
+        if solutions == None:
+            self.solutions = []
+        else:
+            self.solutions = solutions
+
+        assert len(self.solutions) + len(self.annotators) == 2 
+
+
+    def link_annotations(self, entities_list: List[Union[List[BiologicalEntity], pd.DataFrame]] = [], export_suffix_path: str = None) -> List[Union["Solution", BiologicalEntity]]:
+        
+        for i, entities in enumerate(entities_list):
+            solution = self.annotators[i].annotate(entities)
+            if export_suffix_path is not None:
+                solution.to_csv(f"{self.annotators[i].__class__.__name__}_solution_{export_suffix_path}.csv")
+            self.solutions.append(solution)
+
+        return self._link()
+    
+    @abstractmethod
+    def _link(self):
+        pass
 
 
 class Annotator(ABC):
@@ -64,7 +100,7 @@ class Annotator(ABC):
             If not implemented by a subclass.
         """
 
-    def annotate(self, entities: Union[List[BiologicalEntity], pd.DataFrame]) -> List[Solution]:
+    def annotate(self, entities: Union[List[BiologicalEntity], pd.DataFrame], **kwargs) -> List[Solution]:
         """
         Validate input entities and annotate the valid ones.
 
@@ -88,7 +124,7 @@ class Annotator(ABC):
         
         valid_entities, self.invalid_entities = self.validate_input(entities)
         
-        self.solution = self._annotate(valid_entities)
+        self.solution = self._annotate(valid_entities, **kwargs)
 
         return self.solution
     
@@ -144,9 +180,9 @@ class Annotator(ABC):
         - Calls `annotate` to validate and annotate the entities.
         """
 
-        entities = self._convert_to_readable_format(file, format, **kwargs)
+        entities = self._convert_to_readable_format(file, format)
 
-        self.annotate(entities)
+        self.annotate(entities, **kwargs)
 
         return self.solution
     

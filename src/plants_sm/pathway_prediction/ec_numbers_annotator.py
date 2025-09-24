@@ -8,6 +8,10 @@ from plants_sm.pathway_prediction.ec_numbers_annotator_utils._utils import fasta
 from plants_sm.pathway_prediction.ec_numbers_annotator_utils.esm1b_predictions import (
     predict_with_esm1b_from_dataframe,
 )
+from plants_sm.pathway_prediction.ec_numbers_annotator_utils.esm1b_predictions import (
+    predict_with_esm1b_from_dataframe,
+)
+from plants_sm.pathway_prediction.ec_numbers_annotator_utils.esm2_3b_predictions import predict_with_esm2_from_dataframe
 from plants_sm.pathway_prediction.ec_numbers_annotator_utils.prot_bert_prediction import (
     predict_with_protbert_from_dataframe,
 )
@@ -237,3 +241,24 @@ class ESM1bECAnnotator(ECAnnotator):
             DataFrame with predicted EC numbers.
         """
         return predict_with_esm1b_from_dataframe(entities, **kwargs)
+    
+class ESM2ECAnnotator(ECAnnotator):
+    """EC number annotator using ESM-2."""
+
+    def _make_predictions_from_dataframe(self, entities: pd.DataFrame, **kwargs) -> pd.DataFrame:
+        """
+        Make EC number predictions using ESM-2 from a DataFrame of protein data.
+
+        Parameters
+        ----------
+        entities : pd.DataFrame
+            DataFrame containing protein data.
+        **kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with predicted EC numbers.
+        """
+        return predict_with_esm2_from_dataframe(entities, **kwargs)

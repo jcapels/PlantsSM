@@ -2,6 +2,7 @@ import os
 from typing import List
 from plants_sm.pathway_prediction.entities import Molecule, Reaction
 from plants_sm.pathway_prediction.reactor import Reactor
+from plants_sm.pathway_prediction.retroformer.enumerators import _download_retroformer_to_cache
 from plants_sm.pathway_prediction.retroformer.translate import prepare_retroformer, run_retroformer
 from plants_sm.pathway_prediction.solution import ReactionSolution
 from rdkit import Chem
@@ -21,18 +22,19 @@ class Retroformer(Reactor):
         Configuration arguments for the Retroformer model.
     """
 
-    def __init__(self):
+    def __init__(self, topk=10, beam_size=10, device="cpu"):
         """
         Initialize the Retroformer reactor.
 
         Loads the Retroformer model and vocabulary from saved files.
         """
-        exp_topk = 10
-        beam_size = 10
-        device = 'cuda'
+        exp_topk = topk
+        beam_size = beam_size
+        device = device
         retroformer_path = os.path.join(
             BASE_DIR, "pathway_prediction", "retroformer", "saved_models", "model.pt"
         )
+        retroformer_path = _download_retroformer_to_cache()
         vocab_path = os.path.join(
             BASE_DIR, "pathway_prediction", "retroformer", "saved_models", "vocab_share.pk"
         )
@@ -42,12 +44,16 @@ class Retroformer(Reactor):
 
     def _react(self, reactants: List[Mol]) -> List[ReactionSolution]:
         """
-        Predict retro-synthetic pathways for a list of reactants using Retroformer.
+        Predict retro-synthetic pathways for a list of reactants using Retroformer. 
+        It generates a solution that is in accordance to what happens in reality: 
+        in retrobiosynthesis setups we often see real products (reactant in the input) >> real reactant, 
+        
+        however in this case it returns real reactants >> real products.
 
         Parameters
         ----------
         reactants : List[Mol]
-            List of RDKit Mol objects representing the reactants.
+            List of RDKit Mol objects representing the reactants (products in nature).
 
         Returns
         -------
@@ -90,6 +96,4 @@ class Retroformer(Reactor):
                 except ValueError as e:
                     if str(e) != "SMILES is not valid":
                         raise ValueError
-                    else:
-                        print(solution_products)
         return solutions

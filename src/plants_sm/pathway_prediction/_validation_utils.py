@@ -16,7 +16,7 @@ def _validate_proteins(unique_proteins: pd.DataFrame) -> set:
         Set of the IDs of the valid proteins.
     """
 
-    ALLOWED_AMINO_ACIDS = set('ACDEFGHIKLMNPQRSTVWYBZUOJX')
+    ALLOWED_AMINO_ACIDS = set('ACDEFGHIKLMNPQRSTVWYBZUOJX*')
     protein_ids = unique_proteins.columns[0]
     protein_sequences = unique_proteins.columns[1]
     
