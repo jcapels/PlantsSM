@@ -2,6 +2,7 @@ import os
 from typing import List
 from plants_sm.pathway_prediction.entities import Molecule, Reaction
 from plants_sm.pathway_prediction.reactor import Reactor
+from plants_sm.pathway_prediction.retroformer.enumerators import _download_retroformer_to_cache
 from plants_sm.pathway_prediction.retroformer.translate import prepare_retroformer, run_retroformer
 from plants_sm.pathway_prediction.solution import ReactionSolution
 from rdkit import Chem
@@ -33,6 +34,7 @@ class Retroformer(Reactor):
         retroformer_path = os.path.join(
             BASE_DIR, "pathway_prediction", "retroformer", "saved_models", "model.pt"
         )
+        retroformer_path = _download_retroformer_to_cache()
         vocab_path = os.path.join(
             BASE_DIR, "pathway_prediction", "retroformer", "saved_models", "vocab_share.pk"
         )

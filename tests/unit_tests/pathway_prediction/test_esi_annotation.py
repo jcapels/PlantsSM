@@ -70,6 +70,7 @@ class TestESM1bESIAnnotator(TestCase):
         self.assertEqual(len(solution.get_score(39)), 2)
         self.assertGreater(solution.get_score(39)[0][1], solution.get_score(39)[1][1])
 
+@skip("Requires model download")
 class TestESM2ESIAnnotator(TestCase):
 
     def setUp(self):

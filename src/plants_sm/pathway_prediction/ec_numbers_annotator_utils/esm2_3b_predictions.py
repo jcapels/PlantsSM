@@ -131,8 +131,7 @@ def predict_with_esm2_from_dataframe(dataset: pd.DataFrame, sequences_field: str
     results: pandas dataframe
         pandas dataframe with results
     """
-    pipeline_path = "/home/jcapela/plants_ec_number_prediction/PlantsSM/examples/ESM2_pipeline"
-    # pipeline_path = _download_pipeline_to_cache("ESM2 pipeline")
+    pipeline_path = _download_pipeline_to_cache("ESM2 pipeline")
 
     dataset = SingleInputDataset(dataset, representation_field=sequences_field,
                                           instances_ids_field=ids_field)
