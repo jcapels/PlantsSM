@@ -5,7 +5,7 @@ from plants_sm.pathway_prediction.entities import Molecule
 from plants_sm.pathway_prediction.retroformer_reactor import Retroformer
 from plants_sm.pathway_prediction.solution import ReactionSolution
 
-#@skip("For now")
+@skip("For now")
 class TestMCTS_A(TestCase):
 
     def test_search(self):

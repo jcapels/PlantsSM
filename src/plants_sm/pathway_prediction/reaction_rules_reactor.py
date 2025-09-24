@@ -102,7 +102,7 @@ class ReactionRulesReactor(Reactor):
 
             solution_reactions = list(set([AllChem.ReactionToSmiles(entry, canonical=True) for entry in res]))
             for solution_reaction in solution_reactions:
-                if reaction.score >= self.score_threshold:
+                if reaction.score < self.score_threshold:
                     solution_reaction = ReactionFromSmarts(solution_reaction)
                     ps = solution_reaction.RunReactants(reactants)
                     reactant_molecules = []
@@ -118,8 +118,8 @@ class ReactionRulesReactor(Reactor):
 
                     solutions.append(
                         ReactionSolution(
-                            products=product_molecules,
-                            reactants=reactant_molecules,
+                            products=reactant_molecules,
+                            reactants=product_molecules,
                             reaction=reaction,
                             ec_numbers=reaction.ec_numbers,
                             score=reaction.score

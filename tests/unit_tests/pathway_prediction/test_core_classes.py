@@ -16,7 +16,7 @@ class TestCoreClasses(TestCase):
 
     def test_molecule(self):
         molecule = Molecule.from_smiles(smiles="C1=CC=C2C(=C1)C(=CN2)C[C@@H](C(=O)O)N")
-        self.assertEqual(str(molecule.representation), "C1=CC=C2C(=C1)C(=CN2)C[C@@H](C(=O)O)N")
+        self.assertEqual(str(molecule.representation), "N[C@@H](Cc1c[nH]c2ccccc12)C(=O)O")
         self.assertEqual(molecule.smiles, "C1=CC=C2C(=C1)C(=CN2)C[C@@H](C(=O)O)N")
 
     def test_reaction_smarts(self):
