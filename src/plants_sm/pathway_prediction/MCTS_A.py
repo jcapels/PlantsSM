@@ -9,6 +9,7 @@ from plants_sm.pathway_prediction._mcts_a_utils import (
     prepare_starting_molecules_natural, time_limit, value_fn
 )
 from plants_sm.pathway_prediction.entities import Molecule
+from plants_sm.pathway_prediction.precursor_prediction import export_precursors
 from plants_sm.pathway_prediction.reactor import Reactor
 from plants_sm.pathway_prediction.searcher import Searcher, SearcherSolution
 from plants_sm.pathway_prediction.solution import ReactionSolution
@@ -61,6 +62,9 @@ class MCTS_A(Searcher):
     building_blocks_path: str = os.path.join(
         BASE_DIR, "pathway_prediction", "mcts_a_utils", "building_blocks.txt"
     )
+    building_blocks_path_from_predictor: str = os.path.join(
+        BASE_DIR, "pathway_prediction", "precursor_prediction", "building_blocks.txt"
+    )
 
     def __init__(
         self,
@@ -68,7 +72,8 @@ class MCTS_A(Searcher):
         device: torch.device,
         simulations: int = 100,
         cpuct: float = 4.0,
-        times: int = 3000
+        times: int = 3000,
+        predict_precursors: bool = False
     ):
         """Initialize the MCTS_A searcher.
 
@@ -84,6 +89,8 @@ class MCTS_A(Searcher):
             Exploration constant for PUCT. Default is 4.0.
         times : int, optional
             Maximum number of iterations for the search. Default is 3000.
+        predict_precursors : bool, optional
+            Whether to use the building blocks from the precursor predictor. Default is False.
         """
         self.value_model = ValueEnsemble(2048, 128, 0.1).to(device)
         self.value_model.load_state_dict(
@@ -94,7 +101,7 @@ class MCTS_A(Searcher):
         self.cpuct = cpuct
         self.reactors = reactors
         self.times = times
-        self.known_mols = prepare_starting_molecules_natural(self.building_blocks_path)
+        self.predict_precursors = predict_precursors
         self.visited_policy = {}
         self.visited_state = []
         self.opening_size = simulations
@@ -120,6 +127,15 @@ class MCTS_A(Searcher):
         depths = []
         counts = []
         self.target_mol = molecule.smiles
+
+        if self.predict_precursors:
+            result = export_precursors(molecule.smiles)
+            if result:
+                self.known_mols = prepare_starting_molecules_natural(self.building_blocks_path_from_predictor)
+            else:
+                self.known_mols = prepare_starting_molecules_natural(self.building_blocks_path)
+        else:
+            self.known_mols = prepare_starting_molecules_natural(self.building_blocks_path)
 
         with time_limit(600):
             success, node, count = self._search(molecule)

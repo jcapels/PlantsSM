@@ -68,33 +68,36 @@ def convert_predictions_into_model_names(predictions):
     return labels_all
 
 def export_precursors(smiles: list):
-
-    # read text file
-    dataset = SmilesDataset(smiles=smiles)
-
-    predictions = predict_from_dataset(dataset)
-
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    building_blocks_list_path = os.path.join(BASE_DIR,
-                                       "pathway_prediction",
-                                       "precursor_prediction",
-                                       "building_blocks_to_smiles.txt")
-    
-    building_blocks_output_path = os.path.join(BASE_DIR,
-                                       "pathway_prediction",
-                                       "precursor_prediction",
-                                       "building_blocks.txt")
-
-    df = pd.read_csv(building_blocks_list_path, header=None, sep='\t')
-    df.columns = ['precursor',"SMILES"]
-
-    unique_precursors = set()
-    for precursor_list in predictions:
-        if precursor_list:
-            unique_precursors.update(precursor_list.split(';'))
-
-    df = df[df['precursor'].isin(unique_precursors)]
     try:
+        # read text file
+        dataset = SmilesDataset(smiles=smiles)
+
+        predictions = predict_from_dataset(dataset)
+
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        building_blocks_list_path = os.path.join(BASE_DIR,
+                                        "pathway_prediction",
+                                        "precursor_prediction",
+                                        "building_blocks_to_smiles.txt")
+        
+        building_blocks_output_path = os.path.join(BASE_DIR,
+                                        "pathway_prediction",
+                                        "precursor_prediction",
+                                        "building_blocks.txt")
+
+        df = pd.read_csv(building_blocks_list_path, header=None, sep='\t')
+        df.columns = ['precursor',"SMILES"]
+
+        unique_precursors = set()
+        for precursor_list in predictions:
+            if precursor_list:
+                unique_precursors.update(precursor_list.split(';'))
+
+        df = df[df['precursor'].isin(unique_precursors)]
+        if df.empty:
+            print("No matching precursors found.")
+            return False
+    
         df.to_csv(building_blocks_output_path, index=False, sep='\t', header=False)
 
     except Exception as e:
