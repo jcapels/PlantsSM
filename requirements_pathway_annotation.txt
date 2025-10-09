@@ -1,0 +1,3 @@
+deepmol[all]==1.1.18
+lightning
+biopython
