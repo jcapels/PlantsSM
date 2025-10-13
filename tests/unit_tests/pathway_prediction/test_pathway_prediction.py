@@ -7,7 +7,7 @@ from plants_sm.pathway_prediction.solution import ECSolution
 
 from tests import TEST_DIR
 
-# @skip("Need model download")
+@skip("Need model download")
 class TestPathwayPrediction(TestCase):
 
     def setUp(self):
