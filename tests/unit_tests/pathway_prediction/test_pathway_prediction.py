@@ -7,7 +7,7 @@ from plants_sm.pathway_prediction.solution import ECSolution
 
 from tests import TEST_DIR
 
-@skip("Need model download")
+# @skip("Need model download")
 class TestPathwayPrediction(TestCase):
 
     def setUp(self):
@@ -39,6 +39,18 @@ class TestPathwayPrediction(TestCase):
         smiles = ["CC(=O)OC1=CC=CC=C1C(=O)O"]
         predictions, pathways = PlantPathwayClassifier('PlantCyc').predict_ec_numbers_in_pathway(smiles[0])
         self.assertEqual(len(predictions), 6)
+
+    def test_predict_reactions_pathways_plantcyc(self):
+        smiles = ["CC(=O)OC1=CC=CC=C1C(=O)O"]
+        ec_solution = ECSolution.from_csv_and_fasta(self.tomato_genome_annotation, self.tomato_genome, "accession")
+        predictions = PlantPathwayClassifier('PlantCyc').predict_reactions_present_in_pathways_and_ec_solution(smiles[0], ec_solution)
+        self.assertEqual(len(predictions), 9)
+
+    def test_predict_reactions_pathways_kegg(self):
+        smiles = ["CC(=O)OC1=CC=CC=C1C(=O)O"]
+        ec_solution = ECSolution.from_csv_and_fasta(self.tomato_genome_annotation, self.tomato_genome, "accession")
+        predictions = PlantPathwayClassifier('KEGG').predict_reactions_present_in_pathways_and_ec_solution(smiles[0], ec_solution)
+        self.assertEqual(len(predictions), 50)
         
 
         

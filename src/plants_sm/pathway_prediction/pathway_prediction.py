@@ -6,7 +6,7 @@ from deepmol.datasets import SmilesDataset
 import numpy as np
 
 from plants_sm.io.pickle import read_pickle
-from plants_sm.pathway_prediction.pathway_classification_utils._utils import get_ec_numbers_from_ko_pathway
+from plants_sm.pathway_prediction.pathway_classification_utils._utils import get_ec_numbers_from_ko_pathway, get_model_path, get_reactions_by_ec
 from plants_sm.pathway_prediction.solution import ECSolution
 
 
@@ -36,15 +36,6 @@ KEGG_PATHWAYS = np.array(['map01065',
 class PlantPathwayClassifier:
 
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    kegg_pipeline_path = os.path.join(BASE_DIR,
-                                    "pathway_prediction",
-                                    "pathway_classification_utils",
-                                    "kegg_pathway_prediction")
-    
-    plantcyc_pipeline_path = os.path.join(BASE_DIR,
-                                    "pathway_prediction",
-                                    "pathway_classification_utils",
-                                    "plantcyc_pathway_prediction")
     
     plantcyc_labels_path = os.path.join(BASE_DIR,
                                     "pathway_prediction",
@@ -69,10 +60,8 @@ class PlantPathwayClassifier:
         self.pipeline = self.load_model()
 
     def load_model(self):
-        if self.classification_type == 'KEGG':
-            return Pipeline.load(self.kegg_pipeline_path)
-        elif self.classification_type == "PlantCyc":
-            return Pipeline.load(self.plantcyc_pipeline_path)
+        pipeline_path = get_model_path(self.classification_type)
+        return Pipeline.load(pipeline_path)
 
     def predict(self, input_smiles):
         place_holder = "CCC" # we need to add this due to a bug in deepmol (will be fixed in next release)
@@ -98,6 +87,7 @@ class PlantPathwayClassifier:
             for pathway in pathways:
                 list_ecs = get_ec_numbers_from_ko_pathway(pathway)
                 ecs.update(list_ecs)
+
         elif self.classification_type == "PlantCyc":
             pathways_to_reaction = read_pickle(self.plantcyc_pathways_to_reaction_path)
             reaction_to_ec = read_pickle(self.plantcyc_reaction_to_ec_path)
@@ -108,6 +98,56 @@ class PlantPathwayClassifier:
                         ecs.update(reaction_to_ec[reaction])
 
         return ecs, pathways
+    
+    def predict_reactions_in_pathway(self, input_smiles):
+        reactions = set()
+
+        pathways = self.predict(input_smiles=input_smiles)
+        if self.classification_type == "KEGG":
+            for pathway in pathways:
+                list_ecs = get_ec_numbers_from_ko_pathway(pathway)
+                for ec in list_ecs:
+                    reaction = get_reactions_by_ec(ec)
+                    reactions.update(reaction)
+        elif self.classification_type == "PlantCyc":
+            pathways_to_reaction = read_pickle(self.plantcyc_pathways_to_reaction_path)
+            reaction_to_ec = read_pickle(self.plantcyc_reaction_to_ec_path)
+            for pathway in pathways:
+                reactions_ = pathways_to_reaction[pathway]
+                for reaction in reactions_:
+                    if reaction in reaction_to_ec:
+                        reactions.update(reactions_)
+
+        return reactions
+    
+    def predict_reactions_present_in_pathways_and_ec_solution(self, input_smiles: str, ec_solution: ECSolution):
+        reactions = set()
+        ec_solution.create_ec_to_entities()
+
+        pathways = self.predict(input_smiles=input_smiles)
+        if self.classification_type == "KEGG":
+            for pathway in pathways:
+                list_ecs = get_ec_numbers_from_ko_pathway(pathway)
+                list_ecs = [ec for ec in list_ecs if ec_solution.get_entities(ec)]
+                for ec in list_ecs:
+                    reaction = get_reactions_by_ec(ec)
+                    reactions.update(reaction)
+
+        elif self.classification_type == "PlantCyc":
+            pathways_to_reaction = read_pickle(self.plantcyc_pathways_to_reaction_path)
+            reaction_to_ec = read_pickle(self.plantcyc_reaction_to_ec_path)
+            for pathway in pathways:
+                reactions_ = pathways_to_reaction[pathway]
+                for reaction in reactions_:
+                    if reaction in reaction_to_ec:
+                        ecs = reaction_to_ec[reaction]
+                        for ec in ecs:
+                            proteins = ec_solution.get_entities(ec)
+                            if proteins:
+                                reactions.update(reactions_)
+
+        return reactions
+
 
     def predict_ecs_present_in_pathways(self, smiles_input: str, ec_solution: ECSolution):
         ec_solution.create_ec_to_entities()
