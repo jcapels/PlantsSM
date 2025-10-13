@@ -182,6 +182,23 @@ class ECSolution(Solution):
     entity_ec_3: Dict[str, List[Tuple[str, float]]]
     entity_ec_4: Dict[str, List[Tuple[str, float]]]
     entities: Dict[str, BiologicalEntity]
+    ec_to_entities: Dict[str, List[Tuple[str, float]]] = {}
+
+    def create_ec_to_entities(self):
+        # Initialize the dictionary
+        self.ec_to_entities = {}
+
+        # Iterate over all entity_ec dictionaries
+        for entity_ec in [self.entity_ec_1, self.entity_ec_2, self.entity_ec_3, self.entity_ec_4]:
+            for entity_id, ec_list in entity_ec.items():
+                for ec, score in ec_list:
+                    if ec not in self.ec_to_entities:
+                        self.ec_to_entities[ec] = []
+                    self.ec_to_entities[ec].append((entity_id, score))
+
+        # Optional: Sort the lists by score (descending) for each EC
+        for ec in self.ec_to_entities:
+            self.ec_to_entities[ec].sort(key=lambda x: x[1], reverse=True)
 
     @classmethod
     def from_csv_and_fasta(cls, csv_path: str, fasta_file: str, id_field: str):
@@ -351,3 +368,15 @@ class ECSolution(Solution):
             return self.entity_ec_4.get(entity_id, [])
         else:
             raise ValueError(f"Unknown EC number: {ec_number}, available options are EC1, EC2, EC3, EC4.")
+        
+    def get_entities(self, ec):
+        if not self.ec_to_entities:
+            raise ValueError("Call the create_ec_to_entities")
+        
+        if "-" in ec:
+            ec = ec.replace(".-", "")
+        
+        if ec in self.ec_to_entities:
+            return self.ec_to_entities[ec]
+        else:
+            return None

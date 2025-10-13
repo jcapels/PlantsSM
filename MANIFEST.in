@@ -1,1 +1,2 @@
 include src/plants_sm/featurization/reactions/reaction_bert_vocab.txt
+include extra-requirements.txt

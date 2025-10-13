@@ -1,0 +1,56 @@
+L-Alanine	C[C@H](N)C(=O)O
+L-Arginine	NC(=N)NCCC[C@H](N)C(=O)O
+Asparagine	NC(=O)C[C@H](N)C(=O)O
+L-Aspartate	N[C@@H](CC(=O)O)C(=O)O
+Cysteine	N[C@@H](CS)C(=O)O
+Glutamine	NC(=O)CC[C@H](N)C(=O)O
+Glutamate	N[C@@H](CCC(=O)O)C(=O)O
+Glycine	NCC(=O)O
+L-Histidine	N[C@@H](Cc1c[nH]cn1)C(=O)O
+L-Isoleucine	CC[C@H](C)[C@H](N)C(=O)O
+L-Leucine	CC(C)C[C@H](N)C(=O)O
+L-Lysine	NCCCC[C@H](N)C(=O)O
+L-Methionine	CSCC[C@H](N)C(=O)O
+L-Phenylalanine	N[C@@H](Cc1ccccc1)C(=O)O
+L-Proline	O=C(O)[C@@H]1CCCN1
+Serine	N[C@@H](CO)C(=O)O
+Threonine	C[C@@H](O)[C@H](N)C(=O)O
+Tryptophan	N[C@@H](Cc1c[nH]c2ccccc12)C(=O)O
+L-Tyrosine	N[C@@H](Cc1ccc(O)cc1)C(=O)O
+L-Valine	CC(C)[C@H](N)C(=O)O
+Mevalonate	C[C@@](O)(CCO)CC(=O)O
+Pyruvate	CC(=O)C(=O)O
+Isopentenyl diphosphate	C=C(C)CCOP(=O)(O)OP(=O)(O)O
+Dimethylallyl diphosphate	CC(C)=CCOP(=O)(O)OP(=O)(O)O
+2-Aminobenzoate	Nc1ccccc1C(=O)O
+Shikimate	O=C(O)C1=C[C@@H](O)[C@@H](O)[C@H](O)C1
+Farnesyl diphosphate	CC(C)=CCC/C(C)=C/CC/C(C)=C/COP(=O)(O)OP(=O)(O)O
+Geranyl diphosphate	CC(C)=CCC/C(C)=C/COP(=O)(O)OP(=O)(O)O
+Geranylgeranyl diphosphate	CC(C)=CCC/C(C)=C/CC/C(C)=C/CC/C(C)=C/COP(=O)(O)OP(=O)(O)O
+Malonate	O=C(O)CC(=O)O
+Naringenin chalcone	O=C(/C=C/c1ccc(O)cc1)c1c(O)cc(O)cc1O
+Naringenin C1[C@H](OC2=CC(=CC(=C2C1=O)O)O)C3=CC=C(C=C3)O
+Isoliquiritigenin 	O=C(/C=C/c1ccc(O)cc1)c1ccc(O)cc1O
+Liquiritigenin  C1[C@H](OC2=C(C1=O)C=CC(=C2)O)C3=CC=C(C=C3)O
+Campesterol C[C@H](CC[C@@H](C)C(C)C)[C@H]1CC[C@@H]2[C@@]1(CC[C@H]3[C@H]2CC=C4[C@@]3(CC[C@@H](C4)O)C)C
+Indoleglycerol phosphate    C1=CC=C2C(=C1)C(=CN2)[C@@H]([C@@H](COP(=O)(O)O)O)O
+Cholesterol C[C@H](CCCC(C)C)[C@H]1CC[C@@H]2[C@@]1(CC[C@H]3[C@H]2CC=C4[C@@]3(CC[C@@H](C4)O)C)C
+Secologanin    COC(=O)C1=CO[C@H]([C@@H]([C@@H]1CC=O)C=C)O[C@H]2[C@@H]([C@H]([C@@H]([C@H](O2)CO)O)O)O
+Anthranilate    C1=CC=C(C(=C1)C(=O)[O-])N
+Cinnamoyl-CoA   CC(C)(COP(=O)(O)OP(=O)(O)OC[C@@H]1[C@H]([C@H]([C@@H](O1)N2C=NC3=C(N=CN=C32)N)O)OP(=O)(O)O)[C@H](C(=O)NCCC(=O)NCCSC(=O)/C=C/C4=CC=CC=C4)O
+Apigenin    C1=CC(=CC=C1C2=CC(=O)C3=C(C=C(C=C3O2)O)O)O
+Kaempferol  C1=CC(=CC=C1C2=C(C(=O)C3=C(C=C(C=C3O2)O)O)O)O
+Pelargonin  C1=CC(=CC=C1C2=C(C=C3C(=CC(=CC3=[O+]2)O)O[C@H]4[C@@H]([C@H]([C@@H]([C@H](O4)CO)O)O)O)O[C@H]5[C@@H]([C@H]([C@@H]([C@H](O5)CO)O)O)O)O
+Cyanidin    C1=CC(=C(C=C1C2=C(C=C3C(=CC(=O)C=C3O2)O)O)O)[O-]
+Delphinidin C1=C(C=C(C(=C1O)O)O)C2=[O+]C3=CC(=CC(=C3C=C2O)O)O
+Quercetin   C1=CC(=C(C=C1C2=C(C(=O)C3=C(C=C(C=C3O2)O)O)O)O)O
+Luteolin    C1=CC(=C(C=C1C2=CC(=O)C3=C(C=C(C=C3O2)O)O)O)O
+Squalene	CC(C)=CCC/C(C)=C/CC/C(C)=C/CC/C=C(\C)CC/C=C(\C)CCC=C(C)C
+4-Coumarate	O=C(O)/C=C/c1ccc(O)cc1
+Chorismate	C=C(O[C@@H]1C=C(C(=O)O)C=C[C@H]1O)C(=O)O
+Glyoxylate	O=CC(=O)O
+Oxaloacetate	O=C(O)CC(=O)C(=O)O
+Succinate	O=C(O)CCC(=O)O
+p-Coumaroyl-CoA    CC(C)(COP(=O)(O)OP(=O)(O)OC[C@@H]1[C@H]([C@H]([C@@H](O1)N2C=NC3=C(N=CN=C32)N)O)OP(=O)(O)O)[C@H](C(=O)NCCC(=O)NCCSC(=O)/C=C/C4=CC=C(C=C4)O)O
+Acetyl-CoA	*C(=O)C
+Malonyl-CoA	*C(=O)CC(=O)O
