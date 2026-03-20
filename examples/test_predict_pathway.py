@@ -18,7 +18,7 @@ from plants_sm.pathway_prediction.solution import ECSolution
 ec_solution = ECSolution.from_csv_and_fasta("tomato_genome.csv", "ITAG4.1_proteins.fasta", "accession")
 
 reactor = Retroformer(topk=50, beam_size=50, device="cuda")
-compound = "[H]O[C@@H]1CC2=C(C([H])([H])[C@@H](CC2)C(=C([H])[H])C([H])([H])[H])[C@@]([H])([C@H]1O[H])C([H])([H])[H]"
+compound = "C\C(\C=C\C=C(/C)\C=C\C1=C(C)CCCC1(C)C)=C/C=C/C=C(\C)/C=C/C=C(\C)C1OC2(C)CCCC(C)(C)C2=C1"
 linker = ReactionEnzymeSubstratePairsLinker(
                                      enzyme_annotator_solution=ec_solution, 
                                      reaction_annotator=ReactionECNumberAnnotator(),
@@ -30,7 +30,10 @@ compass = ProteomeCompass(enzyme_annotator_solution=ec_solution,
                 device = "cuda:0")
 
 searcher = MCTS_A(reactors=[ProteomeCompassedReactor(compass, Retroformer(device="cuda:0"))], device='cuda:0', 
-                  simulations=100, cpuct=4.0, times=500)
+                  simulations=100, cpuct=4.0, times=500, predict_precursors=True)
+
+# searcher = MCTS_A(reactors=[Retroformer(device="cuda:0")], device='cuda:0', 
+# simulations=100, cpuct=4.0, times=500)
 solutions = searcher.search(molecule=Molecule.from_smiles(compound))
 
 with open('solution_retrosynthesis.pkl','wb') as f:
