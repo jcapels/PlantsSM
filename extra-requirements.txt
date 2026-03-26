@@ -21,7 +21,8 @@ tensorboard>=2.20.0: pathway-denovo-prediction
 fairscale==0.4.13: pathway-denovo-prediction
 optuna==3.1.1: pathway-denovo-prediction
 xgboost==3.0.4: pathway-denovo-prediction
+torch==2.6.0: pathway-denovo-prediction
 cobra: pathway-classification
-lightning: pathway-denovo-prediction
+lightning==2.6.1: pathway-denovo-prediction
 easydict: pathway-denovo-prediction
 chemprop: pathway-denovo-prediction
