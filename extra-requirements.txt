@@ -4,7 +4,7 @@ dask==2022.2.0: pathway-denovo-prediction
 lxml==6.0.0: pathway-denovo-prediction
 matplotlib: pathway-denovo-prediction
 modlamp==4.3.0: pathway-denovo-prediction
-openpyxl==3.0.10: pathway-denovo-prediction
+openpyxl>=3.1.0: pathway-denovo-prediction
 pandas>=3: pathway-denovo-prediction
 pydantic==1.10.2: pathway-denovo-prediction
 PyYAML==6.0: pathway-denovo-prediction
@@ -17,10 +17,11 @@ fair-esm==1.0.3: pathway-denovo-prediction
 cached-property==1.5.2: pathway-denovo-prediction
 deepmol[preprocessing]==1.2.1: pathway-denovo-prediction
 seaborn==0.12.0: pathway-denovo-prediction
-tensorboard==2.14.0: pathway-denovo-prediction
+tensorboard>=2.20.0: pathway-denovo-prediction
 fairscale==0.4.13: pathway-denovo-prediction
 optuna==3.1.1: pathway-denovo-prediction
 xgboost==3.0.4: pathway-denovo-prediction
+cobra: pathway-classification
 lightning: pathway-denovo-prediction
 easydict: pathway-denovo-prediction
 chemprop: pathway-denovo-prediction
