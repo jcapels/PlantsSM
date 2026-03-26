@@ -11,7 +11,7 @@ from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrappe
 from plants_sm.models.constants import BINARY
 from plants_sm.models.pytorch_model import PyTorchModel
 from tests import TEST_DIR
-from unit_tests.models._utils import TestPytorchBaselineModel, DenseNet
+from tests.unit_tests.models._utils import TestPytorchBaselineModel, DenseNet
 
 
 class TestDatasetModel(TestCase):

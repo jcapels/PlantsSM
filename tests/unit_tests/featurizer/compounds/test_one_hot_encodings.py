@@ -1,6 +1,6 @@
 from plants_sm.featurization.encoding.one_hot_encoder import OneHotEncoder
 from plants_sm.tokenisation.compounds.smilespe import AtomLevelTokenizer, SPETokenizer, KmerTokenizer
-from unit_tests.featurizer.compounds.test_compound_featurizers import TestCompoundFeaturizers
+from tests.unit_tests.featurizer.compounds.test_compound_featurizers import TestCompoundFeaturizers
 
 
 class TestOneHotEncodings(TestCompoundFeaturizers):

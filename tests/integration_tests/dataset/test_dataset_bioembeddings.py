@@ -1,8 +1,4 @@
-from copy import copy
-
-import pandas as pd
-
-from integration_tests.dataset.test_dataset import TestDataset
+from tests.integration_tests.dataset.test_dataset import TestDataset
 from plants_sm.data_structures.dataset import SingleInputDataset, PLACEHOLDER_FIELD
 from plants_sm.featurization.proteins.bio_embeddings.prot_bert import ProtBert
 

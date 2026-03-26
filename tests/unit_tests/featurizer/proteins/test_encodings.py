@@ -1,7 +1,7 @@
 from plants_sm.featurization.proteins.encodings.blosum import BLOSSUMEncoder
 from plants_sm.featurization.proteins.encodings.nlf import NLFEncoder
 from plants_sm.featurization.proteins.encodings.z_scale import ZScaleEncoder
-from unit_tests.featurizer.proteins.test_protein_featurizers import TestProteinFeaturizers
+from tests.unit_tests.featurizer.proteins.test_protein_featurizers import TestProteinFeaturizers
 
 
 class TestEncodings(TestProteinFeaturizers):

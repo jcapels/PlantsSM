@@ -6,7 +6,7 @@ from yaml import YAMLError
 from plants_sm.featurization.proteins.bio_embeddings._utils import get_model_file, get_device, read_config_file
 from plants_sm.featurization.proteins.bio_embeddings.esm import ESMEncoder
 from plants_sm.featurization.proteins.bio_embeddings.prot_bert import ProtBert
-from tests.unit_tests.featurizer.proteins.test_protein_featurizers import TestProteinFeaturizers
+from tests.tests.unit_tests.featurizer.proteins.test_protein_featurizers import TestProteinFeaturizers
 
 from tests import TEST_DIR
 

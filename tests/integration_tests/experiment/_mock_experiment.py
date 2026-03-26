@@ -11,7 +11,7 @@ from plants_sm.hyperparameter_optimization.experiment import Experiment
 from plants_sm.models.constants import BINARY
 from plants_sm.models.pytorch_model import PyTorchModel
 from plants_sm.pipeline.pipeline import Pipeline
-from unit_tests.models._utils import TestPytorchBaselineModel
+from tests.unit_tests.models._utils import TestPytorchBaselineModel
 
 
 class MockExperiment(Experiment):

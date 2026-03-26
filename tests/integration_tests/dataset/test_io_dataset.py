@@ -1,6 +1,6 @@
 from unittest import skip
 
-from integration_tests.dataset.test_dataset import TestDataset
+from tests.integration_tests.dataset.test_dataset import TestDataset
 from plants_sm.data_structures.dataset import SingleInputDataset
 from plants_sm.data_structures.dataset.multi_input_dataset import MultiInputDataset
 

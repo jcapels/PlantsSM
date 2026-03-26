@@ -1,7 +1,7 @@
 from unittest import skip
 
 from plants_sm.data_structures.dataset import PLACEHOLDER_FIELD
-from unit_tests.featurizer.compounds.test_compound_featurizers import TestCompoundFeaturizers
+from tests.unit_tests.featurizer.compounds.test_compound_featurizers import TestCompoundFeaturizers
 
 
 @skip("Requires conda")

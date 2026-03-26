@@ -1,4 +1,4 @@
-from integration_tests.dataset.test_dataset import TestDataset
+from tests.integration_tests.dataset.test_dataset import TestDataset
 from plants_sm.data_structures.dataset import SingleInputDataset, PLACEHOLDER_FIELD
 from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
 

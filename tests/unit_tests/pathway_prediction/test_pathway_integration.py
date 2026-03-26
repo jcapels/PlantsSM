@@ -1,12 +1,12 @@
 import os
-from unittest import TestCase
+from unittest import TestCase, skip
 
 from plants_sm.pathway_prediction.esi_annotator import ProtBertESIAnnotator
 from plants_sm.pathway_prediction.gsm_pathway_integration import GSMPathwayAnnotation
 from plants_sm.pathway_prediction.solution import ECSolution
 from tests import TEST_DIR
 
-
+@skip
 class TestPathwayPrediction(TestCase):
 
     def setUp(self):

@@ -1,4 +1,4 @@
-from integration_tests.dataset.test_dataset import TestDataset
+from tests.integration_tests.dataset.test_dataset import TestDataset
 from plants_sm.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
 from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrapper
 
