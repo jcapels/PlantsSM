@@ -129,7 +129,7 @@ class MCTS_A(Searcher):
         self.target_mol = molecule.smiles
 
         if self.predict_precursors:
-            result = export_precursors(molecule.smiles)
+            result = export_precursors([molecule.smiles])
             if result:
                 self.known_mols = prepare_starting_molecules_natural(self.building_blocks_path_from_predictor)
             else:
@@ -164,7 +164,8 @@ class MCTS_A(Searcher):
             f"Search completed with success: {success}, depth: {depths[0]}, count: {counts[0]}"
         )
         logging.info(node.state)
-        return SearcherSolution(**ans)
+        return ans
+        # return SearcherSolution(**ans)
 
     def _search(self, molecule: Molecule) -> Tuple[bool, Node, int]:
         """Internal search loop for MCTS.

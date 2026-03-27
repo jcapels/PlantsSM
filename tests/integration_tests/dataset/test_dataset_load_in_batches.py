@@ -2,7 +2,7 @@ import os
 
 import pandas as pd
 
-from integration_tests.dataset.test_dataset import TestDataset
+from tests.integration_tests.dataset.test_dataset import TestDataset
 from plants_sm.data_standardization.proteins.padding import SequencePadder
 from plants_sm.data_standardization.proteins.standardization import ProteinStandardizer
 from plants_sm.data_structures.dataset import SingleInputDataset, PLACEHOLDER_FIELD

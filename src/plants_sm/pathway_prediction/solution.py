@@ -379,4 +379,4 @@ class ECSolution(Solution):
         if ec in self.ec_to_entities:
             return self.ec_to_entities[ec]
         else:
-            return None
+            return []

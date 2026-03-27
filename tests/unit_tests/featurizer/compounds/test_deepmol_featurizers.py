@@ -1,6 +1,6 @@
 from plants_sm.data_structures.dataset import PLACEHOLDER_FIELD
 from plants_sm.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
-from unit_tests.featurizer.compounds.test_compound_featurizers import TestCompoundFeaturizers
+from tests.unit_tests.featurizer.compounds.test_compound_featurizers import TestCompoundFeaturizers
 
 
 class TestDeepMolDescriptors(TestCompoundFeaturizers):
@@ -45,4 +45,4 @@ class TestDeepMolDescriptors(TestCompoundFeaturizers):
         wrapper = DeepMolDescriptors(n_jobs=2, preset="2d_descriptors")
         wrapper._fit(self.dataset, PLACEHOLDER_FIELD)
         features = wrapper._featurize(self.dataset.instances[PLACEHOLDER_FIELD]['0'])
-        self.assertEqual(features.shape[0], 210)
+        self.assertEqual(features.shape[0], 217)

@@ -1,5 +1,5 @@
-from integration_tests.dataset.test_dataset import TestDataset
-from integration_tests.experiment._mock_experiment import MockExperiment
+from tests.integration_tests.dataset.test_dataset import TestDataset
+from tests.integration_tests.experiment._mock_experiment import MockExperiment
 
 
 class TestOptunaExperiment(TestDataset):

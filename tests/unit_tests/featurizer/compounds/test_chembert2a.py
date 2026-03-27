@@ -1,5 +1,5 @@
 from plants_sm.featurization.compounds.chembert2a import ChemBert2a
-from unit_tests.featurizer.compounds.test_compound_featurizers import TestCompoundFeaturizers
+from tests.unit_tests.featurizer.compounds.test_compound_featurizers import TestCompoundFeaturizers
 
 
 class TestChemBert2a(TestCompoundFeaturizers):

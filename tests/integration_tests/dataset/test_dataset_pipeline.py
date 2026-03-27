@@ -1,4 +1,4 @@
-from integration_tests.dataset.test_dataset import TestDataset
+from tests.integration_tests.dataset.test_dataset import TestDataset
 import numpy as np
 from sklearn.metrics import accuracy_score
 from torch import nn
@@ -10,7 +10,7 @@ from plants_sm.featurization.proteins.propythia.propythia import PropythiaWrappe
 from plants_sm.models.constants import BINARY
 from plants_sm.models.pytorch_model import PyTorchModel
 from plants_sm.pipeline.pipeline import Pipeline
-from unit_tests.models._utils import TestPytorchBaselineModel
+from tests.unit_tests.models._utils import TestPytorchBaselineModel
 
 
 class TestDatasetPipeline(TestDataset):

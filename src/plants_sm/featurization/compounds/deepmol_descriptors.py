@@ -79,7 +79,7 @@ class DeepMolDescriptors(FeaturesGenerator):
         features = self.descriptor._featurize(mol)
 
         if not self.features_names:
-            if features.shape[0] != np.NaN:
+            if features.shape[0] != np.nan:
                 self.features_names = [f"{self.preset}_{i}" for i in range(1, features.shape[0] + 1)]
 
         return features

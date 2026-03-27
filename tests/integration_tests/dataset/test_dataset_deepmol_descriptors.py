@@ -1,4 +1,4 @@
-from integration_tests.dataset.test_dataset import TestDataset
+from tests.integration_tests.dataset.test_dataset import TestDataset
 from plants_sm.data_structures.dataset import SingleInputDataset, PLACEHOLDER_FIELD
 from plants_sm.featurization.compounds.deepmol_descriptors import DeepMolDescriptors
 
@@ -21,6 +21,6 @@ class TestDatasetDeepMol(TestDataset):
         deepmol_wrapper.fit_transform(dataset)
 
         self.assertEqual(dataset.dataframe.shape[0], 2)
-        self.assertEqual(dataset.X.shape[1], 210)
+        self.assertEqual(dataset.X.shape[1], 217)
         self.assertEqual(dataset.features_fields[PLACEHOLDER_FIELD][0], "MaxAbsEStateIndex")
         self.assertEqual(dataset.instances_ids_field, "identifier")

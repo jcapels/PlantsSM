@@ -9,8 +9,8 @@ from torch.optim import Adam
 
 from plants_sm.models.constants import BINARY
 from plants_sm.models.pytorch_model import PyTorchModel
-from unit_tests.models._utils import TestPytorchBaselineModel
-from unit_tests.models.test_models import TestModels
+from tests.unit_tests.models._utils import TestPytorchBaselineModel
+from tests.unit_tests.models.test_models import TestModels
 
 
 class TestPytorchModel(TestModels):
