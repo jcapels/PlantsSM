@@ -341,7 +341,7 @@ class ProtBertESIAnnotator(ESIAnnotator):
     xgboost_model_path: str = os.path.join(BASE_DIR,
                                 "pathway_prediction",
                                 "esi",
-                                "xgb_prot_bert_20.pkl")
+                                "xgb_prot_bert_20_compounds.pkl")
     
     def _get_model_for_transfer_learning(self) -> PyTorchModel:
         """
@@ -401,7 +401,7 @@ class ESM1bESIAnnotator(ESIAnnotator):
     xgboost_model_path: str = os.path.join(BASE_DIR,
                                 "pathway_prediction",
                                 "esi",
-                                "xgb_esm1b_20.pkl")
+                                "xgb_esm1b_20_compounds.pkl")
     
     def _get_model_for_transfer_learning(self) -> PyTorchModel:
         """
@@ -458,7 +458,7 @@ class ESM2ESIAnnotator(ESIAnnotator):
     xgboost_model_path: str = os.path.join(BASE_DIR,
                                 "pathway_prediction",
                                 "esi",
-                                "xgb_esm2_20.pkl")
+                                "xgb_esm2_20_compounds.pkl")
     
     def __init__(self, device="cpu", num_gpus=1):
         self.num_gpus = num_gpus

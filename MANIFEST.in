@@ -1,2 +1,3 @@
 include src/plants_sm/featurization/reactions/reaction_bert_vocab.txt
+recursive-include src/plants_sm/pathway_prediction/esi *
 include extra-requirements.txt
