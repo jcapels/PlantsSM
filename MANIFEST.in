@@ -1,3 +1,7 @@
 include src/plants_sm/featurization/reactions/reaction_bert_vocab.txt
 recursive-include src/plants_sm/pathway_prediction/esi *
+include src/plants_sm/pathway_prediction/ec_numbers_annotator_utils/labels_names_all_data.pkl
+include src/plants_sm/pathway_prediction/ec_numbers_annotator_utils/labels_names.pkl
+#recursive-include src/plants_sm/pathway_prediction/pathway_classification_utils *
+#recursive-include src/plants_sm/pathway_prediction/precursor_prediction *
 include extra-requirements.txt
